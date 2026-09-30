@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#4A0754"
+    >
+
+    <title>Result Management | School Results System</title>
+
+    <link
+        rel="stylesheet"
+        href="result-management.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     PAGE
+========================================================= -->
+
+<div class="page-shell">
+
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="page-header">
+
+        <div>
+
+            <p class="eyebrow">
+                SCHOOL RESULTS SYSTEM
+            </p>
+
+            <h1>
+                Result Management
+            </h1>
+
+            <p class="header-description">
+                Prepare, review and generate student academic results.
+            </p>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="secondary-button"
+            id="refreshButton"
+        >
+            Refresh
+        </button>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         SELECTION PANEL
+    ====================================================== -->
+
+    <section class="panel selection-panel">
+
+        <div class="panel-heading">
+
+            <div>
+
+                <h2>
+                    Select Result Period
+                </h2>
+
+                <p>
+                    Choose the session, term and class you want to manage.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="selection-grid">
+
+
+            <div class="form-group">
+
+                <label for="sessionSelect">
+                    Session
+                </label>
+
+                <select id="sessionSelect">
+
+                    <option value="">
+                        Select session
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="termSelect">
+                    Term
+                </label>
+
+                <select id="termSelect">
+
+                    <option value="">
+                        Select term
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="classSelect">
+                    Class
+                </label>
+
+                <select id="classSelect">
+
+                    <option value="">
+                        Select class
+                    </option>
+
+                </select>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="selection-actions">
+
+            <button
+                type="button"
+                class="primary-button"
+                id="loadResultsButton"
+            >
+                Load Results
+            </button>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         MESSAGE
+    ====================================================== -->
+
+    <div
+        id="messageBox"
+        class="message-box hidden"
+    ></div>
+
+
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <section
+        id="overviewSection"
+        class="hidden"
+    >
+
+
+        <div class="section-heading">
+
+            <div>
+
+                <h2>
+                    Result Overview
+                </h2>
+
+                <p id="overviewDescription">
+                    Result preparation status.
+                </p>
+
+            </div>
+
+
+            <div
+                id="pdfStatusBadge"
+                class="status-badge"
+            >
+                Not Ready
+            </div>
+
+        </div>
+
+
+
+        <div class="stat-grid">
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Students
+                </span>
+
+                <strong
+                    id="totalStudents"
+                    class="stat-value"
+                >
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Complete
+                </span>
+
+                <strong
+                    id="completeStudents"
+                    class="stat-value"
+                >
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Incomplete
+                </span>
+
+                <strong
+                    id="incompleteStudents"
+                    class="stat-value"
+                >
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Not Started
+                </span>
+
+                <strong
+                    id="notStartedStudents"
+                    class="stat-value"
+                >
+                    0
+                </strong>
+
+            </div>
+
+
+        </div>
+
+
+
+        <div class="action-panel">
+
+            <div>
+
+                <h3>
+                    Class Results
+                </h3>
+
+                <p>
+                    Generate result PDFs when all required scores are complete.
+                </p>
+
+            </div>
+
+
+            <button
+                type="button"
+                id="generateClassPdfButton"
+                class="primary-button"
+                disabled
+            >
+                Generate Class PDFs
+            </button>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         STUDENT RESULTS
+    ====================================================== -->
+
+    <section
+        id="studentsSection"
+        class="panel hidden"
+    >
+
+
+        <div class="panel-heading">
+
+            <div>
+
+                <h2>
+                    Students
+                </h2>
+
+                <p>
+                    Review each student's result status.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            #
+                        </th>
+
+                        <th>
+                            Student
+                        </th>
+
+                        <th>
+                            Admission No.
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th>
+                            Total
+                        </th>
+
+                        <th>
+                            Average
+                        </th>
+
+                        <th>
+                            Position
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="studentsTableBody">
+
+                    <tr>
+
+                        <td
+                            colspan="8"
+                            class="empty-cell"
+                        >
+                            No results loaded.
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         RESULT MODAL
+    ====================================================== -->
+
+    <div
+        id="resultModal"
+        class="modal hidden"
+    >
+
+        <div
+            class="modal-overlay"
+            data-close-modal
+        ></div>
+
+
+        <div class="modal-card">
+
+
+            <div class="modal-header">
+
+                <div>
+
+                    <p class="eyebrow">
+                        STUDENT RESULT
+                    </p>
+
+                    <h2 id="modalStudentName">
+                        Student Result
+                    </h2>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="close-button"
+                    data-close-modal
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+
+            <div
+                id="modalContent"
+                class="modal-content"
+            >
+
+                Loading...
+
+            </div>
+
+
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="secondary-button"
+                    data-close-modal
+                >
+                    Close
+                </button>
+
+                <button
+                    type="button"
+                    class="primary-button"
+                    id="generateStudentPdfButton"
+                >
+                    Generate PDF
+                </button>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         LOADING
+    ====================================================== -->
+
+    <div
+        id="loadingOverlay"
+        class="loading-overlay hidden"
+    >
+
+        <div class="loading-card">
+
+            <div class="spinner"></div>
+
+            <p id="loadingText">
+                Loading...
+            </p>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<script src="result-management.js"></script>
+
+</body>
+
+</html>
