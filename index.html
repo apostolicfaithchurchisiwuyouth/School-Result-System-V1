@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#4f46e5"
+    >
+
+    <title>Login | School Results System</title>
+
+    <link rel="stylesheet" href="index.css">
+
+</head>
+
+
+<body>
+
+    <main class="auth-page">
+
+        <section class="auth-card">
+
+            <!-- BRAND -->
+
+            <div class="brand">
+
+                <div class="brand-mark">
+                    SR
+                </div>
+
+                <div class="brand-text">
+
+                    <strong>
+                        School Results System
+                    </strong>
+
+                    <span>
+                        Academic result management
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- LOGIN -->
+
+            <div class="login-content">
+
+                <div class="login-heading">
+
+                    <span class="eyebrow">
+                        Welcome back
+                    </span>
+
+                    <h1>
+                        Sign in to your school
+                    </h1>
+
+                    <p>
+                        Enter your account details to
+                        continue to your dashboard.
+                    </p>
+
+                </div>
+
+
+                <form
+                    id="loginForm"
+                    novalidate
+                >
+
+                    <!-- EMAIL -->
+
+                    <div class="field">
+
+                        <label for="email">
+                            Email address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            autocomplete="email"
+                            placeholder="you@example.com"
+                            required
+                        >
+
+                        <small
+                            id="emailError"
+                            class="field-error"
+                        ></small>
+
+                    </div>
+
+
+                    <!-- PASSWORD -->
+
+                    <div class="field">
+
+                        <div class="field-label-row">
+
+                            <label for="password">
+                                Password
+                            </label>
+
+                            <button
+                                type="button"
+                                id="togglePassword"
+                                class="password-toggle"
+                            >
+                                Show
+                            </button>
+
+                        </div>
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            autocomplete="current-password"
+                            placeholder="Enter your password"
+                            required
+                        >
+
+                        <small
+                            id="passwordError"
+                            class="field-error"
+                        ></small>
+
+                    </div>
+
+
+                    <!-- MESSAGE -->
+
+                    <div
+                        id="loginMessage"
+                        class="login-message hidden"
+                        role="alert"
+                    ></div>
+
+
+                    <!-- SUBMIT -->
+
+                    <button
+                        type="submit"
+                        id="loginButton"
+                        class="login-button"
+                    >
+
+                        <span id="loginButtonText">
+                            Sign In
+                        </span>
+
+                        <span
+                            id="loginSpinner"
+                            class="button-spinner hidden"
+                        ></span>
+
+                    </button>
+
+                </form>
+
+
+                <!-- REGISTER -->
+
+                <div class="register-section">
+
+                    <span>
+                        New school?
+                    </span>
+
+                    <button
+                        type="button"
+                        id="registerButton"
+                        class="register-button"
+                    >
+                        Register your school
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- FOOTER -->
+
+            <footer>
+
+                <span>
+                    School Results System
+                </span>
+
+                <span class="footer-dot">
+                    •
+                </span>
+
+                <span>
+                    Version 1.0
+                </span>
+
+            </footer>
+
+        </section>
+
+    </main>
+
+
+    <script src="index.js"></script>
+
+</body>
+
+</html>
