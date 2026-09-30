@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#4f46e5"
+    >
+
+    <title>Register School | School Results System</title>
+
+    <link rel="stylesheet" href="register.css">
+
+</head>
+
+
+<body>
+
+    <main class="register-page">
+
+        <section class="register-card">
+
+            <!-- ==================================================
+                 BRAND
+            =================================================== -->
+
+            <div class="brand">
+
+                <div class="brand-mark">
+                    SR
+                </div>
+
+                <div class="brand-text">
+
+                    <strong>
+                        School Results System
+                    </strong>
+
+                    <span>
+                        Create your school account
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 CONTENT
+            =================================================== -->
+
+            <div class="register-content">
+
+                <div class="register-heading">
+
+                    <span class="eyebrow">
+                        Get started
+                    </span>
+
+                    <h1>
+                        Register your school
+                    </h1>
+
+                    <p>
+                        Set up your school account and create
+                        the administrator account that will
+                        manage your results system.
+                    </p>
+
+                </div>
+
+
+                <form
+                    id="registerForm"
+                    novalidate
+                >
+
+                    <!-- ==================================================
+                         SCHOOL INFORMATION
+                    =================================================== -->
+
+                    <div class="section-heading">
+
+                        <span class="section-number">
+                            01
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                School information
+                            </strong>
+
+                            <span>
+                                Basic information about your school
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-grid">
+
+                        <!-- SCHOOL NAME -->
+
+                        <div class="field field-full">
+
+                            <label for="schoolName">
+                                School name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="schoolName"
+                                name="schoolName"
+                                placeholder="e.g. Bright Future Academy"
+                                autocomplete="organization"
+                                required
+                            >
+
+                            <small
+                                id="schoolNameError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- SCHOOL CODE -->
+
+                        <div class="field">
+
+                            <label for="schoolCode">
+                                School code
+                            </label>
+
+                            <input
+                                type="text"
+                                id="schoolCode"
+                                name="schoolCode"
+                                placeholder="e.g. BFA001"
+                                maxlength="30"
+                                autocomplete="off"
+                                required
+                            >
+
+                            <small class="field-hint">
+                                A short unique code for your school.
+                            </small>
+
+                            <small
+                                id="schoolCodeError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- SCHOOL PHONE -->
+
+                        <div class="field">
+
+                            <label for="schoolPhone">
+                                School phone
+                            </label>
+
+                            <input
+                                type="tel"
+                                id="schoolPhone"
+                                name="schoolPhone"
+                                placeholder="e.g. 08012345678"
+                                autocomplete="tel"
+                            >
+
+                            <small
+                                id="schoolPhoneError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- SCHOOL EMAIL -->
+
+                        <div class="field">
+
+                            <label for="schoolEmail">
+                                School email
+                            </label>
+
+                            <input
+                                type="email"
+                                id="schoolEmail"
+                                name="schoolEmail"
+                                placeholder="school@example.com"
+                                autocomplete="email"
+                            >
+
+                            <small
+                                id="schoolEmailError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- ADDRESS -->
+
+                        <div class="field">
+
+                            <label for="address">
+                                School address
+                            </label>
+
+                            <input
+                                type="text"
+                                id="address"
+                                name="address"
+                                placeholder="School address"
+                                autocomplete="street-address"
+                            >
+
+                            <small
+                                id="addressError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         ADMINISTRATOR
+                    =================================================== -->
+
+                    <div class="section-heading section-heading-spaced">
+
+                        <span class="section-number">
+                            02
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                Administrator account
+                            </strong>
+
+                            <span>
+                                This account will manage the school system.
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-grid">
+
+                        <!-- ADMIN NAME -->
+
+                        <div class="field field-full">
+
+                            <label for="adminName">
+                                Administrator full name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="adminName"
+                                name="adminName"
+                                placeholder="e.g. John Doe"
+                                autocomplete="name"
+                                required
+                            >
+
+                            <small
+                                id="adminNameError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- ADMIN PHONE -->
+
+                        <div class="field">
+
+                            <label for="adminPhone">
+                                Administrator phone
+                            </label>
+
+                            <input
+                                type="tel"
+                                id="adminPhone"
+                                name="adminPhone"
+                                placeholder="e.g. 08012345678"
+                                autocomplete="tel"
+                            >
+
+                            <small
+                                id="adminPhoneError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- ADMIN EMAIL -->
+
+                        <div class="field">
+
+                            <label for="adminEmail">
+                                Administrator email
+                            </label>
+
+                            <input
+                                type="email"
+                                id="adminEmail"
+                                name="adminEmail"
+                                placeholder="admin@example.com"
+                                autocomplete="email"
+                                required
+                            >
+
+                            <small
+                                id="adminEmailError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- PASSWORD -->
+
+                        <div class="field">
+
+                            <div class="field-label-row">
+
+                                <label for="password">
+                                    Password
+                                </label>
+
+                                <button
+                                    type="button"
+                                    id="togglePassword"
+                                    class="password-toggle"
+                                >
+                                    Show
+                                </button>
+
+                            </div>
+
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="At least 6 characters"
+                                autocomplete="new-password"
+                                minlength="6"
+                                required
+                            >
+
+                            <small
+                                id="passwordError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+
+                        <!-- CONFIRM PASSWORD -->
+
+                        <div class="field">
+
+                            <div class="field-label-row">
+
+                                <label for="confirmPassword">
+                                    Confirm password
+                                </label>
+
+                                <button
+                                    type="button"
+                                    id="toggleConfirmPassword"
+                                    class="password-toggle"
+                                >
+                                    Show
+                                </button>
+
+                            </div>
+
+                            <input
+                                type="password"
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                placeholder="Enter password again"
+                                autocomplete="new-password"
+                                minlength="6"
+                                required
+                            >
+
+                            <small
+                                id="confirmPasswordError"
+                                class="field-error"
+                            ></small>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         MESSAGE
+                    =================================================== -->
+
+                    <div
+                        id="registerMessage"
+                        class="register-message hidden"
+                        role="alert"
+                    ></div>
+
+
+                    <!-- ==================================================
+                         SUBMIT
+                    =================================================== -->
+
+                    <button
+                        type="submit"
+                        id="registerButton"
+                        class="register-submit"
+                    >
+
+                        <span id="registerButtonText">
+                            Create School Account
+                        </span>
+
+                        <span
+                            id="registerSpinner"
+                            class="button-spinner hidden"
+                        ></span>
+
+                    </button>
+
+
+                    <!-- ==================================================
+                         LOGIN
+                    =================================================== -->
+
+                    <div class="login-section">
+
+                        <span>
+                            Already have an account?
+                        </span>
+
+                        <a href="index.html">
+                            Sign in
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <!-- ==================================================
+                 FOOTER
+            =================================================== -->
+
+            <footer>
+
+                <span>
+                    School Results System
+                </span>
+
+                <span class="footer-dot">
+                    •
+                </span>
+
+                <span>
+                    Free plan available
+                </span>
+
+            </footer>
+
+        </section>
+
+    </main>
+
+
+    <script src="register.js"></script>
+
+</body>
+
+</html>
