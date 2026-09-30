@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#4f46e5"
+    >
+
+    <title>
+        Dashboard | School Results System
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="dashboard.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     APPLICATION SHELL
+========================================================= -->
+
+<div class="app-shell">
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
+
+        <div class="sidebar-brand">
+
+            <div class="brand-mark">
+                SR
+            </div>
+
+            <div class="brand-text">
+
+                <strong>
+                    School Results
+                </strong>
+
+                <span>
+                    Management System
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Navigation -->
+
+        <nav class="main-navigation">
+
+            <div class="nav-section-label">
+                MAIN
+            </div>
+
+
+            <a
+                href="dashboard.html"
+                class="nav-link active"
+            >
+
+                <span class="nav-icon">⌂</span>
+
+                <span>
+                    Dashboard
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-label">
+                ACADEMIC
+            </div>
+
+
+            <a
+                href="sessions.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">◷</span>
+
+                <span>
+                    Sessions
+                </span>
+
+            </a>
+
+
+            <a
+                href="classes.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">▦</span>
+
+                <span>
+                    Classes
+                </span>
+
+            </a>
+
+
+            <a
+                href="subjects.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">◇</span>
+
+                <span>
+                    Subjects
+                </span>
+
+            </a>
+
+
+            <a
+                href="teachers.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">♙</span>
+
+                <span>
+                    Teachers
+                </span>
+
+            </a>
+
+
+            <a
+                href="assignments.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">≡</span>
+
+                <span>
+                    Assignments
+                </span>
+
+            </a>
+
+
+            <a
+                href="students.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">♧</span>
+
+                <span>
+                    Students
+                </span>
+
+            </a>
+
+
+            <a
+                href="grading.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">%</span>
+
+                <span>
+                    Grading
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-label">
+                RESULTS
+            </div>
+
+
+            <a
+                href="score-entry.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">✎</span>
+
+                <span>
+                    Score Entry
+                </span>
+
+            </a>
+
+
+            <a
+                href="result-management.html"
+                class="nav-link"
+            >
+
+                <span class="nav-icon">▤</span>
+
+                <span>
+                    Results
+                </span>
+
+            </a>
+
+
+        </nav>
+
+
+        <!-- Sidebar footer -->
+
+        <div class="sidebar-footer">
+
+            <button
+                type="button"
+                class="logout-button"
+                id="sidebarLogoutButton"
+            >
+
+                <span>
+                    ⇥
+                </span>
+
+                Logout
+
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN AREA
+    ====================================================== -->
+
+    <main class="main-area">
+
+
+        <!-- =================================================
+             TOP BAR
+        ================================================== -->
+
+        <header class="topbar">
+
+            <button
+                type="button"
+                class="menu-button"
+                id="menuButton"
+                aria-label="Open menu"
+            >
+                ☰
+            </button>
+
+
+            <div class="topbar-school">
+
+                <span
+                    id="topbarSchoolName"
+                >
+                    School Results System
+                </span>
+
+            </div>
+
+
+            <div class="topbar-user">
+
+                <div class="user-avatar">
+                    <span id="userInitials">
+                        --
+                    </span>
+                </div>
+
+                <div class="topbar-user-info">
+
+                    <strong id="topbarUserName">
+                        User
+                    </strong>
+
+                    <span id="topbarUserRole">
+                        --
+                    </span>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             PAGE CONTENT
+        ================================================== -->
+
+        <section class="page-content">
+
+
+            <!-- =================================================
+                 LOADING
+            ================================================== -->
+
+            <div
+                class="page-loading"
+                id="pageLoading"
+            >
+
+                <div class="loading-spinner"></div>
+
+                <p>
+                    Loading dashboard...
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 DASHBOARD CONTENT
+            ================================================== -->
+
+            <div
+                id="dashboardContent"
+                class="dashboard-content hidden"
+            >
+
+
+                <!-- =============================================
+                     WELCOME
+                ============================================== -->
+
+                <section class="welcome-section">
+
+                    <div class="welcome-copy">
+
+                        <span class="eyebrow">
+                            SCHOOL DASHBOARD
+                        </span>
+
+                        <h1>
+                            Welcome back,
+                            <span id="welcomeName">
+                                Administrator
+                            </span>
+                        </h1>
+
+                        <p>
+                            Manage your school records,
+                            academic sessions, scores and
+                            student results from one place.
+                        </p>
+
+                    </div>
+
+
+                    <div class="school-status">
+
+                        <div class="status-label">
+                            ACCOUNT
+                        </div>
+
+                        <div
+                            class="status-value"
+                            id="schoolStatus"
+                        >
+                            Active
+                        </div>
+
+                        <div
+                            class="status-plan"
+                            id="schoolPlan"
+                        >
+                            Free Plan
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =============================================
+                     ACTIVE SESSION
+                ============================================== -->
+
+                <section class="session-banner">
+
+                    <div class="session-icon">
+                        ◷
+                    </div>
+
+                    <div class="session-information">
+
+                        <span>
+                            ACTIVE ACADEMIC SESSION
+                        </span>
+
+                        <strong
+                            id="activeSessionName"
+                        >
+                            No active session
+                        </strong>
+
+                        <small
+                            id="activeSessionDates"
+                        >
+                            Create an academic session
+                            to get started.
+                        </small>
+
+                    </div>
+
+                    <a
+                        href="sessions.html"
+                        class="session-action"
+                    >
+                        Manage Sessions
+                    </a>
+
+                </section>
+
+
+                <!-- =============================================
+                     STATISTICS
+                ============================================== -->
+
+                <section class="statistics-grid">
+
+
+                    <article class="stat-card">
+
+                        <div class="stat-card-top">
+
+                            <span class="stat-label">
+                                Classes
+                            </span>
+
+                            <span class="stat-icon">
+                                ▦
+                            </span>
+
+                        </div>
+
+                        <strong
+                            class="stat-number"
+                            id="classesCount"
+                        >
+                            0
+                        </strong>
+
+                        <a href="classes.html">
+                            Manage classes →
+                        </a>
+
+                    </article>
+
+
+                    <article class="stat-card">
+
+                        <div class="stat-card-top">
+
+                            <span class="stat-label">
+                                Students
+                            </span>
+
+                            <span class="stat-icon">
+                                ♧
+                            </span>
+
+                        </div>
+
+                        <strong
+                            class="stat-number"
+                            id="studentsCount"
+                        >
+                            0
+                        </strong>
+
+                        <a href="students.html">
+                            Manage students →
+                        </a>
+
+                    </article>
+
+
+                    <article class="stat-card">
+
+                        <div class="stat-card-top">
+
+                            <span class="stat-label">
+                                Teachers
+                            </span>
+
+                            <span class="stat-icon">
+                                ♙
+                            </span>
+
+                        </div>
+
+                        <strong
+                            class="stat-number"
+                            id="teachersCount"
+                        >
+                            0
+                        </strong>
+
+                        <a href="teachers.html">
+                            Manage teachers →
+                        </a>
+
+                    </article>
+
+
+                    <article class="stat-card">
+
+                        <div class="stat-card-top">
+
+                            <span class="stat-label">
+                                Subjects
+                            </span>
+
+                            <span class="stat-icon">
+                                ◇
+                            </span>
+
+                        </div>
+
+                        <strong
+                            class="stat-number"
+                            id="subjectsCount"
+                        >
+                            0
+                        </strong>
+
+                        <a href="subjects.html">
+                            Manage subjects →
+                        </a>
+
+                    </article>
+
+
+                    <article class="stat-card">
+
+                        <div class="stat-card-top">
+
+                            <span class="stat-label">
+                                Assignments
+                            </span>
+
+                            <span class="stat-icon">
+                                ≡
+                            </span>
+
+                        </div>
+
+                        <strong
+                            class="stat-number"
+                            id="assignmentsCount"
+                        >
+                            0
+                        </strong>
+
+                        <a href="assignments.html">
+                            Manage assignments →
+                        </a>
+
+                    </article>
+
+
+                </section>
+
+
+                <!-- =============================================
+                     QUICK ACTIONS
+                ============================================== -->
+
+                <section class="dashboard-section">
+
+                    <div class="section-heading">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                QUICK ACTIONS
+                            </span>
+
+                            <h2>
+                                Common tasks
+                            </h2>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="quick-actions">
+
+
+                        <a
+                            href="score-entry.html"
+                            class="quick-action"
+                        >
+
+                            <span class="quick-action-icon">
+                                ✎
+                            </span>
+
+                            <span class="quick-action-content">
+
+                                <strong>
+                                    Enter Scores
+                                </strong>
+
+                                <small>
+                                    Record student test
+                                    and examination scores.
+                                </small>
+
+                            </span>
+
+                            <span class="quick-action-arrow">
+                                →
+                            </span>
+
+                        </a>
+
+
+                        <a
+                            href="result-management.html"
+                            class="quick-action"
+                        >
+
+                            <span class="quick-action-icon">
+                                ▤
+                            </span>
+
+                            <span class="quick-action-content">
+
+                                <strong>
+                                    Manage Results
+                                </strong>
+
+                                <small>
+                                    Review and prepare
+                                    student results.
+                                </small>
+
+                            </span>
+
+                            <span class="quick-action-arrow">
+                                →
+                            </span>
+
+                        </a>
+
+
+                        <a
+                            href="students.html"
+                            class="quick-action"
+                        >
+
+                            <span class="quick-action-icon">
+                                ♧
+                            </span>
+
+                            <span class="quick-action-content">
+
+                                <strong>
+                                    Add Students
+                                </strong>
+
+                                <small>
+                                    Create and manage
+                                    student records.
+                                </small>
+
+                            </span>
+
+                            <span class="quick-action-arrow">
+                                →
+                            </span>
+
+                        </a>
+
+
+                        <a
+                            href="classes.html"
+                            class="quick-action"
+                        >
+
+                            <span class="quick-action-icon">
+                                ▦
+                            </span>
+
+                            <span class="quick-action-content">
+
+                                <strong>
+                                    Manage Classes
+                                </strong>
+
+                                <small>
+                                    Organise your school's
+                                    classes and sections.
+                                </small>
+
+                            </span>
+
+                            <span class="quick-action-arrow">
+                                →
+                            </span>
+
+                        </a>
+
+
+                    </div>
+
+                </section>
+
+
+                <!-- =============================================
+                     BOTTOM GRID
+                ============================================== -->
+
+                <div class="bottom-grid">
+
+
+                    <!-- Recent sessions -->
+
+                    <section class="dashboard-panel">
+
+                        <div class="panel-heading">
+
+                            <div>
+
+                                <span class="eyebrow">
+                                    ACADEMIC HISTORY
+                                </span>
+
+                                <h2>
+                                    Recent Sessions
+                                </h2>
+
+                            </div>
+
+                            <a
+                                href="sessions.html"
+                            >
+                                View all
+                            </a>
+
+                        </div>
+
+
+                        <div
+                            class="sessions-list"
+                            id="sessionsList"
+                        >
+
+                            <div class="empty-state">
+
+                                <strong>
+                                    No sessions yet
+                                </strong>
+
+                                <span>
+                                    Create your first
+                                    academic session.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- School information -->
+
+                    <section class="dashboard-panel">
+
+                        <div class="panel-heading">
+
+                            <div>
+
+                                <span class="eyebrow">
+                                    SCHOOL ACCOUNT
+                                </span>
+
+                                <h2>
+                                    School Information
+                                </h2>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="school-details">
+
+                            <div class="detail-row">
+
+                                <span>
+                                    School Name
+                                </span>
+
+                                <strong
+                                    id="detailSchoolName"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="detail-row">
+
+                                <span>
+                                    School Code
+                                </span>
+
+                                <strong
+                                    id="detailSchoolCode"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="detail-row">
+
+                                <span>
+                                    Email
+                                </span>
+
+                                <strong
+                                    id="detailSchoolEmail"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="detail-row">
+
+                                <span>
+                                    Phone
+                                </span>
+
+                                <strong
+                                    id="detailSchoolPhone"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="detail-row">
+
+                                <span>
+                                    Plan
+                                </span>
+
+                                <strong
+                                    id="detailSchoolPlan"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                </div>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 ERROR
+            ================================================== -->
+
+            <div
+                class="dashboard-error hidden"
+                id="dashboardError"
+            >
+
+                <div class="error-icon">
+                    !
+                </div>
+
+                <h2>
+                    Dashboard could not load
+                </h2>
+
+                <p id="dashboardErrorMessage">
+                    Something went wrong while loading
+                    your school information.
+                </p>
+
+                <button
+                    type="button"
+                    id="retryButton"
+                >
+                    Try Again
+                </button>
+
+            </div>
+
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- =========================================================
+     MOBILE OVERLAY
+========================================================= -->
+
+<div
+    class="sidebar-overlay"
+    id="sidebarOverlay"
+></div>
+
+
+<script src="dashboard.js"></script>
+
+</body>
+
+</html>
