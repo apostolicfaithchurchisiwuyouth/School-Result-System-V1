@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Score Entry | School Results System</title>
+
+    <link rel="stylesheet" href="score-entry.css">
+</head>
+
+<body>
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="page-header">
+
+        <div>
+            <span class="eyebrow">School Results System</span>
+            <h1>Score Entry</h1>
+        </div>
+
+        <button
+            type="button"
+            id="refreshBtn"
+            class="secondary-btn"
+        >
+            Refresh
+        </button>
+
+    </header>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="page-container">
+
+        <!-- =================================================
+             SELECTION PANEL
+        ================================================== -->
+
+        <section class="panel">
+
+            <div class="panel-heading">
+
+                <div>
+                    <h2>Select Result Details</h2>
+                    <p>
+                        Choose the session, term, class and subject
+                        before entering scores.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="selection-grid">
+
+                <!-- SESSION -->
+
+                <div class="field">
+
+                    <label for="sessionSelect">
+                        Session
+                    </label>
+
+                    <select id="sessionSelect">
+                        <option value="">
+                            Loading sessions...
+                        </option>
+                    </select>
+
+                </div>
+
+
+                <!-- TERM -->
+
+                <div class="field">
+
+                    <label for="termSelect">
+                        Term
+                    </label>
+
+                    <select id="termSelect">
+
+                        <option value="">
+                            Select term
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- CLASS -->
+
+                <div class="field">
+
+                    <label for="classSelect">
+                        Class
+                    </label>
+
+                    <select id="classSelect">
+
+                        <option value="">
+                            Loading classes...
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- SUBJECT -->
+
+                <div class="field">
+
+                    <label for="subjectSelect">
+                        Subject
+                    </label>
+
+                    <select id="subjectSelect">
+
+                        <option value="">
+                            Select subject
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="selectionMessage"
+                class="selection-message hidden"
+            ></div>
+
+        </section>
+
+
+        <!-- =================================================
+             SCORE SUMMARY
+        ================================================== -->
+
+        <section
+            id="scoreSummary"
+            class="summary-grid hidden"
+        >
+
+            <div class="summary-card">
+
+                <span>Students</span>
+
+                <strong id="studentCount">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <span>Completed</span>
+
+                <strong id="completedCount">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <span>Missing</span>
+
+                <strong id="missingCount">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <span>Unsaved Changes</span>
+
+                <strong id="changedCount">
+                    0
+                </strong>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             SCORE TABLE
+        ================================================== -->
+
+        <section
+            id="scorePanel"
+            class="panel hidden"
+        >
+
+            <div class="panel-heading table-heading">
+
+                <div>
+
+                    <h2 id="tableTitle">
+                        Enter Scores
+                    </h2>
+
+                    <p id="tableSubtitle">
+                        Test is out of 40. Exam is out of 60.
+                    </p>
+
+                </div>
+
+
+                <div class="table-actions">
+
+                    <button
+                        type="button"
+                        id="clearChangesBtn"
+                        class="secondary-btn"
+                        disabled
+                    >
+                        Clear Changes
+                    </button>
+
+                    <button
+                        type="button"
+                        id="saveScoresBtn"
+                        class="primary-btn"
+                        disabled
+                    >
+                        Save Scores
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="tableMessage"
+                class="table-message hidden"
+            ></div>
+
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>#</th>
+
+                            <th>Student</th>
+
+                            <th>Admission No.</th>
+
+                            <th>Test<br><small>/ 40</small></th>
+
+                            <th>Exam<br><small>/ 60</small></th>
+
+                            <th>Total<br><small>/ 100</small></th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="scoreTableBody">
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             EMPTY STATE
+        ================================================== -->
+
+        <section
+            id="emptyState"
+            class="empty-state"
+        >
+
+            <div class="empty-icon">
+                +
+            </div>
+
+            <h2>Ready for score entry</h2>
+
+            <p>
+                Select a session, term, class and subject
+                above to load the students.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <!-- =====================================================
+         LOADING OVERLAY
+    ====================================================== -->
+
+    <div
+        id="loadingOverlay"
+        class="loading-overlay hidden"
+    >
+
+        <div class="loading-box">
+
+            <div class="spinner"></div>
+
+            <p id="loadingText">
+                Loading...
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+
+    <script src="score-entry.js"></script>
+
+</body>
+
+</html>
