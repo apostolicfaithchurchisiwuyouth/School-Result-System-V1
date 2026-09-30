@@ -647,7 +647,7 @@ function handleRegister() {
      */
 
     window.location.href =
-        'register.html';
+        '/app/register.html';
 }
 
 
