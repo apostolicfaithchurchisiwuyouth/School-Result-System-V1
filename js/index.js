@@ -30,7 +30,7 @@ const SESSION_KEY =
  * We will create this page in the next phase.
  */
 const DASHBOARD_URL =
-    'dashboard.html';
+    '/app/dashboard.html';
 
 
 /* ============================================================
