@@ -1,9 +1,22 @@
 /* ============================================================
    SCHOOL RESULTS SYSTEM
    FILE: result-management.js
-   VERSION: 1.0.1
+   VERSION: 1.2.0
 
    RESULT MANAGEMENT FRONTEND
+
+   FEATURES:
+   - Result management setup
+   - Session / Term / Class selection
+   - Result overview
+   - Student result list
+   - Student result modal
+   - Subject result display
+   - Comments display
+   - Student result PDF generation
+   - Google Drive PDF opening
+   - Responsive sidebar
+   - Persistent login session
 ============================================================ */
 
 
@@ -39,6 +52,10 @@ let currentSelected = {
     term: '',
     classId: ''
 };
+
+let currentViewedStudentId = '';
+
+let currentViewedResult = null;
 
 
 /* ============================================================
@@ -206,7 +223,9 @@ function loadStoredSession() {
 function applySessionToHeader() {
 
     if (!currentSession) {
+
         return;
+
     }
 
 
@@ -510,7 +529,9 @@ function toggleSidebar() {
 
 
     if (!sidebar) {
+
         return;
+
     }
 
 
@@ -530,7 +551,9 @@ function closeSidebar() {
 
 
     if (!sidebar) {
+
         return;
+
     }
 
 
@@ -549,10 +572,6 @@ async function loadSetup() {
 
     showSelectionLoading();
 
-    /*
-     * CORRECTED:
-     * The actual function in this file is hideMessage().
-     */
     hideMessage();
 
 
@@ -611,7 +630,6 @@ async function loadSetup() {
 
         populateClasses();
 
-
         chooseDefaultSelection();
 
 
@@ -646,7 +664,9 @@ function populateSessions() {
 
 
     if (!select) {
+
         return;
+
     }
 
 
@@ -696,7 +716,9 @@ function populateTerms() {
 
 
     if (!select) {
+
         return;
+
     }
 
 
@@ -744,7 +766,9 @@ function populateClasses() {
 
 
     if (!select) {
+
         return;
+
     }
 
 
@@ -1183,7 +1207,9 @@ function setOverviewLoading() {
 
 
     if (!section) {
+
         return;
+
     }
 
 
@@ -1192,52 +1218,60 @@ function setOverviewLoading() {
     );
 
 
-    document.getElementById(
-        'overviewTitle'
-    ).textContent =
-        'Loading result overview...';
+    setText(
+        'overviewTitle',
+        'Loading result overview...'
+    );
 
 
-    document.getElementById(
-        'overviewSubtitle'
-    ).textContent =
-        'Please wait while result information is loaded.';
+    setText(
+        'overviewSubtitle',
+        'Please wait while result information is loaded.'
+    );
 
 
-    document.getElementById(
-        'totalStudents'
-    ).textContent =
-        '—';
+    setText(
+        'totalStudents',
+        '—'
+    );
 
 
-    document.getElementById(
-        'completedStudents'
-    ).textContent =
-        '—';
+    setText(
+        'completedStudents',
+        '—'
+    );
 
 
-    document.getElementById(
-        'incompleteStudents'
-    ).textContent =
-        '—';
+    setText(
+        'incompleteStudents',
+        '—'
+    );
 
 
-    document.getElementById(
-        'notStartedStudents'
-    ).textContent =
-        '—';
+    setText(
+        'notStartedStudents',
+        '—'
+    );
 
 
-    document.getElementById(
-        'readinessBadge'
-    ).textContent =
-        'Checking...';
+    setText(
+        'readinessBadge',
+        'Checking...'
+    );
 
 
-    document.getElementById(
-        'readinessBadge'
-    ).className =
-        'readiness-badge';
+    const badge =
+        document.getElementById(
+            'readinessBadge'
+        );
+
+
+    if (badge) {
+
+        badge.className =
+            'readiness-badge';
+
+    }
 
 
     const validationPanel =
@@ -1289,85 +1323,70 @@ function renderOverview(data) {
         data.validation || {};
 
 
-    const overviewTitle =
-        document.getElementById(
-            'overviewTitle'
-        );
+    setText(
+        'overviewTitle',
+        buildClassName({
+
+            className:
+                classData.className,
+
+            section:
+                classData.section
+
+        })
+    );
 
 
-    const overviewSubtitle =
-        document.getElementById(
-            'overviewSubtitle'
-        );
+    setText(
+        'overviewSubtitle',
 
-
-    if (overviewTitle) {
-
-        overviewTitle.textContent =
-            buildClassName({
-
-                className:
-                    classData.className,
-
-                section:
-                    classData.section
-
-            });
-
-    }
-
-
-    if (overviewSubtitle) {
-
-        overviewSubtitle.textContent =
-            (
-                data.session &&
-                data.session.sessionName
+        (
+            data.session &&
+            data.session.sessionName
+        )
+            ? (
+                data.session.sessionName +
+                ' • ' +
+                currentSelected.term
             )
-                ? (
-                    data.session.sessionName +
-                    ' • ' +
-                    currentSelected.term
-                )
-                : (
-                    currentSelected.sessionId +
-                    ' • ' +
-                    currentSelected.term
-                );
-
-    }
+            : (
+                currentSelected.sessionId +
+                ' • ' +
+                currentSelected.term
+            )
+    );
 
 
-    document.getElementById(
-        'totalStudents'
-    ).textContent =
+    setText(
+        'totalStudents',
         safeNumber(
             students.total
-        );
+        )
+    );
 
 
-    document.getElementById(
-        'completedStudents'
-    ).textContent =
+    setText(
+        'completedStudents',
         safeNumber(
             students.complete
-        );
+        )
+    );
 
 
-    document.getElementById(
-        'incompleteStudents'
-    ).textContent =
+    setText(
+        'incompleteStudents',
         safeNumber(
             students.incomplete
-        );
+        )
+    );
 
 
-    document.getElementById(
-        'notStartedStudents'
-    ).textContent =
+    setText(
+        'notStartedStudents',
         safeNumber(
             students.notStarted
-        );
+        )
+    );
 
 
     renderReadiness(
@@ -1840,7 +1859,9 @@ function renderStudents(
 
 
     if (!tbody) {
+
         return;
+
     }
 
 
@@ -2132,8 +2153,18 @@ async function openStudentResult(
 
 
     if (!modal || !body) {
+
         return;
+
     }
+
+
+    currentViewedStudentId =
+        String(studentId);
+
+
+    currentViewedResult =
+        null;
 
 
     modal.classList.remove(
@@ -2187,6 +2218,10 @@ async function openStudentResult(
         }
 
 
+        currentViewedResult =
+            result.result;
+
+
         renderStudentResult(
             result.result
         );
@@ -2203,11 +2238,17 @@ async function openStudentResult(
         body.innerHTML = `
             <div class="table-empty">
                 <div class="empty-icon">!</div>
-                <strong>Could not load result</strong>
-                <span>${escapeHtml(
-                    error.message ||
-                    'An error occurred.'
-                )}</span>
+
+                <strong>
+                    Could not load result
+                </strong>
+
+                <span>
+                    ${escapeHtml(
+                        error.message ||
+                        'An error occurred.'
+                    )}
+                </span>
             </div>
         `;
 
@@ -2231,7 +2272,9 @@ function renderStudentResult(
 
 
     if (!body) {
+
         return;
+
     }
 
 
@@ -2239,9 +2282,19 @@ function renderStudentResult(
 
         body.innerHTML = `
             <div class="table-empty">
-                <div class="empty-icon">!</div>
-                <strong>No result found</strong>
-                <span>This student does not have a result for the selected period.</span>
+
+                <div class="empty-icon">
+                    !
+                </div>
+
+                <strong>
+                    No result found
+                </strong>
+
+                <span>
+                    This student does not have a result for the selected period.
+                </span>
+
             </div>
         `;
 
@@ -2279,6 +2332,25 @@ function renderStudentResult(
         {};
 
 
+    const positionData =
+        result.position &&
+        typeof result.position === 'object'
+            ? result.position
+            : null;
+
+
+    const position =
+        positionData &&
+        positionData.position !== null &&
+        positionData.position !== undefined
+            ? positionData.position
+            : (
+                typeof result.position === 'number'
+                    ? result.position
+                    : null
+            );
+
+
     const fullName =
         firstValue(
             student.fullName,
@@ -2314,14 +2386,6 @@ function renderStudentResult(
         );
 
 
-    const position =
-        firstValue(
-            summary.position,
-            result.position,
-            null
-        );
-
-
     const completionStatus =
         firstValue(
             summary.completionStatus,
@@ -2344,6 +2408,41 @@ function renderStudentResult(
     }
 
 
+    const session =
+        result.session ||
+        {};
+
+
+    const classInfo =
+        result.class ||
+        {};
+
+
+    const sessionName =
+        firstValue(
+            session.sessionName,
+            'Session'
+        );
+
+
+    const className =
+        buildClassName({
+
+            className:
+                classInfo.className,
+
+            section:
+                classInfo.section
+
+        });
+
+
+    const isComplete =
+        normalize(
+            completionStatus
+        ) === 'complete';
+
+
     body.innerHTML = `
 
         <div class="result-student-header">
@@ -2361,6 +2460,18 @@ function renderStudentResult(
                             admissionNo
                         )}
                     </strong>
+                </span>
+
+                <span>
+                    ${escapeHtml(
+                        className
+                    )}
+                </span>
+
+                <span>
+                    ${escapeHtml(
+                        sessionName
+                    )}
                 </span>
 
                 <span>
@@ -2443,13 +2554,99 @@ function renderStudentResult(
                 ? createSubjectResultsTable(
                     subjects
                 )
-                : ''
+                : `
+                    <div class="result-detail-section">
+
+                        <h4>
+                            Subject Results
+                        </h4>
+
+                        <p>
+                            No subject results are available for this student.
+                        </p>
+
+                    </div>
+                `
         }
 
 
         ${createCommentsSection(
             comments
         )}
+
+
+        ${createPdfSection(
+            isComplete
+        )}
+
+    `;
+
+}
+
+
+/* ============================================================
+   PDF SECTION
+============================================================ */
+
+function createPdfSection(
+    isComplete
+) {
+
+    if (isComplete) {
+
+        return `
+
+            <div class="result-detail-section result-pdf-section">
+
+                <h4>
+                    Final Result
+                </h4>
+
+                <p>
+                    This student's result is complete and can be generated as a PDF.
+                </p>
+
+                <button
+                    type="button"
+                    class="primary-button result-pdf-button"
+                    id="generateStudentPdfButton"
+                >
+                    Generate PDF
+                </button>
+
+                <div
+                    id="pdfGenerationMessage"
+                    class="result-pdf-message hidden"
+                ></div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    return `
+
+        <div class="result-detail-section result-pdf-section">
+
+            <h4>
+                Final Result
+            </h4>
+
+            <p>
+                The PDF will become available when all required scores have been completed.
+            </p>
+
+            <button
+                type="button"
+                class="primary-button result-pdf-button"
+                disabled
+            >
+                Generate PDF
+            </button>
+
+        </div>
 
     `;
 
@@ -2714,6 +2911,266 @@ function createCommentsSection(
 
 
 /* ============================================================
+   GENERATE STUDENT RESULT PDF
+============================================================ */
+
+async function generateStudentResultPdf() {
+
+    if (!currentViewedStudentId) {
+
+        showMessage(
+            'Student ID is missing. Please close the result and open it again.'
+        );
+
+        return;
+
+    }
+
+
+    const result =
+        currentViewedResult;
+
+
+    if (!result) {
+
+        showMessage(
+            'The student result is not loaded.'
+        );
+
+        return;
+
+    }
+
+
+    const summary =
+        result.summary ||
+        {};
+
+
+    const completionStatus =
+        firstValue(
+            summary.completionStatus,
+            result.completionStatus,
+            'Not Started'
+        );
+
+
+    if (
+        normalize(
+            completionStatus
+        ) !== 'complete'
+    ) {
+
+        showMessage(
+            'This student has an incomplete result. Complete all required scores before generating the PDF.'
+        );
+
+        return;
+
+    }
+
+
+    const button =
+        document.getElementById(
+            'generateStudentPdfButton'
+        );
+
+
+    const message =
+        document.getElementById(
+            'pdfGenerationMessage'
+        );
+
+
+    if (button) {
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            'Generating PDF...';
+
+    }
+
+
+    if (message) {
+
+        message.classList.remove(
+            'hidden'
+        );
+
+        message.textContent =
+            'Preparing the student result PDF. Please wait...';
+
+    }
+
+
+    try {
+
+        const response =
+            await apiRequest(
+                'generateStudentResultPdf',
+                {
+
+                    schoolId:
+                        currentSession.schoolId,
+
+                    sessionId:
+                        currentSelected.sessionId,
+
+                    term:
+                        currentSelected.term,
+
+                    studentId:
+                        currentViewedStudentId
+
+                }
+            );
+
+
+        if (!response.success) {
+
+            throw new Error(
+                response.error ||
+                response.message ||
+                'The student result PDF could not be generated.'
+            );
+
+        }
+
+
+        if (
+            !response.file
+        ) {
+
+            throw new Error(
+                'The PDF was generated, but no file information was returned.'
+            );
+
+        }
+
+
+        const pdfUrl =
+            response.file.url ||
+            response.file.downloadUrl ||
+            '';
+
+
+        if (!pdfUrl) {
+
+            throw new Error(
+                'The PDF was generated, but its file URL was not returned.'
+            );
+
+        }
+
+
+        if (message) {
+
+            message.textContent =
+                'PDF generated successfully. Opening the result...';
+
+        }
+
+
+        /*
+         * The PDF URL is opened immediately from the
+         * button-click flow to reduce popup-blocking issues.
+         */
+        window.open(
+            pdfUrl,
+            '_blank',
+            'noopener,noreferrer'
+        );
+
+
+        if (message) {
+
+            message.innerHTML =
+                'PDF generated successfully. ' +
+                '<a href="' +
+                escapeHtml(pdfUrl) +
+                '" target="_blank" rel="noopener noreferrer">' +
+                'Open PDF' +
+                '</a>';
+
+        }
+
+
+        if (button) {
+
+            button.textContent =
+                'Generate PDF Again';
+
+            button.disabled =
+                false;
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            'Student PDF generation error:',
+            error
+        );
+
+
+        if (message) {
+
+            message.classList.remove(
+                'hidden'
+            );
+
+            message.textContent =
+                error.message ||
+                'The PDF could not be generated.';
+
+        }
+
+
+        if (button) {
+
+            button.disabled =
+                false;
+
+            button.textContent =
+                'Generate PDF';
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+   PDF BUTTON EVENT DELEGATION
+============================================================ */
+
+document.addEventListener(
+    'click',
+    function (event) {
+
+        const target =
+            event.target;
+
+
+        if (
+            target &&
+            target.id ===
+                'generateStudentPdfButton'
+        ) {
+
+            generateStudentResultPdf();
+
+        }
+
+    }
+);
+
+
+/* ============================================================
    CLOSE RESULT MODAL
 ============================================================ */
 
@@ -2732,6 +3189,14 @@ function closeStudentResultModal() {
         );
 
     }
+
+
+    currentViewedStudentId =
+        '';
+
+
+    currentViewedResult =
+        null;
 
 
     document.body.style.overflow =
@@ -2988,7 +3453,9 @@ function showMessage(
 
 
     if (!pageMessage) {
+
         return;
+
     }
 
 
@@ -3017,12 +3484,9 @@ function showMessage(
 }
 
 
-/*
- * This is the function that was missing.
- *
- * All previous calls to hidePageMessage()
- * have been standardized to this function.
- */
+/* ============================================================
+   HIDE PAGE MESSAGE
+============================================================ */
 
 function hideMessage() {
 
@@ -3072,6 +3536,37 @@ function redirectToLogin() {
 
     window.location.href =
         'index.html';
+
+}
+
+
+/* ============================================================
+   SET TEXT
+============================================================ */
+
+function setText(
+    elementId,
+    value
+) {
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!element) {
+
+        return;
+
+    }
+
+
+    element.textContent =
+        value === null ||
+        value === undefined
+            ? ''
+            : String(value);
 
 }
 
