@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#4f46e5"
+    >
+
+    <title>
+        Grading | School Results System
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="../css/grading.css"
+    >
+
+</head>
+
+
+<body>
+
+<div class="app-shell">
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
+
+        <div class="sidebar-brand">
+
+            <div class="brand-mark">
+                SR
+            </div>
+
+            <div class="brand-text">
+
+                <strong>
+                    School Results
+                </strong>
+
+                <span>
+                    Management System
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <nav class="main-navigation">
+
+            <div class="nav-section-label">
+                MAIN
+            </div>
+
+            <a
+                href="dashboard.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">⌂</span>
+                <span>Dashboard</span>
+            </a>
+
+
+            <div class="nav-section-label">
+                ACADEMIC
+            </div>
+
+            <a
+                href="sessions.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">◷</span>
+                <span>Sessions</span>
+            </a>
+
+            <a
+                href="classes.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">▦</span>
+                <span>Classes</span>
+            </a>
+
+            <a
+                href="subjects.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">◇</span>
+                <span>Subjects</span>
+            </a>
+
+            <a
+                href="teachers.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">♙</span>
+                <span>Teachers</span>
+            </a>
+
+            <a
+                href="assignments.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">≡</span>
+                <span>Assignments</span>
+            </a>
+
+            <a
+                href="students.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">♧</span>
+                <span>Students</span>
+            </a>
+
+            <a
+                href="grading.html"
+                class="nav-link active"
+            >
+                <span class="nav-icon">%</span>
+                <span>Grading</span>
+            </a>
+
+
+            <div class="nav-section-label">
+                RESULTS
+            </div>
+
+            <a
+                href="score-entry.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">✎</span>
+                <span>Score Entry</span>
+            </a>
+
+            <a
+                href="result-management.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">▤</span>
+                <span>Results</span>
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-footer">
+
+            <button
+                type="button"
+                class="logout-button"
+                id="logoutButton"
+            >
+                <span>⇥</span>
+                Logout
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN AREA
+    ====================================================== -->
+
+    <main class="main-area">
+
+
+        <!-- TOPBAR -->
+
+        <header class="topbar">
+
+            <button
+                type="button"
+                class="menu-button"
+                id="menuButton"
+                aria-label="Open menu"
+            >
+                ☰
+            </button>
+
+
+            <div class="topbar-title">
+
+                <span id="schoolName">
+                    School Results System
+                </span>
+
+            </div>
+
+
+            <div class="topbar-user">
+
+                <div class="user-avatar">
+
+                    <span id="userInitials">
+                        --
+                    </span>
+
+                </div>
+
+                <div class="user-info">
+
+                    <strong id="userName">
+                        User
+                    </strong>
+
+                    <span id="userRole">
+                        --
+                    </span>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             PAGE CONTENT
+        ================================================== -->
+
+        <section class="page-content">
+
+
+            <!-- PAGE HEADER -->
+
+            <div class="page-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        ACADEMIC SETUP
+                    </span>
+
+                    <h1>
+                        Grading
+                    </h1>
+
+                    <p>
+                        Configure the score ranges, grades,
+                        and remarks used for student results.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="primary-button"
+                    id="openCreateButton"
+                >
+                    <span>+</span>
+                    New Grade
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 SUMMARY
+            ================================================== -->
+
+            <section class="grading-summary">
+
+                <div class="summary-icon">
+                    %
+                </div>
+
+                <div class="summary-content">
+
+                    <span class="card-label">
+                        ACTIVE GRADES
+                    </span>
+
+                    <strong id="activeGradingCount">
+                        0
+                    </strong>
+
+                    <small>
+                        Active grading rules currently
+                        used for result calculations.
+                    </small>
+
+                </div>
+
+            </section>
+
+
+            <!-- MESSAGE -->
+
+            <div
+                class="page-message hidden"
+                id="pageMessage"
+            >
+
+                <span id="messageText"></span>
+
+                <button
+                    type="button"
+                    id="closeMessage"
+                    aria-label="Close"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 GRADING TABLE
+            ================================================== -->
+
+            <section class="content-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            GRADING MANAGEMENT
+                        </span>
+
+                        <h2>
+                            Grading Rules
+                        </h2>
+
+                    </div>
+
+                    <span
+                        class="record-count"
+                        id="recordCount"
+                    >
+                        0 grades
+                    </span>
+
+                </div>
+
+
+                <div
+                    class="table-wrapper"
+                    id="tableWrapper"
+                >
+
+                    <div class="loading-state">
+
+                        <div class="spinner"></div>
+
+                        <span>
+                            Loading grading rules...
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- =========================================================
+     MOBILE SIDEBAR OVERLAY
+========================================================= -->
+
+<div
+    class="sidebar-overlay"
+    id="sidebarOverlay"
+></div>
+
+
+<!-- =========================================================
+     CREATE / EDIT GRADING MODAL
+========================================================= -->
+
+<div
+    class="modal-backdrop hidden"
+    id="gradingModal"
+>
+
+    <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalTitle"
+    >
+
+        <div class="modal-header">
+
+            <div>
+
+                <span class="eyebrow">
+                    ACADEMIC SETUP
+                </span>
+
+                <h2 id="modalTitle">
+                    Create Grading Rule
+                </h2>
+
+            </div>
+
+
+            <button
+                type="button"
+                class="modal-close"
+                id="closeModalButton"
+                aria-label="Close"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="gradingForm">
+
+
+            <!-- GRADE -->
+
+            <div class="form-group">
+
+                <label for="grade">
+                    Grade
+                </label>
+
+                <input
+                    type="text"
+                    id="grade"
+                    name="grade"
+                    placeholder="e.g. A"
+                    maxlength="20"
+                    autocomplete="off"
+                    required
+                >
+
+                <small>
+                    Enter the grade label that will appear
+                    on student results.
+                </small>
+
+            </div>
+
+
+            <!-- MINIMUM SCORE -->
+
+            <div class="form-group">
+
+                <label for="minScore">
+                    Minimum Score
+                </label>
+
+                <input
+                    type="number"
+                    id="minScore"
+                    name="minScore"
+                    placeholder="e.g. 70"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    required
+                >
+
+                <small>
+                    The lowest score included in this grade.
+                </small>
+
+            </div>
+
+
+            <!-- MAXIMUM SCORE -->
+
+            <div class="form-group">
+
+                <label for="maxScore">
+                    Maximum Score
+                </label>
+
+                <input
+                    type="number"
+                    id="maxScore"
+                    name="maxScore"
+                    placeholder="e.g. 100"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    required
+                >
+
+                <small>
+                    The highest score included in this grade.
+                </small>
+
+            </div>
+
+
+            <!-- REMARK -->
+
+            <div class="form-group">
+
+                <label for="remark">
+                    Remark
+                </label>
+
+                <input
+                    type="text"
+                    id="remark"
+                    name="remark"
+                    placeholder="e.g. Excellent"
+                    maxlength="100"
+                    autocomplete="off"
+                >
+
+                <small>
+                    Optional description associated with
+                    this grade.
+                </small>
+
+            </div>
+
+
+            <!-- FORM ERROR -->
+
+            <div
+                class="form-error hidden"
+                id="formError"
+            ></div>
+
+
+            <!-- ACTIONS -->
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="secondary-button"
+                    id="cancelButton"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                    id="saveButton"
+                >
+                    Create Grade
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script src="../js/grading.js"></script>
+
+</body>
+
+</html>
