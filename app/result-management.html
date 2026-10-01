@@ -12,14 +12,19 @@
 
     <meta
         name="theme-color"
-        content="#4A0754"
+        content="#4f46e5"
     >
 
-    <title>Result Management | School Results System</title>
+    <meta
+        name="description"
+        content="Manage and review student results."
+    >
+
+    <title>Results | School Results System</title>
 
     <link
         rel="stylesheet"
-        href="result-management.css"
+        href="../css/result-management.css"
     >
 
 </head>
@@ -28,427 +33,380 @@
 <body>
 
 
-<!-- =========================================================
-     PAGE
-========================================================= -->
-
-<div class="page-shell">
+<div class="app-shell">
 
 
     <!-- =====================================================
-         HEADER
+         SIDEBAR
     ====================================================== -->
 
-    <header class="page-header">
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
 
-        <div>
+        <div class="sidebar-brand">
 
-            <p class="eyebrow">
-                SCHOOL RESULTS SYSTEM
-            </p>
+            <div class="brand-mark">
+                SR
+            </div>
 
-            <h1>
-                Result Management
-            </h1>
+            <div class="brand-text">
 
-            <p class="header-description">
-                Prepare, review and generate student academic results.
-            </p>
+                <strong>
+                    School Results
+                </strong>
 
-        </div>
-
-
-        <button
-            type="button"
-            class="secondary-button"
-            id="refreshButton"
-        >
-            Refresh
-        </button>
-
-    </header>
-
-
-
-    <!-- =====================================================
-         SELECTION PANEL
-    ====================================================== -->
-
-    <section class="panel selection-panel">
-
-        <div class="panel-heading">
-
-            <div>
-
-                <h2>
-                    Select Result Period
-                </h2>
-
-                <p>
-                    Choose the session, term and class you want to manage.
-                </p>
+                <span>
+                    Management System
+                </span>
 
             </div>
 
         </div>
 
 
-        <div class="selection-grid">
+        <nav class="main-navigation">
 
 
-            <div class="form-group">
+            <div class="navigation-section">
 
-                <label for="sessionSelect">
-                    Session
-                </label>
+                <div class="navigation-label">
+                    MAIN
+                </div>
 
-                <select id="sessionSelect">
-
-                    <option value="">
-                        Select session
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="form-group">
-
-                <label for="termSelect">
-                    Term
-                </label>
-
-                <select id="termSelect">
-
-                    <option value="">
-                        Select term
-                    </option>
-
-                </select>
+                <a
+                    href="dashboard.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">⌂</span>
+                    <span>Dashboard</span>
+                </a>
 
             </div>
 
 
-            <div class="form-group">
+            <div class="navigation-section">
 
-                <label for="classSelect">
-                    Class
-                </label>
+                <div class="navigation-label">
+                    ACADEMIC
+                </div>
 
-                <select id="classSelect">
+                <a
+                    href="sessions.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">◷</span>
+                    <span>Sessions</span>
+                </a>
 
-                    <option value="">
-                        Select class
-                    </option>
+                <a
+                    href="classes.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">▦</span>
+                    <span>Classes</span>
+                </a>
 
-                </select>
+                <a
+                    href="subjects.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">◇</span>
+                    <span>Subjects</span>
+                </a>
+
+                <a
+                    href="teachers.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">♙</span>
+                    <span>Teachers</span>
+                </a>
+
+                <a
+                    href="assignments.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">≡</span>
+                    <span>Assignments</span>
+                </a>
+
+                <a
+                    href="students.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">♧</span>
+                    <span>Students</span>
+                </a>
+
+                <a
+                    href="grading.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">%</span>
+                    <span>Grading</span>
+                </a>
 
             </div>
 
 
-        </div>
+            <div class="navigation-section">
+
+                <div class="navigation-label">
+                    RESULTS
+                </div>
+
+                <a
+                    href="score-entry.html"
+                    class="nav-item"
+                >
+                    <span class="nav-icon">✎</span>
+                    <span>Score Entry</span>
+                </a>
+
+                <a
+                    href="result-management.html"
+                    class="nav-item active"
+                >
+                    <span class="nav-icon">▤</span>
+                    <span>Results</span>
+                </a>
+
+            </div>
 
 
-        <div class="selection-actions">
+        </nav>
+
+
+        <div class="sidebar-footer">
 
             <button
                 type="button"
-                class="primary-button"
-                id="loadResultsButton"
+                class="logout-button"
+                id="logoutButton"
             >
-                Load Results
+                <span>↪</span>
+                <span>Logout</span>
             </button>
 
         </div>
 
-    </section>
+    </aside>
 
 
 
     <!-- =====================================================
-         MESSAGE
+         MAIN AREA
     ====================================================== -->
 
-    <div
-        id="messageBox"
-        class="message-box hidden"
-    ></div>
+    <main class="main-area">
 
 
+        <!-- =================================================
+             TOPBAR
+        ================================================== -->
 
-    <!-- =====================================================
-         OVERVIEW
-    ====================================================== -->
-
-    <section
-        id="overviewSection"
-        class="hidden"
-    >
-
-
-        <div class="section-heading">
-
-            <div>
-
-                <h2>
-                    Result Overview
-                </h2>
-
-                <p id="overviewDescription">
-                    Result preparation status.
-                </p>
-
-            </div>
-
-
-            <div
-                id="pdfStatusBadge"
-                class="status-badge"
-            >
-                Not Ready
-            </div>
-
-        </div>
-
-
-
-        <div class="stat-grid">
-
-
-            <div class="stat-card">
-
-                <span class="stat-label">
-                    Students
-                </span>
-
-                <strong
-                    id="totalStudents"
-                    class="stat-value"
-                >
-                    0
-                </strong>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span class="stat-label">
-                    Complete
-                </span>
-
-                <strong
-                    id="completeStudents"
-                    class="stat-value"
-                >
-                    0
-                </strong>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span class="stat-label">
-                    Incomplete
-                </span>
-
-                <strong
-                    id="incompleteStudents"
-                    class="stat-value"
-                >
-                    0
-                </strong>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span class="stat-label">
-                    Not Started
-                </span>
-
-                <strong
-                    id="notStartedStudents"
-                    class="stat-value"
-                >
-                    0
-                </strong>
-
-            </div>
-
-
-        </div>
-
-
-
-        <div class="action-panel">
-
-            <div>
-
-                <h3>
-                    Class Results
-                </h3>
-
-                <p>
-                    Generate result PDFs when all required scores are complete.
-                </p>
-
-            </div>
-
+        <header class="topbar">
 
             <button
                 type="button"
-                id="generateClassPdfButton"
-                class="primary-button"
-                disabled
+                class="menu-button"
+                id="menuButton"
+                aria-label="Open navigation"
             >
-                Generate Class PDFs
+                ☰
             </button>
 
-        </div>
 
+            <div class="topbar-title">
 
-    </section>
-
-
-
-    <!-- =====================================================
-         STUDENT RESULTS
-    ====================================================== -->
-
-    <section
-        id="studentsSection"
-        class="panel hidden"
-    >
-
-
-        <div class="panel-heading">
-
-            <div>
-
-                <h2>
-                    Students
-                </h2>
-
-                <p>
-                    Review each student's result status.
-                </p>
+                <span id="schoolName">
+                    School Results System
+                </span>
 
             </div>
 
-        </div>
+
+            <div class="topbar-user">
+
+                <div
+                    class="user-avatar"
+                    id="userInitials"
+                >
+                    SR
+                </div>
+
+                <div class="user-info">
+
+                    <strong id="userName">
+                        User
+                    </strong>
+
+                    <span id="userRole">
+                        Administrator
+                    </span>
+
+                </div>
+
+            </div>
+
+        </header>
 
 
 
-        <div class="table-wrapper">
+        <!-- =================================================
+             PAGE CONTENT
+        ================================================== -->
 
-            <table>
-
-                <thead>
-
-                    <tr>
-
-                        <th>
-                            #
-                        </th>
-
-                        <th>
-                            Student
-                        </th>
-
-                        <th>
-                            Admission No.
-                        </th>
-
-                        <th>
-                            Status
-                        </th>
-
-                        <th>
-                            Total
-                        </th>
-
-                        <th>
-                            Average
-                        </th>
-
-                        <th>
-                            Position
-                        </th>
-
-                        <th>
-                            Action
-                        </th>
-
-                    </tr>
-
-                </thead>
+        <section class="page-content">
 
 
-                <tbody id="studentsTableBody">
+            <!-- PAGE HEADER -->
 
-                    <tr>
-
-                        <td
-                            colspan="8"
-                            class="empty-cell"
-                        >
-                            No results loaded.
-                        </td>
-
-                    </tr>
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-
-    </section>
-
-
-
-    <!-- =====================================================
-         RESULT MODAL
-    ====================================================== -->
-
-    <div
-        id="resultModal"
-        class="modal hidden"
-    >
-
-        <div
-            class="modal-overlay"
-            data-close-modal
-        ></div>
-
-
-        <div class="modal-card">
-
-
-            <div class="modal-header">
+            <div class="page-header">
 
                 <div>
 
-                    <p class="eyebrow">
-                        STUDENT RESULT
+                    <div class="eyebrow">
+                        RESULTS
+                    </div>
+
+                    <h1>
+                        Result Management
+                    </h1>
+
+                    <p>
+                        Review student results, completion status,
+                        positions and result readiness.
                     </p>
 
-                    <h2 id="modalStudentName">
-                        Student Result
-                    </h2>
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 SELECTION PANEL
+            ================================================== -->
+
+            <section class="selection-panel">
+
+                <div class="selection-heading">
+
+                    <div>
+
+                        <div class="panel-eyebrow">
+                            RESULT PERIOD
+                        </div>
+
+                        <h2>
+                            Select Result
+                        </h2>
+
+                    </div>
 
                 </div>
 
 
+                <div class="selection-grid">
+
+
+                    <div class="form-group">
+
+                        <label for="sessionSelect">
+                            Session
+                        </label>
+
+                        <select
+                            id="sessionSelect"
+                        >
+
+                            <option value="">
+                                Select session
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="termSelect">
+                            Term
+                        </label>
+
+                        <select
+                            id="termSelect"
+                        >
+
+                            <option value="">
+                                Select term
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="classSelect">
+                            Class
+                        </label>
+
+                        <select
+                            id="classSelect"
+                        >
+
+                            <option value="">
+                                Select class
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                </div>
+
+
+                <div
+                    class="selection-message hidden"
+                    id="selectionMessage"
+                >
+                    <span id="selectionMessageText"></span>
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 PAGE MESSAGE
+            ================================================== -->
+
+            <div
+                class="page-message hidden"
+                id="pageMessage"
+            >
+
+                <div class="message-content">
+
+                    <strong>
+                        Notice
+                    </strong>
+
+                    <span id="messageText"></span>
+
+                </div>
+
                 <button
                     type="button"
-                    class="close-button"
-                    data-close-modal
+                    id="closeMessage"
+                    aria-label="Close message"
                 >
                     ×
                 </button>
@@ -457,70 +415,393 @@
 
 
 
-            <div
-                id="modalContent"
-                class="modal-content"
+            <!-- =================================================
+                 OVERVIEW
+            ================================================== -->
+
+            <section
+                class="overview-section hidden"
+                id="overviewSection"
             >
 
-                Loading...
 
-            </div>
+                <div class="overview-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            RESULT OVERVIEW
+                        </div>
+
+                        <h2 id="overviewTitle">
+                            Result Overview
+                        </h2>
+
+                        <p id="overviewSubtitle">
+                            Result completion information.
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        class="readiness-badge"
+                        id="readinessBadge"
+                    >
+                        Checking...
+                    </div>
+
+                </div>
 
 
 
-            <div class="modal-footer">
+                <div class="summary-grid">
 
-                <button
-                    type="button"
-                    class="secondary-button"
-                    data-close-modal
+
+                    <div class="summary-card">
+
+                        <div class="summary-icon">
+                            #
+                        </div>
+
+                        <div class="summary-content">
+
+                            <span class="card-label">
+                                TOTAL STUDENTS
+                            </span>
+
+                            <strong id="totalStudents">
+                                0
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="summary-card">
+
+                        <div class="summary-icon success">
+                            ✓
+                        </div>
+
+                        <div class="summary-content">
+
+                            <span class="card-label">
+                                COMPLETED
+                            </span>
+
+                            <strong id="completedStudents">
+                                0
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="summary-card">
+
+                        <div class="summary-icon warning">
+                            !
+                        </div>
+
+                        <div class="summary-content">
+
+                            <span class="card-label">
+                                INCOMPLETE
+                            </span>
+
+                            <strong id="incompleteStudents">
+                                0
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="summary-card">
+
+                        <div class="summary-icon muted">
+                            ○
+                        </div>
+
+                        <div class="summary-content">
+
+                            <span class="card-label">
+                                NOT STARTED
+                            </span>
+
+                            <strong id="notStartedStudents">
+                                0
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- VALIDATION -->
+
+                <div
+                    class="validation-panel"
+                    id="validationPanel"
                 >
-                    Close
-                </button>
 
-                <button
-                    type="button"
-                    class="primary-button"
-                    id="generateStudentPdfButton"
+                    <div class="validation-icon">
+                        !
+                    </div>
+
+                    <div class="validation-content">
+
+                        <strong id="validationTitle">
+                            Result readiness
+                        </strong>
+
+                        <p id="validationMessage">
+                            Checking result readiness...
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+
+            <!-- =================================================
+                 STUDENT RESULTS
+            ================================================== -->
+
+            <section
+                class="content-panel hidden"
+                id="studentsSection"
+            >
+
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="panel-eyebrow">
+                            STUDENT RESULTS
+                        </div>
+
+                        <h2>
+                            Class Results
+                        </h2>
+
+                    </div>
+
+
+                    <span
+                        class="record-count"
+                        id="recordCount"
+                    >
+                        0 students
+                    </span>
+
+                </div>
+
+
+
+                <div
+                    class="table-wrapper"
+                    id="tableWrapper"
                 >
-                    Generate PDF
-                </button>
 
-            </div>
+                    <div
+                        class="table-loading"
+                        id="tableLoading"
+                    >
+
+                        <div class="loading-spinner"></div>
+
+                        <span>
+                            Loading student results...
+                        </span>
+
+                    </div>
 
 
-        </div>
+                    <div
+                        class="table-empty hidden"
+                        id="tableEmpty"
+                    >
 
-    </div>
+                        <div class="empty-icon">
+                            ▤
+                        </div>
+
+                        <strong>
+                            No students found
+                        </strong>
+
+                        <span>
+                            There are no active students in this class.
+                        </span>
+
+                    </div>
+
+
+                    <table
+                        id="resultsTable"
+                        class="results-table hidden"
+                    >
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Admission No.
+                                </th>
+
+                                <th>
+                                    Student Name
+                                </th>
+
+                                <th>
+                                    Total
+                                </th>
+
+                                <th>
+                                    Average
+                                </th>
+
+                                <th>
+                                    Position
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Action
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="resultsTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+            </section>
 
 
 
-    <!-- =====================================================
-         LOADING
-    ====================================================== -->
+        </section>
 
-    <div
-        id="loadingOverlay"
-        class="loading-overlay hidden"
-    >
 
-        <div class="loading-card">
-
-            <div class="spinner"></div>
-
-            <p id="loadingText">
-                Loading...
-            </p>
-
-        </div>
-
-    </div>
+    </main>
 
 
 </div>
 
 
-<script src="result-management.js"></script>
+
+<!-- =========================================================
+     STUDENT RESULT MODAL
+========================================================== -->
+
+<div
+    class="modal-backdrop hidden"
+    id="studentResultModal"
+>
+
+    <div
+        class="modal result-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="studentResultTitle"
+    >
+
+
+        <div class="modal-header">
+
+            <div>
+
+                <div class="eyebrow">
+                    STUDENT RESULT
+                </div>
+
+                <h2 id="studentResultTitle">
+                    Result Details
+                </h2>
+
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                id="closeStudentResultButton"
+                aria-label="Close result"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+
+        <div
+            class="result-modal-body"
+            id="resultModalBody"
+        >
+
+            <div class="result-loading">
+
+                <div class="loading-spinner"></div>
+
+                <span>
+                    Loading result...
+                </span>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="secondary-button"
+                id="cancelResultButton"
+            >
+                Close
+            </button>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+
+<script
+    src="../js/result-management.js"
+></script>
 
 </body>
 
