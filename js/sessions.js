@@ -2,17 +2,23 @@
  * ============================================================
  * SCHOOL RESULTS SYSTEM
  * FILE: sessions.js
- * VERSION: 1.0.0
+ * VERSION: 1.1.0
  *
  * PURPOSE:
  * Academic session management frontend.
+ *
+ * FIXES:
+ * - Correctly reads Apps Script "error" responses.
+ * - Provides useful API error messages.
+ * - Handles non-JSON server responses safely.
+ * - Preserves session creation and activation logic.
  * ============================================================
  */
 
 
-// ============================================================
-// CONFIGURATION
-// ============================================================
+/* ============================================================
+   CONFIGURATION
+============================================================ */
 
 const API_URL =
     'https://script.google.com/macros/s/AKfycbwJOUmxayihKhry6HSZQl-tsnzbQYM8jDkHaQ4O_CdOqpnGTOJ8bi_80EjD6lLcxqCI/exec';
@@ -21,16 +27,16 @@ const SESSION_KEY =
     'school_results_system_session_v1';
 
 
-// ============================================================
-// STATE
-// ============================================================
+/* ============================================================
+   STATE
+============================================================ */
 
 let sessions = [];
 
 
-// ============================================================
-// DOM
-// ============================================================
+/* ============================================================
+   DOM
+============================================================ */
 
 const sidebar =
     document.getElementById('sidebar');
@@ -81,9 +87,9 @@ const closeMessage =
     document.getElementById('closeMessage');
 
 
-// ============================================================
-// START
-// ============================================================
+/* ============================================================
+   START
+============================================================ */
 
 document.addEventListener(
     'DOMContentLoaded',
@@ -91,9 +97,9 @@ document.addEventListener(
 );
 
 
-// ============================================================
-// INITIALIZE
-// ============================================================
+/* ============================================================
+   INITIALIZE
+============================================================ */
 
 function initialize() {
 
@@ -131,9 +137,9 @@ function initialize() {
 }
 
 
-// ============================================================
-// SESSION STORAGE
-// ============================================================
+/* ============================================================
+   SESSION STORAGE
+============================================================ */
 
 function getStoredSession() {
 
@@ -166,9 +172,9 @@ function getStoredSession() {
 }
 
 
-// ============================================================
-// LOGIN REDIRECT
-// ============================================================
+/* ============================================================
+   LOGIN REDIRECT
+============================================================ */
 
 function redirectToLogin() {
 
@@ -178,9 +184,9 @@ function redirectToLogin() {
 }
 
 
-// ============================================================
-// USER
-// ============================================================
+/* ============================================================
+   USER
+============================================================ */
 
 function populateUser(
     session
@@ -222,9 +228,9 @@ function populateUser(
 }
 
 
-// ============================================================
-// API
-// ============================================================
+/* ============================================================
+   API
+============================================================ */
 
 async function apiRequest(
     action,
@@ -244,54 +250,142 @@ async function apiRequest(
     }
 
 
-    const response =
-        await fetch(
-            API_URL,
-            {
+    let response;
 
-                method:
-                    'POST',
 
-                headers: {
-                    'Content-Type':
-                        'text/plain;charset=utf-8'
-                },
+    try {
 
-                body:
-                    JSON.stringify({
+        response =
+            await fetch(
+                API_URL,
+                {
 
-                        action:
-                            action,
+                    method:
+                        'POST',
 
-                        ...data
+                    headers: {
+                        'Content-Type':
+                            'text/plain;charset=utf-8'
+                    },
 
-                    })
+                    body:
+                        JSON.stringify({
 
-            }
+                            action:
+                                action,
+
+                            ...data
+
+                        })
+
+                }
+            );
+
+    } catch (error) {
+
+        console.error(
+            'Network error:',
+            error
         );
 
-
-    if (!response.ok) {
-
         throw new Error(
-            'Server request failed.'
+            'Could not connect to the School Results System server.'
         );
 
     }
 
 
-    const result =
-        await response.json();
+    /*
+     * Read the response as text first.
+     *
+     * This allows us to see the actual Apps Script
+     * response even if it is not valid JSON.
+     */
 
+    const responseText =
+        await response.text();
+
+
+    console.log(
+        `API response [${action}]:`,
+        responseText
+    );
+
+
+    /*
+     * HTTP-level failure.
+     */
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Server request failed (${response.status}).`
+        );
+
+    }
+
+
+    let result;
+
+
+    try {
+
+        result =
+            JSON.parse(
+                responseText
+            );
+
+    } catch (error) {
+
+        console.error(
+            'Invalid JSON response:',
+            responseText
+        );
+
+        throw new Error(
+            'The server returned an invalid response.'
+        );
+
+    }
+
+
+    /*
+     * IMPORTANT:
+     *
+     * Apps Script jsonResponse() returns:
+     *
+     * {
+     *   success: false,
+     *   error: "Actual error here"
+     * }
+     *
+     * The old frontend was looking only for
+     * result.message, which caused the useful
+     * backend error to become "Request failed."
+     */
 
     if (
         result &&
         result.success === false
     ) {
 
-        throw new Error(
+        const serverError =
+            result.error ||
             result.message ||
-            'Request failed.'
+            result.details ||
+            result.statusMessage ||
+            'Request failed.';
+
+
+        console.error(
+            `API error [${action}]:`,
+            serverError,
+            result
+        );
+
+
+        throw new Error(
+            String(serverError)
         );
 
     }
@@ -302,9 +396,9 @@ async function apiRequest(
 }
 
 
-// ============================================================
-// LOAD SESSIONS
-// ============================================================
+/* ============================================================
+   LOAD SESSIONS
+============================================================ */
 
 async function loadSessions() {
 
@@ -315,6 +409,18 @@ async function loadSessions() {
 
         const session =
             getStoredSession();
+
+
+        if (
+            !session ||
+            !session.schoolId
+        ) {
+
+            redirectToLogin();
+
+            return;
+
+        }
 
 
         const result =
@@ -354,9 +460,9 @@ async function loadSessions() {
 }
 
 
-// ============================================================
-// EXTRACT SESSIONS
-// ============================================================
+/* ============================================================
+   EXTRACT SESSIONS
+============================================================ */
 
 function extractSessions(
     result
@@ -391,7 +497,9 @@ function extractSessions(
 
 
     if (
-        Array.isArray(result.data)
+        Array.isArray(
+            result.data
+        )
     ) {
 
         return result.data;
@@ -400,7 +508,9 @@ function extractSessions(
 
 
     if (
-        Array.isArray(result.results)
+        Array.isArray(
+            result.results
+        )
     ) {
 
         return result.results;
@@ -413,9 +523,9 @@ function extractSessions(
 }
 
 
-// ============================================================
-// RENDER
-// ============================================================
+/* ============================================================
+   RENDER
+============================================================ */
 
 function renderSessions() {
 
@@ -427,7 +537,9 @@ function renderSessions() {
         }`;
 
 
-    if (sessions.length === 0) {
+    if (
+        sessions.length === 0
+    ) {
 
         tableWrapper.innerHTML = `
 
@@ -509,9 +621,9 @@ function renderSessions() {
 
             <tbody>
 
-                ${sorted.map(
-                    renderSessionRow
-                ).join('')}
+                ${sorted
+                    .map(renderSessionRow)
+                    .join('')}
 
             </tbody>
 
@@ -534,6 +646,7 @@ function renderSessions() {
                         const sessionId =
                             button.dataset.sessionId;
 
+
                         activateSession(
                             sessionId
                         );
@@ -547,9 +660,9 @@ function renderSessions() {
 }
 
 
-// ============================================================
-// SESSION ROW
-// ============================================================
+/* ============================================================
+   SESSION ROW
+============================================================ */
 
 function renderSessionRow(
     session
@@ -657,9 +770,9 @@ function renderSessionRow(
 }
 
 
-// ============================================================
-// ACTIVE SESSION
-// ============================================================
+/* ============================================================
+   ACTIVE SESSION
+============================================================ */
 
 function updateActiveSession() {
 
@@ -672,8 +785,10 @@ function updateActiveSession() {
                         session.status ||
                         session['Status'] ||
                         ''
-                    ).trim()
+                    )
+                    .trim()
                     .toLowerCase();
+
 
                 return status === 'active';
 
@@ -744,6 +859,7 @@ function updateActiveSession() {
     badge.textContent =
         'Active';
 
+
     badge.classList.add(
         'active'
     );
@@ -751,9 +867,9 @@ function updateActiveSession() {
 }
 
 
-// ============================================================
-// CREATE SESSION
-// ============================================================
+/* ============================================================
+   CREATE SESSION
+============================================================ */
 
 async function createSession() {
 
@@ -826,6 +942,18 @@ async function createSession() {
         getStoredSession();
 
 
+    if (
+        !storedSession ||
+        !storedSession.schoolId
+    ) {
+
+        redirectToLogin();
+
+        return;
+
+    }
+
+
     setSaving(true);
 
 
@@ -887,9 +1015,9 @@ async function createSession() {
 }
 
 
-// ============================================================
-// ACTIVATE SESSION
-// ============================================================
+/* ============================================================
+   ACTIVATE SESSION
+============================================================ */
 
 async function activateSession(
     sessionId
@@ -907,7 +1035,8 @@ async function activateSession(
                 return (
                     String(
                         session.sessionId ||
-                        session['Session ID']
+                        session['Session ID'] ||
+                        ''
                     ) ===
                     String(sessionId)
                 );
@@ -941,6 +1070,18 @@ async function activateSession(
 
         const storedSession =
             getStoredSession();
+
+
+        if (
+            !storedSession ||
+            !storedSession.schoolId
+        ) {
+
+            redirectToLogin();
+
+            return;
+
+        }
 
 
         await apiRequest(
@@ -985,9 +1126,9 @@ async function activateSession(
 }
 
 
-// ============================================================
-// MODAL
-// ============================================================
+/* ============================================================
+   MODAL
+============================================================ */
 
 function setupModal() {
 
@@ -1032,6 +1173,7 @@ function openModal() {
 
     clearFormError();
 
+
     sessionModal.classList.remove(
         'hidden'
     );
@@ -1059,6 +1201,7 @@ function closeModal() {
         'hidden'
     );
 
+
     clearFormError();
 
     sessionForm.reset();
@@ -1066,9 +1209,9 @@ function closeModal() {
 }
 
 
-// ============================================================
-// FORM
-// ============================================================
+/* ============================================================
+   FORM
+============================================================ */
 
 function setupForm() {
 
@@ -1109,6 +1252,7 @@ function showFormError(
     formError.textContent =
         message;
 
+
     formError.classList.remove(
         'hidden'
     );
@@ -1121,6 +1265,7 @@ function clearFormError() {
     formError.textContent =
         '';
 
+
     formError.classList.add(
         'hidden'
     );
@@ -1128,9 +1273,9 @@ function clearFormError() {
 }
 
 
-// ============================================================
-// MESSAGES
-// ============================================================
+/* ============================================================
+   MESSAGES
+============================================================ */
 
 function showMessage(
     message,
@@ -1176,9 +1321,9 @@ closeMessage.addEventListener(
 );
 
 
-// ============================================================
-// LOADING / ERROR
-// ============================================================
+/* ============================================================
+   LOADING / ERROR
+============================================================ */
 
 function showTableLoading() {
 
@@ -1225,9 +1370,9 @@ function showTableError(
 }
 
 
-// ============================================================
-// NAVIGATION
-// ============================================================
+/* ============================================================
+   NAVIGATION
+============================================================ */
 
 function setupNavigation() {
 
@@ -1238,6 +1383,7 @@ function setupNavigation() {
             sidebar.classList.toggle(
                 'open'
             );
+
 
             sidebarOverlay.classList.toggle(
                 'visible'
@@ -1277,6 +1423,7 @@ function closeMobileSidebar() {
         'open'
     );
 
+
     sidebarOverlay.classList.remove(
         'visible'
     );
@@ -1284,9 +1431,9 @@ function closeMobileSidebar() {
 }
 
 
-// ============================================================
-// LOGOUT
-// ============================================================
+/* ============================================================
+   LOGOUT
+============================================================ */
 
 function setupLogout() {
 
@@ -1319,9 +1466,9 @@ function setupLogout() {
 }
 
 
-// ============================================================
-// HELPERS
-// ============================================================
+/* ============================================================
+   HELPERS
+============================================================ */
 
 function getInitials(
     name
@@ -1372,7 +1519,11 @@ function formatDate(
         new Date(value);
 
 
-    if (isNaN(date.getTime())) {
+    if (
+        isNaN(
+            date.getTime()
+        )
+    ) {
 
         return String(value);
 
