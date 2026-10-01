@@ -1,15 +1,16 @@
 /* =========================================================
    SCHOOL RESULTS SYSTEM
    FILE: score-entry.js
-   VERSION: 1.1.0
+   VERSION: 1.2.0
 
-   PURPOSE:
-   - Score entry frontend
-   - Loads active academic session
-   - Loads active classes
-   - Loads class-specific score entry setup
-   - Loads students and existing scores
-   - Saves scores in bulk
+   CHANGES IN 1.2.0:
+   - Success/failure message is shown AFTER the table reloads
+     (it used to be hidden immediately by the reload)
+   - Backend failures (failedCount / failed[]) are now reported
+   - Saved scores now display after reload (backend returns them
+     on each student, not in a separate "scores" array)
+   - Rows with only one of Test/Exam are blocked before saving;
+     rows with neither are skipped
 ========================================================= */
 
 
@@ -20,8 +21,7 @@
 const API_URL =
     'https://script.google.com/macros/s/AKfycbwJOUmxayihKhry6HSZQl-tsnzbQYM8jDkHaQ4O_CdOqpnGTOJ8bi_80EjD6lLcxqCI/exec';
 
-const SESSION_KEY =
-    'school_results_system_session_v1';
+const SESSION_KEY = 'school_results_system_session_v1';
 
 
 /* =========================================================
@@ -38,7 +38,6 @@ let setupData = {
 };
 
 let scoreRecords = [];
-
 let currentStudents = [];
 
 let currentSelection = {
@@ -49,7 +48,6 @@ let currentSelection = {
 };
 
 let isSaving = false;
-
 let isLoadingSetup = false;
 
 
@@ -57,108 +55,50 @@ let isLoadingSetup = false;
    DOM
 ========================================================= */
 
-const sidebar =
-    document.getElementById('sidebar');
-
-const menuButton =
-    document.getElementById('menuButton');
-
-const sidebarOverlay =
-    document.getElementById('sidebarOverlay');
-
-const logoutButton =
-    document.getElementById('logoutButton');
-
-const schoolName =
-    document.getElementById('schoolName');
-
-const userName =
-    document.getElementById('userName');
-
-const userRole =
-    document.getElementById('userRole');
-
-const userInitials =
-    document.getElementById('userInitials');
-
-const sessionSelect =
-    document.getElementById('sessionSelect');
-
-const termSelect =
-    document.getElementById('termSelect');
-
-const classSelect =
-    document.getElementById('classSelect');
-
-const subjectSelect =
-    document.getElementById('subjectSelect');
-
-const loadRecordsButton =
-    document.getElementById('loadRecordsButton');
-
-const setupMessage =
-    document.getElementById('setupMessage');
-
-const pageMessage =
-    document.getElementById('pageMessage');
-
-const messageText =
-    document.getElementById('messageText');
-
-const closeMessage =
-    document.getElementById('closeMessage');
-
-const scoreSummary =
-    document.getElementById('scoreSummary');
-
-const studentCount =
-    document.getElementById('studentCount');
-
-const enteredCount =
-    document.getElementById('enteredCount');
-
-const missingCount =
-    document.getElementById('missingCount');
-
-const summarySubject =
-    document.getElementById('summarySubject');
-
-const tableWrapper =
-    document.getElementById('tableWrapper');
-
-const saveScoresButton =
-    document.getElementById('saveScoresButton');
+const sidebar = document.getElementById('sidebar');
+const menuButton = document.getElementById('menuButton');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const logoutButton = document.getElementById('logoutButton');
+const schoolName = document.getElementById('schoolName');
+const userName = document.getElementById('userName');
+const userRole = document.getElementById('userRole');
+const userInitials = document.getElementById('userInitials');
+const sessionSelect = document.getElementById('sessionSelect');
+const termSelect = document.getElementById('termSelect');
+const classSelect = document.getElementById('classSelect');
+const subjectSelect = document.getElementById('subjectSelect');
+const loadRecordsButton = document.getElementById('loadRecordsButton');
+const setupMessage = document.getElementById('setupMessage');
+const pageMessage = document.getElementById('pageMessage');
+const messageText = document.getElementById('messageText');
+const closeMessage = document.getElementById('closeMessage');
+const scoreSummary = document.getElementById('scoreSummary');
+const studentCount = document.getElementById('studentCount');
+const enteredCount = document.getElementById('enteredCount');
+const missingCount = document.getElementById('missingCount');
+const summarySubject = document.getElementById('summarySubject');
+const tableWrapper = document.getElementById('tableWrapper');
+const saveScoresButton = document.getElementById('saveScoresButton');
 
 
 /* =========================================================
    INITIALIZE
 ========================================================= */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    initializeScoreEntry
-);
+document.addEventListener('DOMContentLoaded', initializeScoreEntry);
 
 
 async function initializeScoreEntry() {
 
-    currentSession =
-        loadSession();
-
+    currentSession = loadSession();
 
     if (!currentSession) {
-
         redirectToLogin();
-
         return;
-
     }
 
-
     populateUserInterface();
-
     setupEventListeners();
-
 
     try {
 
@@ -166,21 +106,12 @@ async function initializeScoreEntry() {
 
     } catch (error) {
 
-        console.error(
-            'Score entry setup error:',
-            error
-        );
+        console.error('Score entry setup error:', error);
 
-        showMessage(
-            error.message ||
-            'Unable to load score entry setup.',
-            'error'
-        );
+        const text = error.message || 'Unable to load score entry setup.';
 
-        renderErrorState(
-            error.message ||
-            'Unable to load score entry setup.'
-        );
+        showMessage(text, 'error');
+        renderErrorState(text);
 
     }
 
@@ -195,26 +126,17 @@ function loadSession() {
 
     try {
 
-        const saved =
-            localStorage.getItem(
-                SESSION_KEY
-            );
-
+        const saved = localStorage.getItem(SESSION_KEY);
 
         if (!saved) {
             return null;
         }
 
-
         return JSON.parse(saved);
 
     } catch (error) {
 
-        console.error(
-            'Session error:',
-            error
-        );
-
+        console.error('Session error:', error);
         return null;
 
     }
@@ -224,12 +146,8 @@ function loadSession() {
 
 function getSchoolId() {
 
-    const user =
-        currentSession?.user || {};
-
-    const school =
-        currentSession?.school || {};
-
+    const user = currentSession?.user || {};
+    const school = currentSession?.school || {};
 
     return (
         school.schoolId ||
@@ -244,18 +162,29 @@ function getSchoolId() {
 }
 
 
+function getCurrentUserId() {
+
+    const user = currentSession?.user || {};
+
+    return (
+        user.userId ||
+        user['User ID'] ||
+        currentSession.userId ||
+        currentSession['User ID'] ||
+        ''
+    );
+
+}
+
+
 /* =========================================================
    USER INTERFACE
 ========================================================= */
 
 function populateUserInterface() {
 
-    const user =
-        currentSession?.user || {};
-
-    const school =
-        currentSession?.school || {};
-
+    const user = currentSession?.user || {};
+    const school = currentSession?.school || {};
 
     const name =
         school.schoolName ||
@@ -263,13 +192,11 @@ function populateUserInterface() {
         currentSession.schoolName ||
         'School Results System';
 
-
     const fullName =
         user.fullName ||
         user['Full Name'] ||
         currentSession.fullName ||
         'User';
-
 
     const role =
         user.role ||
@@ -277,45 +204,27 @@ function populateUserInterface() {
         currentSession.role ||
         '--';
 
-
-    schoolName.textContent =
-        name;
-
-    userName.textContent =
-        fullName;
-
-    userRole.textContent =
-        role;
-
-    userInitials.textContent =
-        getInitials(fullName);
+    schoolName.textContent = name;
+    userName.textContent = fullName;
+    userRole.textContent = role;
+    userInitials.textContent = getInitials(fullName);
 
 }
 
 
 function getInitials(name) {
 
-    const value =
-        String(name || '').trim();
-
+    const value = String(name || '').trim();
 
     if (!value) {
         return '--';
     }
 
-
-    const parts =
-        value.split(/\s+/);
-
+    const parts = value.split(/\s+/);
 
     if (parts.length === 1) {
-
-        return parts[0]
-            .substring(0, 2)
-            .toUpperCase();
-
+        return parts[0].substring(0, 2).toUpperCase();
     }
-
 
     return (
         parts[0].charAt(0) +
@@ -332,102 +241,45 @@ function getInitials(name) {
 function setupEventListeners() {
 
     if (menuButton) {
-
-        menuButton.addEventListener(
-            'click',
-            toggleSidebar
-        );
-
+        menuButton.addEventListener('click', toggleSidebar);
     }
-
 
     if (sidebarOverlay) {
-
-        sidebarOverlay.addEventListener(
-            'click',
-            closeSidebar
-        );
-
+        sidebarOverlay.addEventListener('click', closeSidebar);
     }
-
 
     if (logoutButton) {
-
-        logoutButton.addEventListener(
-            'click',
-            handleLogout
-        );
-
+        logoutButton.addEventListener('click', handleLogout);
     }
-
 
     if (loadRecordsButton) {
-
-        loadRecordsButton.addEventListener(
-            'click',
-            loadScoreRecords
-        );
-
+        loadRecordsButton.addEventListener('click', function () {
+            loadScoreRecords();
+        });
     }
-
 
     if (saveScoresButton) {
-
-        saveScoresButton.addEventListener(
-            'click',
-            saveScores
-        );
-
+        saveScoresButton.addEventListener('click', saveScores);
     }
-
 
     if (closeMessage) {
-
-        closeMessage.addEventListener(
-            'click',
-            hideMessage
-        );
-
+        closeMessage.addEventListener('click', hideMessage);
     }
-
 
     if (sessionSelect) {
-
-        sessionSelect.addEventListener(
-            'change',
-            handleSessionChange
-        );
-
+        sessionSelect.addEventListener('change', handleSessionChange);
     }
-
 
     if (termSelect) {
-
-        termSelect.addEventListener(
-            'change',
-            handleSetupChange
-        );
-
+        termSelect.addEventListener('change', handleSetupChange);
     }
-
 
     if (classSelect) {
-
-        classSelect.addEventListener(
-            'change',
-            handleClassChange
-        );
-
+        classSelect.addEventListener('change', handleClassChange);
     }
 
-
     if (subjectSelect) {
-
-        subjectSelect.addEventListener(
-            'change',
-            handleSetupChange
-        );
-
+        subjectSelect.addEventListener('change', handleSetupChange);
     }
 
 }
@@ -440,20 +292,11 @@ function setupEventListeners() {
 function toggleSidebar() {
 
     if (sidebar) {
-
-        sidebar.classList.toggle(
-            'open'
-        );
-
+        sidebar.classList.toggle('open');
     }
 
-
     if (sidebarOverlay) {
-
-        sidebarOverlay.classList.toggle(
-            'visible'
-        );
-
+        sidebarOverlay.classList.toggle('visible');
     }
 
 }
@@ -462,20 +305,11 @@ function toggleSidebar() {
 function closeSidebar() {
 
     if (sidebar) {
-
-        sidebar.classList.remove(
-            'open'
-        );
-
+        sidebar.classList.remove('open');
     }
 
-
     if (sidebarOverlay) {
-
-        sidebarOverlay.classList.remove(
-            'visible'
-        );
-
+        sidebarOverlay.classList.remove('visible');
     }
 
 }
@@ -485,64 +319,38 @@ function closeSidebar() {
    API
 ========================================================= */
 
-async function callApi(
-    action,
-    data = {}
-) {
+async function callApi(action, data = {}) {
 
     const payload = {
         action,
         ...data
     };
 
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+    });
 
-    const response =
-        await fetch(
-            API_URL,
-            {
-                method: 'POST',
-
-                headers: {
-                    'Content-Type':
-                        'text/plain;charset=utf-8'
-                },
-
-                body:
-                    JSON.stringify(payload)
-            }
-        );
-
-
-    const text =
-        await response.text();
-
+    const text = await response.text();
 
     let result;
 
-
     try {
 
-        result =
-            JSON.parse(text);
+        result = JSON.parse(text);
 
     } catch (error) {
 
-        console.error(
-            'Invalid API response:',
-            text
-        );
+        console.error('Invalid API response:', text);
 
-        throw new Error(
-            'The server returned an invalid response.'
-        );
+        throw new Error('The server returned an invalid response.');
 
     }
 
-
-    if (
-        result &&
-        result.success === false
-    ) {
+    if (result && result.success === false) {
 
         throw new Error(
             result.error ||
@@ -552,7 +360,6 @@ async function callApi(
 
     }
 
-
     return result;
 
 }
@@ -560,23 +367,9 @@ async function callApi(
 
 /* =========================================================
    LOAD SCORE ENTRY SETUP
-=========================================================
-
-   IMPORTANT BACKEND FLOW:
-
-   getScoreEntrySetup requires:
-
-   schoolId
-   sessionId
-   classId
-
-   Therefore we must obtain:
-
-   1. School ID from login session
-   2. Active academic session
-   3. Active classes
-   4. Select a class
-   5. THEN call getScoreEntrySetup
+   Flow: sessions -> active session -> active classes ->
+         select class -> getScoreEntrySetup (needs schoolId,
+         sessionId, classId)
 ========================================================= */
 
 async function loadScoreEntrySetup() {
@@ -585,239 +378,109 @@ async function loadScoreEntrySetup() {
         return;
     }
 
-
     isLoadingSetup = true;
 
-
-    const schoolId =
-        getSchoolId();
-
+    const schoolId = getSchoolId();
 
     if (!schoolId) {
+        isLoadingSetup = false;
 
         throw new Error(
             'School information is missing from your session.'
         );
-
     }
-
 
     try {
 
-        /*
-         * -------------------------------------------------
-         * STEP 1
-         * Load all sessions.
-         * -------------------------------------------------
-         */
+        /* STEP 1: all sessions */
 
-        const sessionsResult =
-            await callApi(
-                'getSessions',
-                {
-                    schoolId
-                }
-            );
+        const sessionsResult = await callApi('getSessions', { schoolId });
 
+        setupData.sessions = extractCollectionFromResult(
+            sessionsResult,
+            ['sessions', 'Sessions', 'records', 'data']
+        );
 
-        setupData.sessions =
-            extractCollectionFromResult(
-                sessionsResult,
-                [
-                    'sessions',
-                    'Sessions',
-                    'records',
-                    'data'
-                ]
-            );
-
-
-        /*
-         * -------------------------------------------------
-         * STEP 2
-         * Get active session.
-         * -------------------------------------------------
-         */
+        /* STEP 2: active session */
 
         const activeSessionResult =
-            await callApi(
-                'getActiveSession',
-                {
-                    schoolId
-                }
-            );
+            await callApi('getActiveSession', { schoolId });
 
-
-        const activeSession =
-            extractActiveSession(
-                activeSessionResult
-            );
-
+        const activeSession = extractActiveSession(activeSessionResult);
 
         if (!activeSession) {
-
             throw new Error(
                 'No active academic session has been set for this school.'
             );
-
         }
 
-
-        const activeSessionId =
-            getField(
-                activeSession,
-                [
-                    'Session ID',
-                    'sessionId'
-                ]
-            );
-
+        const activeSessionId = getField(
+            activeSession,
+            ['Session ID', 'sessionId']
+        );
 
         if (!activeSessionId) {
-
             throw new Error(
                 'The active academic session does not have a valid Session ID.'
             );
-
         }
 
+        currentSelection.sessionId = activeSessionId;
 
-        currentSelection.sessionId =
-            activeSessionId;
-
-
-        /*
-         * -------------------------------------------------
-         * STEP 3
-         * Load active classes.
-         * -------------------------------------------------
-         */
+        /* STEP 3: active classes */
 
         const classesResult =
-            await callApi(
-                'getActiveClasses',
-                {
-                    schoolId
-                }
-            );
+            await callApi('getActiveClasses', { schoolId });
 
-
-        setupData.classes =
-            extractCollectionFromResult(
-                classesResult,
-                [
-                    'classes',
-                    'Classes',
-                    'records',
-                    'data'
-                ]
-            );
-
+        setupData.classes = extractCollectionFromResult(
+            classesResult,
+            ['classes', 'Classes', 'records', 'data']
+        );
 
         if (!setupData.classes.length) {
-
             throw new Error(
                 'No active classes were found. Please create an active class before entering scores.'
             );
-
         }
 
-
-        /*
-         * -------------------------------------------------
-         * STEP 4
-         * Populate session and class selectors.
-         * -------------------------------------------------
-         */
+        /* STEP 4: populate selectors */
 
         populateSessions();
-
-        sessionSelect.value =
-            activeSessionId;
-
+        sessionSelect.value = activeSessionId;
 
         populateClasses();
 
+        let selectedClassId = currentSelection.classId;
 
-        /*
-         * Automatically select the first active class
-         * if no class has already been selected.
-         */
+        const classStillExists = setupData.classes.some(function (item) {
 
-        let selectedClassId =
-            currentSelection.classId;
+            return String(
+                getField(item, ['Class ID', 'classId'])
+            ) === String(selectedClassId);
 
+        });
 
-        if (
-            !selectedClassId ||
-            !setupData.classes.some(
-                function (item) {
+        if (!selectedClassId || !classStillExists) {
 
-                    return String(
-                        getField(
-                            item,
-                            [
-                                'Class ID',
-                                'classId'
-                            ]
-                        )
-                    ) === String(
-                        selectedClassId
-                    );
-
-                }
-            )
-        ) {
-
-            const firstClass =
-                setupData.classes[0];
-
-
-            selectedClassId =
-                getField(
-                    firstClass,
-                    [
-                        'Class ID',
-                        'classId'
-                    ]
-                );
-
-        }
-
-
-        if (!selectedClassId) {
-
-            throw new Error(
-                'The selected class does not have a valid Class ID.'
+            selectedClassId = getField(
+                setupData.classes[0],
+                ['Class ID', 'classId']
             );
 
         }
 
+        if (!selectedClassId) {
+            throw new Error(
+                'The selected class does not have a valid Class ID.'
+            );
+        }
 
-        currentSelection.classId =
-            selectedClassId;
+        currentSelection.classId = selectedClassId;
+        classSelect.value = selectedClassId;
 
+        /* STEP 5: class-specific setup */
 
-        classSelect.value =
-            selectedClassId;
-
-
-        /*
-         * -------------------------------------------------
-         * STEP 5
-         * NOW call getScoreEntrySetup.
-         *
-         * This backend requires:
-         * schoolId
-         * sessionId
-         * classId
-         * -------------------------------------------------
-         */
-
-        await loadClassScoreEntrySetup(
-            selectedClassId
-        );
-
+        await loadClassScoreEntrySetup(selectedClassId);
 
         updateSetupMessage();
 
@@ -834,197 +497,80 @@ async function loadScoreEntrySetup() {
    LOAD CLASS-SPECIFIC SETUP
 ========================================================= */
 
-async function loadClassScoreEntrySetup(
-    classId
-) {
+async function loadClassScoreEntrySetup(classId) {
 
-    const schoolId =
-        getSchoolId();
-
-
-    const sessionId =
-        currentSelection.sessionId;
-
+    const schoolId = getSchoolId();
+    const sessionId = currentSelection.sessionId;
 
     if (!schoolId) {
-
-        throw new Error(
-            'School information is missing from your session.'
-        );
-
+        throw new Error('School information is missing from your session.');
     }
-
 
     if (!sessionId) {
-
-        throw new Error(
-            'Session ID is required.'
-        );
-
+        throw new Error('Session ID is required.');
     }
-
 
     if (!classId) {
-
-        throw new Error(
-            'Class ID is required.'
-        );
-
+        throw new Error('Class ID is required.');
     }
-
-
-    /*
-     * Show a small loading message while the
-     * class-specific subjects are being retrieved.
-     */
 
     if (setupMessage) {
-
         setupMessage.textContent =
             'Loading subjects for the selected class...';
-
-        setupMessage.classList.remove(
-            'hidden'
-        );
-
+        setupMessage.classList.remove('hidden');
     }
 
+    const result = await callApi('getScoreEntrySetup', {
+        schoolId,
+        sessionId,
+        classId
+    });
 
-    const result =
-        await callApi(
-            'getScoreEntrySetup',
-            {
-                schoolId,
-                sessionId,
-                classId
-            }
-        );
+    const normalized = normalizeSetupData(result);
 
-
-    const normalized =
-        normalizeSetupData(
-            result
-        );
-
-
-    /*
-     * Preserve the sessions/classes already loaded
-     * because the setup endpoint may return only the
-     * class-specific subjects/assignments.
-     */
-
-    if (
-        normalized.sessions.length
-    ) {
-
-        setupData.sessions =
-            normalized.sessions;
-
+    if (normalized.sessions.length) {
+        setupData.sessions = normalized.sessions;
     }
 
-
-    if (
-        normalized.classes.length
-    ) {
-
-        setupData.classes =
-            normalized.classes;
-
+    if (normalized.classes.length) {
+        setupData.classes = normalized.classes;
     }
 
-
-    setupData.subjects =
-        normalized.subjects;
-
-
-    setupData.assignments =
-        normalized.assignments;
-
-
-    /*
-     * Populate subjects returned for this class.
-     */
+    setupData.subjects = normalized.subjects;
+    setupData.assignments = normalized.assignments;
 
     populateSubjects();
 
+    if (setupData.subjects.length === 1) {
 
-    /*
-     * If there is only one subject, automatically
-     * select it.
-     */
-
-    if (
-        setupData.subjects.length === 1
-    ) {
-
-        const onlySubject =
-            setupData.subjects[0];
-
-
-        const subjectId =
-            getField(
-                onlySubject,
-                [
-                    'Subject ID',
-                    'subjectId'
-                ]
-            );
-
+        const subjectId = getField(
+            setupData.subjects[0],
+            ['Subject ID', 'subjectId']
+        );
 
         if (subjectId) {
-
-            currentSelection.subjectId =
-                subjectId;
-
-            subjectSelect.value =
-                subjectId;
-
+            currentSelection.subjectId = subjectId;
+            subjectSelect.value = subjectId;
         }
 
     } else {
 
-        /*
-         * If the previously selected subject is
-         * not available for this class, clear it.
-         */
+        const stillExists = setupData.subjects.some(function (subject) {
 
-        const stillExists =
-            setupData.subjects.some(
-                function (subject) {
+            const id = getField(subject, ['Subject ID', 'subjectId']);
 
-                    const id =
-                        getField(
-                            subject,
-                            [
-                                'Subject ID',
-                                'subjectId'
-                            ]
-                        );
+            return String(id) === String(currentSelection.subjectId);
 
-                    return String(id) ===
-                        String(
-                            currentSelection.subjectId
-                        );
-
-                }
-            );
-
+        });
 
         if (!stillExists) {
-
-            currentSelection.subjectId =
-                '';
-
-            subjectSelect.value =
-                '';
-
+            currentSelection.subjectId = '';
+            subjectSelect.value = '';
         }
 
     }
 
-
     clearLoadedRecords();
-
     updateSetupMessage();
 
 }
@@ -1034,65 +580,24 @@ async function loadClassScoreEntrySetup(
    EXTRACT ACTIVE SESSION
 ========================================================= */
 
-function extractActiveSession(
-    result
-) {
+function extractActiveSession(result) {
 
     const data =
-        result?.data &&
-        !Array.isArray(result.data)
+        result?.data && !Array.isArray(result.data)
             ? result.data
             : result || {};
 
-
-    if (
-        data.session &&
-        typeof data.session === 'object'
-    ) {
-
+    if (data.session && typeof data.session === 'object') {
         return data.session;
-
     }
 
-
-    if (
-        data.activeSession &&
-        typeof data.activeSession === 'object'
-    ) {
-
+    if (data.activeSession && typeof data.activeSession === 'object') {
         return data.activeSession;
-
     }
 
-
-    if (
-        data['Session ID'] ||
-        data.sessionId
-    ) {
-
+    if (data['Session ID'] || data.sessionId) {
         return data;
-
     }
-
-
-    /*
-     * Some simple Apps Script responses may return
-     * the session directly inside data.
-     */
-
-    if (
-        result?.data &&
-        !Array.isArray(result.data) &&
-        (
-            result.data['Session ID'] ||
-            result.data.sessionId
-        )
-    ) {
-
-        return result.data;
-
-    }
-
 
     return null;
 
@@ -1103,59 +608,34 @@ function extractActiveSession(
    SETUP NORMALIZATION
 ========================================================= */
 
-function normalizeSetupData(
-    result
-) {
+function normalizeSetupData(result) {
 
     const data =
-        result?.data &&
-        !Array.isArray(result.data)
+        result?.data && !Array.isArray(result.data)
             ? result.data
             : result || {};
 
-
     return {
 
-        sessions:
-            extractCollection(
-                data,
-                [
-                    'sessions',
-                    'Sessions',
-                    'availableSessions'
-                ]
-            ),
+        sessions: extractCollection(
+            data,
+            ['sessions', 'Sessions', 'availableSessions']
+        ),
 
-        classes:
-            extractCollection(
-                data,
-                [
-                    'classes',
-                    'Classes',
-                    'availableClasses'
-                ]
-            ),
+        classes: extractCollection(
+            data,
+            ['classes', 'Classes', 'availableClasses']
+        ),
 
-        subjects:
-            extractCollection(
-                data,
-                [
-                    'subjects',
-                    'Subjects',
-                    'availableSubjects',
-                    'classSubjects'
-                ]
-            ),
+        subjects: extractCollection(
+            data,
+            ['subjects', 'Subjects', 'availableSubjects', 'classSubjects']
+        ),
 
-        assignments:
-            extractCollection(
-                data,
-                [
-                    'assignments',
-                    'Assignments',
-                    'teacherAssignments'
-                ]
-            )
+        assignments: extractCollection(
+            data,
+            ['assignments', 'Assignments', 'teacherAssignments']
+        )
 
     };
 
@@ -1163,91 +643,44 @@ function normalizeSetupData(
 
 
 /* =========================================================
-   GENERIC RESULT COLLECTION EXTRACTION
+   GENERIC COLLECTION EXTRACTION
 ========================================================= */
 
-function extractCollectionFromResult(
-    result,
-    names
-) {
+function extractCollectionFromResult(result, names) {
 
     const data =
-        result?.data &&
-        !Array.isArray(result.data)
+        result?.data && !Array.isArray(result.data)
             ? result.data
             : result || {};
 
-
-    /*
-     * First look for named collections.
-     */
-
-    const named =
-        extractCollection(
-            data,
-            names
-        );
-
+    const named = extractCollection(data, names);
 
     if (named.length) {
         return named;
     }
 
-
-    /*
-     * If data itself is an array.
-     */
-
-    if (
-        Array.isArray(
-            result?.data
-        )
-    ) {
-
+    if (Array.isArray(result?.data)) {
         return result.data;
-
     }
 
-
-    /*
-     * If the response itself is an array.
-     */
-
-    if (
-        Array.isArray(result)
-    ) {
-
+    if (Array.isArray(result)) {
         return result;
-
     }
-
 
     return [];
 
 }
 
 
-function extractCollection(
-    source,
-    names
-) {
+function extractCollection(source, names) {
 
-    for (
-        const name of names
-    ) {
+    for (const name of names) {
 
-        if (
-            Array.isArray(
-                source?.[name]
-            )
-        ) {
-
+        if (Array.isArray(source?.[name])) {
             return source[name];
-
         }
 
     }
-
 
     return [];
 
@@ -1255,391 +688,181 @@ function extractCollection(
 
 
 /* =========================================================
-   POPULATE SESSIONS
+   POPULATE SELECTS
 ========================================================= */
 
 function populateSessions() {
 
-    const sessions =
-        setupData?.sessions || [];
+    const sessions = setupData?.sessions || [];
 
+    sessionSelect.innerHTML = '<option value="">Select session</option>';
 
-    sessionSelect.innerHTML =
-        '<option value="">Select session</option>';
+    sessions.forEach(function (session) {
 
+        const id = getField(session, ['Session ID', 'sessionId']);
+        const name = getField(session, ['Session Name', 'sessionName']);
 
-    sessions.forEach(
-        function (session) {
-
-            const id =
-                getField(
-                    session,
-                    [
-                        'Session ID',
-                        'sessionId'
-                    ]
-                );
-
-
-            const name =
-                getField(
-                    session,
-                    [
-                        'Session Name',
-                        'sessionName'
-                    ]
-                );
-
-
-            if (!id) {
-                return;
-            }
-
-
-            const option =
-                document.createElement(
-                    'option'
-                );
-
-
-            option.value =
-                id;
-
-
-            option.textContent =
-                name || id;
-
-
-            sessionSelect.appendChild(
-                option
-            );
-
+        if (!id) {
+            return;
         }
-    );
+
+        const option = document.createElement('option');
+
+        option.value = id;
+        option.textContent = name || id;
+
+        sessionSelect.appendChild(option);
+
+    });
 
 }
 
-
-/* =========================================================
-   POPULATE CLASSES
-========================================================= */
 
 function populateClasses() {
 
-    const classes =
-        setupData?.classes || [];
+    const classes = setupData?.classes || [];
 
+    classSelect.innerHTML = '<option value="">Select class</option>';
 
-    classSelect.innerHTML =
-        '<option value="">Select class</option>';
+    classes.forEach(function (item) {
 
+        const id = getField(item, ['Class ID', 'classId']);
+        const name = getClassDisplayName(item);
 
-    classes.forEach(
-        function (item) {
-
-            const id =
-                getField(
-                    item,
-                    [
-                        'Class ID',
-                        'classId'
-                    ]
-                );
-
-
-            const name =
-                getClassDisplayName(
-                    item
-                );
-
-
-            if (!id) {
-                return;
-            }
-
-
-            const option =
-                document.createElement(
-                    'option'
-                );
-
-
-            option.value =
-                id;
-
-
-            option.textContent =
-                name || id;
-
-
-            classSelect.appendChild(
-                option
-            );
-
+        if (!id) {
+            return;
         }
-    );
+
+        const option = document.createElement('option');
+
+        option.value = id;
+        option.textContent = name || id;
+
+        classSelect.appendChild(option);
+
+    });
 
 }
 
-
-/* =========================================================
-   POPULATE SUBJECTS
-========================================================= */
 
 function populateSubjects() {
 
-    const subjects =
-        setupData?.subjects || [];
+    const subjects = setupData?.subjects || [];
 
+    subjectSelect.innerHTML = '<option value="">Select subject</option>';
 
-    subjectSelect.innerHTML =
-        '<option value="">Select subject</option>';
+    subjects.forEach(function (subject) {
 
+        const id = getField(subject, ['Subject ID', 'subjectId']);
+        const name = getField(subject, ['Subject Name', 'subjectName']);
+        const code = getField(subject, ['Subject Code', 'subjectCode']);
 
-    subjects.forEach(
-        function (subject) {
-
-            const id =
-                getField(
-                    subject,
-                    [
-                        'Subject ID',
-                        'subjectId'
-                    ]
-                );
-
-
-            const name =
-                getField(
-                    subject,
-                    [
-                        'Subject Name',
-                        'subjectName'
-                    ]
-                );
-
-
-            const code =
-                getField(
-                    subject,
-                    [
-                        'Subject Code',
-                        'subjectCode'
-                    ]
-                );
-
-
-            if (!id) {
-                return;
-            }
-
-
-            const option =
-                document.createElement(
-                    'option'
-                );
-
-
-            option.value =
-                id;
-
-
-            option.textContent =
-                code
-                    ? `${name} (${code})`
-                    : name || id;
-
-
-            subjectSelect.appendChild(
-                option
-            );
-
+        if (!id) {
+            return;
         }
-    );
+
+        const option = document.createElement('option');
+
+        option.value = id;
+        option.textContent = code ? `${name} (${code})` : name || id;
+
+        subjectSelect.appendChild(option);
+
+    });
 
 }
 
 
 /* =========================================================
-   SESSION CHANGE
+   SELECTION CHANGES
 ========================================================= */
 
 async function handleSessionChange() {
 
     clearPageMessage();
-
     clearLoadedRecords();
 
+    const sessionId = sessionSelect.value;
 
-    const sessionId =
-        sessionSelect.value;
+    currentSelection.sessionId = sessionId;
+    currentSelection.subjectId = '';
 
+    subjectSelect.innerHTML = '<option value="">Select subject</option>';
 
-    currentSelection.sessionId =
-        sessionId;
-
-
-    currentSelection.subjectId =
-        '';
-
-
-    subjectSelect.innerHTML =
-        '<option value="">Select subject</option>';
-
-
-    if (!sessionId) {
-
+    if (!sessionId || !classSelect.value) {
         updateSetupMessage();
-
         return;
-
     }
-
-
-    const classId =
-        classSelect.value;
-
-
-    if (!classId) {
-
-        updateSetupMessage();
-
-        return;
-
-    }
-
 
     try {
 
-        await loadClassScoreEntrySetup(
-            classId
-        );
+        await loadClassScoreEntrySetup(classSelect.value);
 
     } catch (error) {
 
-        console.error(
-            'Session change setup error:',
-            error
-        );
-
+        console.error('Session change setup error:', error);
 
         showMessage(
-            error.message ||
-            'Unable to load score entry setup.',
+            error.message || 'Unable to load score entry setup.',
             'error'
         );
 
     }
-
 
     updateSetupMessage();
 
 }
 
 
-/* =========================================================
-   CLASS CHANGE
-========================================================= */
-
 async function handleClassChange() {
 
     clearPageMessage();
-
     clearLoadedRecords();
 
+    const classId = classSelect.value;
 
-    const classId =
-        classSelect.value;
+    currentSelection.classId = classId;
+    currentSelection.subjectId = '';
 
+    subjectSelect.innerHTML = '<option value="">Select subject</option>';
 
-    currentSelection.classId =
-        classId;
-
-
-    currentSelection.subjectId =
-        '';
-
-
-    subjectSelect.innerHTML =
-        '<option value="">Select subject</option>';
-
-
-    if (!classId) {
-
+    if (!classId || !sessionSelect.value) {
         updateSetupMessage();
-
         return;
-
     }
-
-
-    const sessionId =
-        sessionSelect.value;
-
-
-    if (!sessionId) {
-
-        updateSetupMessage();
-
-        return;
-
-    }
-
 
     try {
 
-        await loadClassScoreEntrySetup(
-            classId
-        );
+        await loadClassScoreEntrySetup(classId);
 
     } catch (error) {
 
-        console.error(
-            'Class change setup error:',
-            error
-        );
-
+        console.error('Class change setup error:', error);
 
         showMessage(
-            error.message ||
-            'Unable to load subjects for this class.',
+            error.message || 'Unable to load subjects for this class.',
             'error'
         );
-
 
         subjectSelect.innerHTML =
             '<option value="">Unable to load subjects</option>';
 
     }
 
-
     updateSetupMessage();
 
 }
 
 
-/* =========================================================
-   GENERAL SETUP CHANGE
-========================================================= */
-
 function handleSetupChange() {
 
     updateSetupMessage();
-
     clearLoadedRecords();
 
-
-    currentSelection.sessionId =
-        sessionSelect.value;
-
-    currentSelection.term =
-        termSelect.value;
-
-    currentSelection.classId =
-        classSelect.value;
-
-    currentSelection.subjectId =
-        subjectSelect.value;
+    currentSelection.sessionId = sessionSelect.value;
+    currentSelection.term = termSelect.value;
+    currentSelection.classId = classSelect.value;
+    currentSelection.subjectId = subjectSelect.value;
 
 }
 
@@ -1650,81 +873,39 @@ function handleSetupChange() {
 
 function updateSetupMessage() {
 
-    const complete =
-        Boolean(
-            sessionSelect.value &&
-            termSelect.value &&
-            classSelect.value &&
-            subjectSelect.value
-        );
-
-
-    if (complete) {
-
-        setupMessage.classList.add(
-            'hidden'
-        );
-
-        return;
-
-    }
-
-
-    setupMessage.classList.remove(
-        'hidden'
+    const complete = Boolean(
+        sessionSelect.value &&
+        termSelect.value &&
+        classSelect.value &&
+        subjectSelect.value
     );
 
-
-    if (
-        !sessionSelect.value
-    ) {
-
-        setupMessage.textContent =
-            'Select an academic session.';
-
+    if (complete) {
+        setupMessage.classList.add('hidden');
         return;
-
     }
 
+    setupMessage.classList.remove('hidden');
 
-    if (
-        !termSelect.value
-    ) {
-
-        setupMessage.textContent =
-            'Select a term.';
-
+    if (!sessionSelect.value) {
+        setupMessage.textContent = 'Select an academic session.';
         return;
-
     }
 
-
-    if (
-        !classSelect.value
-    ) {
-
-        setupMessage.textContent =
-            'Select a class.';
-
+    if (!termSelect.value) {
+        setupMessage.textContent = 'Select a term.';
         return;
-
     }
 
-
-    if (
-        !subjectSelect.value
-    ) {
-
-        setupMessage.textContent =
-            'Select a subject.';
-
+    if (!classSelect.value) {
+        setupMessage.textContent = 'Select a class.';
         return;
-
     }
 
-
-    setupMessage.textContent =
-        'Select the session, term, class and subject, then click Load Students.';
+    if (!subjectSelect.value) {
+        setupMessage.textContent = 'Select a subject.';
+        return;
+    }
 
 }
 
@@ -1736,34 +917,19 @@ function updateSetupMessage() {
 function clearLoadedRecords() {
 
     currentStudents = [];
-
     scoreRecords = [];
 
-
-    scoreSummary.classList.add(
-        'hidden'
-    );
-
-
-    saveScoresButton.disabled =
-        true;
-
+    scoreSummary.classList.add('hidden');
+    saveScoresButton.disabled = true;
 
     tableWrapper.innerHTML = `
-
         <div class="empty-state">
-
-            <strong>
-                No students loaded
-            </strong>
-
+            <strong>No students loaded</strong>
             <span>
                 Select the session, term, class and subject,
                 then click Load Students.
             </span>
-
         </div>
-
     `;
 
 }
@@ -1771,145 +937,79 @@ function clearLoadedRecords() {
 
 /* =========================================================
    LOAD SCORE RECORDS
+   options.keepMessage = true keeps the current page message
+   (used after saving so the result message stays visible).
 ========================================================= */
 
-async function loadScoreRecords() {
+async function loadScoreRecords(options) {
 
-    clearPageMessage();
+    const keepMessage = Boolean(options && options.keepMessage === true);
 
+    if (!keepMessage) {
+        clearPageMessage();
+    }
 
-    const sessionId =
-        sessionSelect.value;
+    const sessionId = sessionSelect.value;
+    const term = termSelect.value;
+    const classId = classSelect.value;
+    const subjectId = subjectSelect.value;
 
-    const term =
-        termSelect.value;
-
-    const classId =
-        classSelect.value;
-
-    const subjectId =
-        subjectSelect.value;
-
-
-    if (
-        !sessionId ||
-        !term ||
-        !classId ||
-        !subjectId
-    ) {
+    if (!sessionId || !term || !classId || !subjectId) {
 
         setupMessage.textContent =
             'Please select a session, term, class and subject before loading students.';
 
-        setupMessage.classList.remove(
-            'hidden'
-        );
+        setupMessage.classList.remove('hidden');
 
         return;
 
     }
 
+    currentSelection = { sessionId, term, classId, subjectId };
 
-    currentSelection = {
-
-        sessionId,
-
-        term,
-
-        classId,
-
-        subjectId
-
-    };
-
-
-    loadRecordsButton.disabled =
-        true;
-
-
-    loadRecordsButton.textContent =
-        'Loading...';
-
+    loadRecordsButton.disabled = true;
+    loadRecordsButton.textContent = 'Loading...';
 
     renderLoadingState();
 
-
     try {
 
-        const result =
-            await callApi(
-                'getScoreEntryRecords',
-                {
-                    schoolId:
-                        getSchoolId(),
+        const result = await callApi('getScoreEntryRecords', {
+            schoolId: getSchoolId(),
+            sessionId,
+            term,
+            classId,
+            subjectId
+        });
 
-                    sessionId,
+        const normalized = normalizeScoreRecords(result);
 
-                    term,
-
-                    classId,
-
-                    subjectId
-                }
-            );
-
-
-        const normalized =
-            normalizeScoreRecords(
-                result
-            );
-
-
-        currentStudents =
-            normalized.students;
-
-
-        scoreRecords =
-            normalized.scores;
-
+        currentStudents = normalized.students;
+        scoreRecords = normalized.scores;
 
         renderScoreTable();
-
         updateSummary();
 
-
         if (!currentStudents.length) {
-
             showMessage(
                 'No active students were found in this class.',
                 'error'
             );
-
         }
 
     } catch (error) {
 
-        console.error(
-            'Load score records error:',
-            error
-        );
+        console.error('Load score records error:', error);
 
+        const text = error.message || 'Unable to load score records.';
 
-        renderErrorState(
-            error.message ||
-            'Unable to load score records.'
-        );
-
-
-        showMessage(
-            error.message ||
-            'Unable to load score records.',
-            'error'
-        );
+        renderErrorState(text);
+        showMessage(text, 'error');
 
     } finally {
 
-        loadRecordsButton.disabled =
-            false;
-
-
-        loadRecordsButton.textContent =
-            'Load Students';
+        loadRecordsButton.disabled = false;
+        loadRecordsButton.textContent = 'Load Students';
 
     }
 
@@ -1918,114 +1018,46 @@ async function loadScoreRecords() {
 
 /* =========================================================
    NORMALIZE SCORE RESPONSE
+   The backend returns ONE students array where each student
+   already carries testScore / examScore.
 ========================================================= */
 
-function normalizeScoreRecords(
-    result
-) {
+function normalizeScoreRecords(result) {
 
     const data =
-        result?.data &&
-        !Array.isArray(result.data)
+        result?.data && !Array.isArray(result.data)
             ? result.data
             : result || {};
 
+    let students = extractCollection(
+        data,
+        ['students', 'Students', 'records']
+    );
 
-    let students =
-        extractCollection(
-            data,
-            [
-                'students',
-                'Students',
-                'records'
-            ]
-        );
+    let scores = extractCollection(
+        data,
+        ['scores', 'Scores', 'scoreRecords']
+    );
 
-
-    let scores =
-        extractCollection(
-            data,
-            [
-                'scores',
-                'Scores',
-                'scoreRecords'
-            ]
-        );
-
-
-    /*
-     * If the backend returns a combined records array,
-     * try to use it for both lists.
-     */
-
-    if (
-        !students.length &&
-        Array.isArray(data.records)
-    ) {
-
-        students =
-            data.records;
-
+    /* Scores are embedded in the student records. */
+    if (!scores.length) {
+        scores = students;
     }
 
-
-    if (
-        !scores.length &&
-        Array.isArray(data.records)
-    ) {
-
-        scores =
-            data.records;
-
-    }
-
-
-    /*
-     * Some backend responses may put the student list
-     * directly inside data.students and the score list
-     * inside data.scores, which the extraction above
-     * already handles.
-     */
-
-    return {
-
-        students,
-
-        scores
-
-    };
+    return { students, scores };
 
 }
 
 
-/* =========================================================
-   FIND SCORE FOR STUDENT
-========================================================= */
+function getStudentScore(studentId) {
 
-function getStudentScore(
-    studentId
-) {
+    return scoreRecords.find(function (score) {
 
-    return scoreRecords.find(
-        function (score) {
+        const id = getField(score, ['Student ID', 'studentId']);
 
-            const id =
-                getField(
-                    score,
-                    [
-                        'Student ID',
-                        'studentId'
-                    ]
-                );
+        return String(id) === String(studentId);
 
-
-            return (
-                String(id) ===
-                String(studentId)
-            );
-
-        }
-    ) || null;
+    }) || null;
 
 }
 
@@ -2039,370 +1071,172 @@ function renderScoreTable() {
     if (!currentStudents.length) {
 
         tableWrapper.innerHTML = `
-
             <div class="empty-state">
-
-                <strong>
-                    No students found
-                </strong>
-
+                <strong>No students found</strong>
                 <span>
                     There are no active students available
                     for the selected class.
                 </span>
-
             </div>
-
         `;
 
-
-        saveScoresButton.disabled =
-            true;
-
+        saveScoresButton.disabled = true;
 
         return;
 
     }
 
+    const table = document.createElement('table');
 
-    const table =
-        document.createElement(
-            'table'
-        );
-
-
-    table.className =
-        'score-table';
-
+    table.className = 'score-table';
 
     table.innerHTML = `
-
         <thead>
-
             <tr>
-
                 <th>#</th>
-
                 <th>ADMISSION NO.</th>
-
                 <th>STUDENT</th>
-
                 <th>TEST / 40</th>
-
                 <th>EXAM / 60</th>
-
                 <th>TOTAL / 100</th>
-
                 <th>STATUS</th>
-
             </tr>
-
         </thead>
-
         <tbody></tbody>
-
     `;
 
+    const tbody = table.querySelector('tbody');
 
-    const tbody =
-        table.querySelector(
-            'tbody'
+    currentStudents.forEach(function (student, index) {
+
+        const studentId = getField(student, ['Student ID', 'studentId']);
+
+        const admissionNo = getField(
+            student,
+            ['Admission No', 'admissionNo', 'Admission Number']
         );
 
-
-    currentStudents.forEach(
-        function (student, index) {
-
-            const studentId =
-                getField(
-                    student,
-                    [
-                        'Student ID',
-                        'studentId'
-                    ]
-                );
-
-
-            const admissionNo =
-                getField(
-                    student,
-                    [
-                        'Admission No',
-                        'admissionNo',
-                        'Admission Number'
-                    ]
-                );
-
-
-            const fullName =
-                getField(
-                    student,
-                    [
-                        'Full Name',
-                        'fullName',
-                        'Student Name',
-                        'studentName'
-                    ]
-                );
-
-
-            const existing =
-                getStudentScore(
-                    studentId
-                );
-
-
-            const testScore =
-                getScoreValue(
-                    existing,
-                    [
-                        'Test Score',
-                        'testScore'
-                    ]
-                );
-
-
-            const examScore =
-                getScoreValue(
-                    existing,
-                    [
-                        'Exam Score',
-                        'examScore'
-                    ]
-                );
-
-
-            const row =
-                document.createElement(
-                    'tr'
-                );
-
-
-            row.dataset.studentId =
-                studentId;
-
-
-            row.innerHTML = `
-
-                <td class="student-number">
-                    ${index + 1}
-                </td>
-
-                <td class="admission-cell">
-                    ${escapeHtml(admissionNo)}
-                </td>
-
-                <td class="student-name">
-                    ${escapeHtml(fullName)}
-                </td>
-
-                <td>
-
-                    <input
-                        type="number"
-                        class="score-input test-input"
-                        data-student-id="${escapeHtml(studentId)}"
-                        value="${formatInputScore(testScore)}"
-                        min="0"
-                        max="40"
-                        step="0.01"
-                        placeholder="0–40"
-                        aria-label="Test score for ${escapeHtml(fullName)}"
-                    >
-
-                </td>
-
-                <td>
-
-                    <input
-                        type="number"
-                        class="score-input exam-input"
-                        data-student-id="${escapeHtml(studentId)}"
-                        value="${formatInputScore(examScore)}"
-                        min="0"
-                        max="60"
-                        step="0.01"
-                        placeholder="0–60"
-                        aria-label="Exam score for ${escapeHtml(fullName)}"
-                    >
-
-                </td>
-
-                <td class="total-cell">
-                    —
-                </td>
-
-                <td class="status-cell">
-                    —
-                </td>
-
-            `;
-
-
-            const testInput =
-                row.querySelector(
-                    '.test-input'
-                );
-
-
-            const examInput =
-                row.querySelector(
-                    '.exam-input'
-                );
-
-
-            testInput.addEventListener(
-                'input',
-                function () {
-
-                    validateAndUpdateRow(
-                        row
-                    );
-
-                }
-            );
-
-
-            examInput.addEventListener(
-                'input',
-                function () {
-
-                    validateAndUpdateRow(
-                        row
-                    );
-
-                }
-            );
-
-
-            testInput.addEventListener(
-                'blur',
-                function () {
-
-                    normalizeInputValue(
-                        testInput,
-                        40
-                    );
-
-
-                    validateAndUpdateRow(
-                        row
-                    );
-
-                }
-            );
-
-
-            examInput.addEventListener(
-                'blur',
-                function () {
-
-                    normalizeInputValue(
-                        examInput,
-                        60
-                    );
-
-
-                    validateAndUpdateRow(
-                        row
-                    );
-
-                }
-            );
-
-
-            tbody.appendChild(
-                row
-            );
-
-
-            validateAndUpdateRow(
-                row
-            );
-
-        }
-    );
-
-
-    tableWrapper.innerHTML =
-        '';
-
-
-    tableWrapper.appendChild(
-        table
-    );
-
-
-    scoreSummary.classList.remove(
-        'hidden'
-    );
-
-
-    saveScoresButton.disabled =
-        false;
+        const fullName = getField(
+            student,
+            ['Full Name', 'fullName', 'Student Name', 'studentName']
+        );
+
+        const existing = getStudentScore(studentId);
+
+        const testScore = getScoreValue(
+            existing,
+            ['Test Score', 'testScore']
+        );
+
+        const examScore = getScoreValue(
+            existing,
+            ['Exam Score', 'examScore']
+        );
+
+        const row = document.createElement('tr');
+
+        row.dataset.studentId = studentId;
+
+        row.innerHTML = `
+            <td class="student-number">${index + 1}</td>
+            <td class="admission-cell">${escapeHtml(admissionNo)}</td>
+            <td class="student-name">${escapeHtml(fullName)}</td>
+            <td>
+                <input
+                    type="number"
+                    class="score-input test-input"
+                    data-student-id="${escapeHtml(studentId)}"
+                    value="${formatInputScore(testScore)}"
+                    min="0"
+                    max="40"
+                    step="0.01"
+                    placeholder="0–40"
+                    aria-label="Test score for ${escapeHtml(fullName)}"
+                >
+            </td>
+            <td>
+                <input
+                    type="number"
+                    class="score-input exam-input"
+                    data-student-id="${escapeHtml(studentId)}"
+                    value="${formatInputScore(examScore)}"
+                    min="0"
+                    max="60"
+                    step="0.01"
+                    placeholder="0–60"
+                    aria-label="Exam score for ${escapeHtml(fullName)}"
+                >
+            </td>
+            <td class="total-cell">—</td>
+            <td class="status-cell">—</td>
+        `;
+
+        const testInput = row.querySelector('.test-input');
+        const examInput = row.querySelector('.exam-input');
+
+        testInput.addEventListener('input', function () {
+            validateAndUpdateRow(row);
+        });
+
+        examInput.addEventListener('input', function () {
+            validateAndUpdateRow(row);
+        });
+
+        testInput.addEventListener('blur', function () {
+            normalizeInputValue(testInput, 40);
+            validateAndUpdateRow(row);
+        });
+
+        examInput.addEventListener('blur', function () {
+            normalizeInputValue(examInput, 60);
+            validateAndUpdateRow(row);
+        });
+
+        tbody.appendChild(row);
+
+        validateAndUpdateRow(row);
+
+    });
+
+    tableWrapper.innerHTML = '';
+    tableWrapper.appendChild(table);
+
+    scoreSummary.classList.remove('hidden');
+    saveScoresButton.disabled = false;
 
 }
 
 
 /* =========================================================
-   SCORE VALUE
+   SCORE VALUE HELPERS
 ========================================================= */
 
-function getScoreValue(
-    record,
-    fields
-) {
+function getScoreValue(record, fields) {
 
     if (!record) {
         return '';
     }
 
+    const value = getField(record, fields);
 
-    const value =
-        getField(
-            record,
-            fields
-        );
-
-
-    if (
-        value === '' ||
-        value === null ||
-        value === undefined
-    ) {
-
+    if (value === '' || value === null || value === undefined) {
         return '';
-
     }
-
 
     return value;
 
 }
 
 
-function formatInputScore(
-    value
-) {
+function formatInputScore(value) {
 
-    if (
-        value === '' ||
-        value === null ||
-        value === undefined
-    ) {
-
+    if (value === '' || value === null || value === undefined) {
         return '';
-
     }
 
+    const number = Number(value);
 
-    const number =
-        Number(value);
-
-
-    return Number.isNaN(number)
-        ? ''
-        : number;
+    return Number.isNaN(number) ? '' : number;
 
 }
 
@@ -2411,231 +1245,99 @@ function formatInputScore(
    ROW VALIDATION
 ========================================================= */
 
-function validateAndUpdateRow(
-    row
-) {
+function validateAndUpdateRow(row) {
 
-    const testInput =
-        row.querySelector(
-            '.test-input'
-        );
+    const testInput = row.querySelector('.test-input');
+    const examInput = row.querySelector('.exam-input');
+    const totalCell = row.querySelector('.total-cell');
+    const statusCell = row.querySelector('.status-cell');
 
-    const examInput =
-        row.querySelector(
-            '.exam-input'
-        );
+    const testValue = parseOptionalNumber(testInput.value);
+    const examValue = parseOptionalNumber(examInput.value);
 
-    const totalCell =
-        row.querySelector(
-            '.total-cell'
-        );
+    testInput.classList.remove('invalid');
+    examInput.classList.remove('invalid');
 
-    const statusCell =
-        row.querySelector(
-            '.status-cell'
-        );
-
-
-    const testValue =
-        parseOptionalNumber(
-            testInput.value
-        );
-
-
-    const examValue =
-        parseOptionalNumber(
-            examInput.value
-        );
-
-
-    testInput.classList.remove(
-        'invalid'
-    );
-
-
-    examInput.classList.remove(
-        'invalid'
-    );
-
-
-    let invalid =
-        false;
-
+    let invalid = false;
 
     if (
         testInput.value !== '' &&
-        (
-            testValue === null ||
-            testValue < 0 ||
-            testValue > 40
-        )
+        (testValue === null || testValue < 0 || testValue > 40)
     ) {
-
-        testInput.classList.add(
-            'invalid'
-        );
-
+        testInput.classList.add('invalid');
         invalid = true;
-
     }
-
 
     if (
         examInput.value !== '' &&
-        (
-            examValue === null ||
-            examValue < 0 ||
-            examValue > 60
-        )
+        (examValue === null || examValue < 0 || examValue > 60)
     ) {
-
-        examInput.classList.add(
-            'invalid'
-        );
-
+        examInput.classList.add('invalid');
         invalid = true;
-
     }
 
+    if (testInput.value !== '' && examInput.value !== '' && !invalid) {
 
-    if (
-        testInput.value !== '' &&
-        examInput.value !== '' &&
-        !invalid
-    ) {
+        totalCell.textContent = formatNumber(testValue + examValue);
 
-        const total =
-            testValue +
-            examValue;
-
-
-        totalCell.textContent =
-            formatNumber(total);
-
-
-        totalCell.classList.remove(
-            'missing'
-        );
-
-
-        totalCell.classList.add(
-            'complete'
-        );
-
+        totalCell.classList.remove('missing');
+        totalCell.classList.add('complete');
 
         statusCell.innerHTML =
             '<span class="row-status complete">Complete</span>';
 
     } else {
 
-        totalCell.textContent =
-            '—';
+        totalCell.textContent = '—';
 
+        totalCell.classList.remove('complete');
+        totalCell.classList.add('missing');
 
-        totalCell.classList.remove(
-            'complete'
-        );
-
-
-        totalCell.classList.add(
-            'missing'
-        );
-
-
-        if (invalid) {
-
-            statusCell.innerHTML =
-                '<span class="row-status missing">Invalid</span>';
-
-        } else {
-
-            statusCell.innerHTML =
-                '<span class="row-status missing">Missing</span>';
-
-        }
+        statusCell.innerHTML = invalid
+            ? '<span class="row-status missing">Invalid</span>'
+            : '<span class="row-status missing">Missing</span>';
 
     }
-
 
     updateSummary();
 
 }
 
 
-/* =========================================================
-   INPUT NORMALIZATION
-========================================================= */
-
-function normalizeInputValue(
-    input,
-    maximum
-) {
+function normalizeInputValue(input, maximum) {
 
     if (input.value === '') {
         return;
     }
 
-
-    const number =
-        Number(input.value);
-
+    const number = Number(input.value);
 
     if (Number.isNaN(number)) {
-
-        input.value =
-            '';
-
+        input.value = '';
         return;
-
     }
-
 
     if (number < 0) {
-
-        input.value =
-            '0';
-
+        input.value = '0';
         return;
-
     }
 
-
     if (number > maximum) {
-
-        input.value =
-            maximum;
-
+        input.value = maximum;
     }
 
 }
 
 
-/* =========================================================
-   PARSE OPTIONAL NUMBER
-========================================================= */
+function parseOptionalNumber(value) {
 
-function parseOptionalNumber(
-    value
-) {
-
-    if (
-        value === '' ||
-        value === null ||
-        value === undefined
-    ) {
-
+    if (value === '' || value === null || value === undefined) {
         return null;
-
     }
 
+    const number = Number(value);
 
-    const number =
-        Number(value);
-
-
-    return Number.isFinite(number)
-        ? number
-        : null;
+    return Number.isFinite(number) ? number : null;
 
 }
 
@@ -2646,129 +1348,61 @@ function parseOptionalNumber(
 
 function updateSummary() {
 
-    const rows =
-        Array.from(
-            tableWrapper.querySelectorAll(
-                'tbody tr'
-            )
-        );
-
+    const rows = Array.from(tableWrapper.querySelectorAll('tbody tr'));
 
     if (!rows.length) {
 
-        studentCount.textContent =
-            '0';
-
-        enteredCount.textContent =
-            '0';
-
-        missingCount.textContent =
-            '0';
-
-        summarySubject.textContent =
-            getSelectedSubjectName();
+        studentCount.textContent = '0';
+        enteredCount.textContent = '0';
+        missingCount.textContent = '0';
+        summarySubject.textContent = getSelectedSubjectName();
 
         return;
 
     }
 
+    let entered = 0;
+    let missing = 0;
 
-    let entered =
-        0;
+    rows.forEach(function (row) {
 
+        const test = parseOptionalNumber(
+            row.querySelector('.test-input')?.value
+        );
 
-    let missing =
-        0;
+        const exam = parseOptionalNumber(
+            row.querySelector('.exam-input')?.value
+        );
 
+        const complete =
+            test !== null &&
+            exam !== null &&
+            test >= 0 && test <= 40 &&
+            exam >= 0 && exam <= 60;
 
-    rows.forEach(
-        function (row) {
-
-            const testInput =
-                row.querySelector(
-                    '.test-input'
-                );
-
-            const examInput =
-                row.querySelector(
-                    '.exam-input'
-                );
-
-
-            const test =
-                parseOptionalNumber(
-                    testInput?.value
-                );
-
-
-            const exam =
-                parseOptionalNumber(
-                    examInput?.value
-                );
-
-
-            const complete =
-                test !== null &&
-                exam !== null &&
-                test >= 0 &&
-                test <= 40 &&
-                exam >= 0 &&
-                exam <= 60;
-
-
-            if (complete) {
-
-                entered++;
-
-            } else {
-
-                missing++;
-
-            }
-
+        if (complete) {
+            entered++;
+        } else {
+            missing++;
         }
-    );
 
+    });
 
-    studentCount.textContent =
-        rows.length;
-
-
-    enteredCount.textContent =
-        entered;
-
-
-    missingCount.textContent =
-        missing;
-
-
-    summarySubject.textContent =
-        getSelectedSubjectName();
+    studentCount.textContent = rows.length;
+    enteredCount.textContent = entered;
+    missingCount.textContent = missing;
+    summarySubject.textContent = getSelectedSubjectName();
 
 }
 
 
-/* =========================================================
-   SELECTED SUBJECT NAME
-========================================================= */
-
 function getSelectedSubjectName() {
 
-    const option =
-        subjectSelect.options[
-            subjectSelect.selectedIndex
-        ];
+    const option = subjectSelect.options[subjectSelect.selectedIndex];
 
-
-    if (
-        !option ||
-        !subjectSelect.value
-    ) {
-
+    if (!option || !subjectSelect.value) {
         return '—';
-
     }
-
 
     return option.textContent;
 
@@ -2785,161 +1419,104 @@ async function saveScores() {
         return;
     }
 
-
-    const rows =
-        Array.from(
-            tableWrapper.querySelectorAll(
-                'tbody tr'
-            )
-        );
-
+    const rows = Array.from(tableWrapper.querySelectorAll('tbody tr'));
 
     if (!rows.length) {
-
-        showMessage(
-            'There are no students to save.',
-            'error'
-        );
-
+        showMessage('There are no students to save.', 'error');
         return;
-
     }
 
+    const scorePayload = [];
 
-    const scorePayload =
-        [];
+    let hasInvalid = false;
+    let partialCount = 0;
+    let blankCount = 0;
 
+    rows.forEach(function (row) {
 
-    let hasInvalid =
-        false;
+        const studentId = row.dataset.studentId;
 
+        const testInput = row.querySelector('.test-input');
+        const examInput = row.querySelector('.exam-input');
 
-    let hasMissing =
-        false;
+        const test = parseOptionalNumber(testInput.value);
+        const exam = parseOptionalNumber(examInput.value);
 
+        const testProvided = testInput.value !== '';
+        const examProvided = examInput.value !== '';
 
-    rows.forEach(
-        function (row) {
+        if (
+            testProvided &&
+            (test === null || test < 0 || test > 40)
+        ) {
+            hasInvalid = true;
+            return;
+        }
 
-            const studentId =
-                row.dataset.studentId;
+        if (
+            examProvided &&
+            (exam === null || exam < 0 || exam > 60)
+        ) {
+            hasInvalid = true;
+            return;
+        }
 
+        /* Neither score entered: nothing to save for this student. */
+        if (!testProvided && !examProvided) {
+            blankCount++;
+            return;
+        }
 
-            const testInput =
-                row.querySelector(
-                    '.test-input'
-                );
+        /* Only one score entered: backend requires both. */
+        if (!testProvided || !examProvided) {
 
-            const examInput =
-                row.querySelector(
-                    '.exam-input'
-                );
+            partialCount++;
 
+            (testProvided ? examInput : testInput)
+                .classList.add('invalid');
 
-            const test =
-                parseOptionalNumber(
-                    testInput.value
-                );
-
-
-            const exam =
-                parseOptionalNumber(
-                    examInput.value
-                );
-
-
-            const testProvided =
-                testInput.value !== '';
-
-
-            const examProvided =
-                examInput.value !== '';
-
-
-            if (
-                testProvided &&
-                (
-                    test === null ||
-                    test < 0 ||
-                    test > 40
-                )
-            ) {
-
-                hasInvalid =
-                    true;
-
-                return;
-
-            }
-
-
-            if (
-                examProvided &&
-                (
-                    exam === null ||
-                    exam < 0 ||
-                    exam > 60
-                )
-            ) {
-
-                hasInvalid =
-                    true;
-
-                return;
-
-            }
-
-
-            if (
-                !testProvided ||
-                !examProvided
-            ) {
-
-                hasMissing =
-                    true;
-
-            }
-
-
-            scorePayload.push({
-
-                studentId,
-
-                testScore:
-                    testProvided
-                        ? test
-                        : '',
-
-                examScore:
-                    examProvided
-                        ? exam
-                        : ''
-
-            });
+            return;
 
         }
-    );
 
+        scorePayload.push({
+            studentId,
+            testScore: test,
+            examScore: exam
+        });
+
+    });
 
     if (hasInvalid) {
-
         showMessage(
             'Please correct the highlighted scores before saving.',
             'error'
         );
-
         return;
-
     }
 
+    if (partialCount > 0) {
+        showMessage(
+            `${partialCount} student(s) have only a Test or an Exam score. ` +
+            'Enter both scores (or clear both) before saving.',
+            'error'
+        );
+        return;
+    }
 
-    if (hasMissing) {
+    if (!scorePayload.length) {
+        showMessage(
+            'No scores have been entered. Enter Test and Exam scores for at least one student.',
+            'error'
+        );
+        return;
+    }
 
-        const proceed =
-            window.confirm(
-                'Some students do not have both Test and Exam scores. Do you want to continue saving the entered scores?'
-            );
+    if (blankCount > 0) {
 
+        const proceed = window.confirm(
+            `${blankCount} student(s) have no scores and will be skipped. Continue saving?`
+        );
 
         if (!proceed) {
             return;
@@ -2947,89 +1524,73 @@ async function saveScores() {
 
     }
 
-
-    isSaving =
-        true;
-
-
-    saveScoresButton.disabled =
-        true;
-
-
-    saveScoresButton.textContent =
-        'Saving...';
-
+    isSaving = true;
+    saveScoresButton.disabled = true;
+    saveScoresButton.textContent = 'Saving...';
 
     try {
 
-        const result =
-            await callApi(
-                'saveBulkScores',
-                {
-                    schoolId:
-                        getSchoolId(),
+        const result = await callApi('saveBulkScores', {
+            schoolId: getSchoolId(),
+            sessionId: currentSelection.sessionId,
+            term: currentSelection.term,
+            classId: currentSelection.classId,
+            subjectId: currentSelection.subjectId,
+            scores: scorePayload,
+            enteredBy: getCurrentUserId()
+        });
 
-                    sessionId:
-                        currentSelection.sessionId,
+        const savedCount = Number(result?.savedCount ?? 0);
+        const failedCount = Number(result?.failedCount ?? 0);
+        const failedList = Array.isArray(result?.failed) ? result.failed : [];
 
-                    term:
-                        currentSelection.term,
+        /* Reload first, then show the message so it isn't cleared. */
+        await loadScoreRecords({ keepMessage: true });
 
-                    classId:
-                        currentSelection.classId,
+        if (failedCount > 0) {
 
-                    subjectId:
-                        currentSelection.subjectId,
+            const reasons = failedList.slice(0, 3).map(function (item) {
 
-                    scores:
-                        scorePayload,
+                const student = currentStudents.find(function (s) {
+                    return String(
+                        getField(s, ['Student ID', 'studentId'])
+                    ) === String(item.studentId);
+                });
 
-                    enteredBy:
-                        getCurrentUserId()
-                }
+                const name = student
+                    ? getField(student, ['Full Name', 'fullName'])
+                    : item.studentId;
+
+                return `${name}: ${item.error}`;
+
+            }).join(' | ');
+
+            showMessage(
+                `${savedCount} saved, ${failedCount} failed. ${reasons}`,
+                'error'
             );
 
+        } else {
 
-        const message =
-            result?.message ||
-            result?.data?.message ||
-            'Scores saved successfully.';
+            showMessage(
+                result?.message ||
+                `${savedCount} score(s) saved successfully.`,
+                'success'
+            );
 
-
-        showMessage(
-            message,
-            'success'
-        );
-
-
-        await loadScoreRecords();
+        }
 
     } catch (error) {
 
-        console.error(
-            'Save scores error:',
-            error
-        );
+        console.error('Save scores error:', error);
 
-
-        showMessage(
-            error.message ||
-            'Unable to save scores.',
-            'error'
-        );
+        showMessage(error.message || 'Unable to save scores.', 'error');
 
     } finally {
 
-        isSaving =
-            false;
-
-
-        saveScoresButton.disabled =
-            false;
-
-
-        saveScoresButton.textContent =
-            'Save Scores';
+        isSaving = false;
+        saveScoresButton.disabled = false;
+        saveScoresButton.textContent = 'Save Scores';
 
     }
 
@@ -3037,90 +1598,35 @@ async function saveScores() {
 
 
 /* =========================================================
-   CURRENT USER ID
-========================================================= */
-
-function getCurrentUserId() {
-
-    const user =
-        currentSession?.user || {};
-
-
-    return (
-        user.userId ||
-        user['User ID'] ||
-        currentSession.userId ||
-        currentSession['User ID'] ||
-        ''
-    );
-
-}
-
-
-/* =========================================================
-   LOADING STATE
+   LOADING / ERROR STATE
 ========================================================= */
 
 function renderLoadingState() {
 
     tableWrapper.innerHTML = `
-
         <div class="loading-state">
-
             <div class="spinner"></div>
-
-            <span>
-                Loading students and scores...
-            </span>
-
+            <span>Loading students and scores...</span>
         </div>
-
     `;
 
-
-    scoreSummary.classList.add(
-        'hidden'
-    );
-
-
-    saveScoresButton.disabled =
-        true;
+    scoreSummary.classList.add('hidden');
+    saveScoresButton.disabled = true;
 
 }
 
 
-/* =========================================================
-   ERROR STATE
-========================================================= */
-
-function renderErrorState(
-    message
-) {
+function renderErrorState(message) {
 
     tableWrapper.innerHTML = `
-
         <div class="empty-state">
-
-            <strong>
-                Unable to load score entry
-            </strong>
-
-            <span>
-                ${escapeHtml(message)}
-            </span>
-
+            <strong>Unable to load score entry</strong>
+            <span>${escapeHtml(message)}</span>
         </div>
-
     `;
 
-
-    scoreSummary.classList.add(
-        'hidden'
-    );
-
-
-    saveScoresButton.disabled =
-        true;
+    scoreSummary.classList.add('hidden');
+    saveScoresButton.disabled = true;
 
 }
 
@@ -3129,33 +1635,18 @@ function renderErrorState(
    MESSAGE
 ========================================================= */
 
-function showMessage(
-    message,
-    type = ''
-) {
+function showMessage(message, type = '') {
 
     if (!pageMessage || !messageText) {
         return;
     }
 
+    messageText.textContent = message;
 
-    messageText.textContent =
-        message;
-
-
-    pageMessage.classList.remove(
-        'hidden',
-        'success',
-        'error'
-    );
-
+    pageMessage.classList.remove('hidden', 'success', 'error');
 
     if (type) {
-
-        pageMessage.classList.add(
-            type
-        );
-
+        pageMessage.classList.add(type);
     }
 
 }
@@ -3163,28 +1654,16 @@ function showMessage(
 
 function hideMessage() {
 
-    if (!pageMessage) {
-        return;
+    if (pageMessage) {
+        pageMessage.classList.add('hidden');
     }
-
-
-    pageMessage.classList.add(
-        'hidden'
-    );
 
 }
 
 
 function clearPageMessage() {
 
-    if (!pageMessage) {
-        return;
-    }
-
-
-    pageMessage.classList.add(
-        'hidden'
-    );
+    hideMessage();
 
 }
 
@@ -3193,138 +1672,58 @@ function clearPageMessage() {
    FIELD HELPERS
 ========================================================= */
 
-function getField(
-    object,
-    fields
-) {
+function getField(object, fields) {
 
     if (!object) {
         return '';
     }
 
+    for (const field of fields) {
 
-    for (
-        const field of fields
-    ) {
-
-        if (
-            object[field] !== undefined &&
-            object[field] !== null
-        ) {
-
+        if (object[field] !== undefined && object[field] !== null) {
             return object[field];
-
         }
 
     }
-
 
     return '';
 
 }
 
 
-/* =========================================================
-   CLASS DISPLAY NAME
-========================================================= */
+function getClassDisplayName(classRecord) {
 
-function getClassDisplayName(
-    classRecord
-) {
+    const name = getField(classRecord, ['Class Name', 'className']);
+    const section = getField(classRecord, ['Section', 'section']);
 
-    const name =
-        getField(
-            classRecord,
-            [
-                'Class Name',
-                'className'
-            ]
-        );
-
-
-    const section =
-        getField(
-            classRecord,
-            [
-                'Section',
-                'section'
-            ]
-        );
-
-
-    if (
-        name &&
-        section
-    ) {
-
+    if (name && section) {
         return `${name} - ${section}`;
-
     }
-
 
     return name || '';
 
 }
 
 
-/* =========================================================
-   FORMAT NUMBER
-========================================================= */
+function formatNumber(number) {
 
-function formatNumber(
-    number
-) {
-
-    if (
-        Number.isInteger(number)
-    ) {
-
+    if (Number.isInteger(number)) {
         return String(number);
-
     }
 
-
-    return Number(number)
-        .toFixed(2)
-        .replace(
-            /\.?0+$/,
-            ''
-        );
+    return Number(number).toFixed(2).replace(/\.?0+$/, '');
 
 }
 
 
-/* =========================================================
-   HTML ESCAPING
-========================================================= */
+function escapeHtml(value) {
 
-function escapeHtml(
-    value
-) {
-
-    return String(
-        value ?? ''
-    )
-    .replace(
-        /&/g,
-        '&amp;'
-    )
-    .replace(
-        /</g,
-        '&lt;'
-    )
-    .replace(
-        />/g,
-        '&gt;'
-    )
-    .replace(
-        /"/g,
-        '&quot;'
-    )
-    .replace(
-        /'/g,
-        '&#039;'
-    );
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
 }
 
@@ -3335,25 +1734,15 @@ function escapeHtml(
 
 function handleLogout() {
 
-    const confirmed =
-        window.confirm(
-            'Are you sure you want to log out?'
-        );
-
+    const confirmed = window.confirm('Are you sure you want to log out?');
 
     if (!confirmed) {
         return;
     }
 
+    localStorage.removeItem(SESSION_KEY);
 
-    localStorage.removeItem(
-        SESSION_KEY
-    );
-
-
-    currentSession =
-        null;
-
+    currentSession = null;
 
     redirectToLogin();
 
@@ -3362,7 +1751,6 @@ function handleLogout() {
 
 function redirectToLogin() {
 
-    window.location.href =
-        'index.html';
+    window.location.href = 'index.html';
 
 }
