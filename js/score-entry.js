@@ -505,11 +505,70 @@ async function loadScoreEntrySetup() {
     }
 
 
+    /*
+     * The Score Entry backend requires a Session ID.
+     * Get the school's active session first.
+     */
+    const activeSessionResult =
+        await callApi(
+            'getActiveSession',
+            {
+                schoolId
+            }
+        );
+
+
+    const activeSession =
+        extractActiveSession(
+            activeSessionResult
+        );
+
+
+    if (!activeSession) {
+
+        throw new Error(
+            'No active academic session has been set for this school.'
+        );
+
+    }
+
+
+    const activeSessionId =
+        getField(
+            activeSession,
+            [
+                'Session ID',
+                'sessionId'
+            ]
+        );
+
+
+    if (!activeSessionId) {
+
+        throw new Error(
+            'The active academic session does not have a valid Session ID.'
+        );
+
+    }
+
+
+    /*
+     * Remember the active session.
+     */
+    currentSelection.sessionId =
+        activeSessionId;
+
+
+    /*
+     * Now load Score Entry setup with
+     * BOTH schoolId and sessionId.
+     */
     const result =
         await callApi(
             'getScoreEntrySetup',
             {
-                schoolId
+                schoolId,
+                sessionId: activeSessionId
             }
         );
 
@@ -518,43 +577,91 @@ async function loadScoreEntrySetup() {
         normalizeSetupData(result);
 
 
+    /*
+     * Populate the session selector.
+     */
     populateSessions();
 
+
+    /*
+     * Select the active session automatically.
+     */
+    sessionSelect.value =
+        activeSessionId;
+
+
+    /*
+     * Populate the remaining academic data.
+     */
     populateClasses();
 
     populateSubjects();
-
-
-    const activeSession =
-        findActiveSession();
-
-
-    if (activeSession) {
-
-        const sessionId =
-            getField(
-                activeSession,
-                [
-                    'Session ID',
-                    'sessionId'
-                ]
-            );
-
-
-        if (sessionId) {
-
-            sessionSelect.value =
-                sessionId;
-
-        }
-
-    }
 
 
     updateSetupMessage();
 
 }
 
+function extractActiveSession(result) {
+
+    const data =
+        result?.data &&
+        !Array.isArray(result.data)
+            ? result.data
+            : result || {};
+
+
+    /*
+     * Most likely response:
+     *
+     * {
+     *   success: true,
+     *   session: {...}
+     * }
+     */
+
+    if (
+        data.session &&
+        typeof data.session === 'object'
+    ) {
+
+        return data.session;
+
+    }
+
+
+    /*
+     * Alternative response names.
+     */
+
+    if (
+        data.activeSession &&
+        typeof data.activeSession === 'object'
+    ) {
+
+        return data.activeSession;
+
+    }
+
+
+    /*
+     * If the backend returns the session
+     * object directly.
+     */
+
+    if (
+        data['Session ID'] ||
+        data.sessionId
+    ) {
+
+        return data;
+
+    }
+
+
+    return null;
+
+}
 
 /* =========================================================
    SETUP NORMALIZATION
