@@ -2,7 +2,7 @@
  * ============================================================
  * SCHOOL RESULTS SYSTEM
  * FILE: result-management.js
- * VERSION: 1.2.0
+ * VERSION: 1.3.0
  *
  * PURPOSE:
  * Result Management frontend.
@@ -15,6 +15,8 @@
  * - Show validation/readiness
  * - List students
  * - Show individual final result
+ * - Load teacher/principal comments
+ * - Create/update result comments
  * - Generate individual student result PDF
  * - Persistent login session
  * - Logout
@@ -58,11 +60,14 @@ let currentOverview = null;
    DOM READY
 ============================================================ */
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
-    initializePage();
+        initializePage();
 
-});
+    }
+);
 
 
 /* ============================================================
@@ -138,23 +143,6 @@ function normalizeSession(data) {
     if (!data) {
         return null;
     }
-
-    /*
-     * Handles both:
-     *
-     * {
-     *   schoolId,
-     *   schoolName,
-     *   ...
-     * }
-     *
-     * and:
-     *
-     * {
-     *   user: {...},
-     *   school: {...}
-     * }
-     */
 
     const user =
         data.user ||
@@ -724,10 +712,6 @@ function setDefaultSelections() {
             : [];
 
 
-    /*
-     * Prefer active session.
-     */
-
     let selectedSession =
         sessions.find(
             function (session) {
@@ -741,10 +725,6 @@ function setDefaultSelections() {
             }
         );
 
-
-    /*
-     * Fall back to first session.
-     */
 
     if (!selectedSession) {
 
@@ -774,10 +754,6 @@ function setDefaultSelections() {
 
     }
 
-
-    /*
-     * Prefer First Term.
-     */
 
     let selectedTerm =
         terms.find(
@@ -818,10 +794,6 @@ function setDefaultSelections() {
 
     }
 
-
-    /*
-     * Select first active class.
-     */
 
     let selectedClass =
         classes.find(
@@ -1105,6 +1077,7 @@ function showSelectionLoading(
 
     }
 
+
     if (messageBox) {
 
         messageBox.classList.remove(
@@ -1142,6 +1115,7 @@ function showSelectionMessage(
             'Something went wrong.';
 
     }
+
 
     if (messageBox) {
 
@@ -1823,8 +1797,13 @@ async function openStudentResult(
         modalBody.innerHTML = `
 
             <div class="result-loading">
+
                 <div class="loading-spinner"></div>
-                <p>Loading student result...</p>
+
+                <p>
+                    Loading student result...
+                </p>
+
             </div>
 
         `;
@@ -1842,6 +1821,13 @@ async function openStudentResult(
 
 
     try {
+
+        /*
+         * Load the final result.
+         *
+         * The final result already contains
+         * comments when they exist.
+         */
 
         const response =
             await apiRequest(
@@ -1882,8 +1868,62 @@ async function openStudentResult(
             response.result;
 
 
+        /*
+         * If FinalResults.gs did not return
+         * comments for some reason, separately
+         * retrieve them from Comments.gs.
+         */
+
+        if (
+            !currentViewedResult.comments
+        ) {
+
+            try {
+
+                const commentResponse =
+                    await apiRequest(
+                        'getResultComments',
+                        {
+                            schoolId:
+                                currentSession.schoolId,
+
+                            sessionId:
+                                currentSelected.sessionId,
+
+                            term:
+                                currentSelected.term,
+
+                            studentId:
+                                studentId
+                        }
+                    );
+
+
+                if (
+                    commentResponse &&
+                    commentResponse.success &&
+                    commentResponse.exists
+                ) {
+
+                    currentViewedResult.comments =
+                        commentResponse.comment;
+
+                }
+
+            } catch (commentError) {
+
+                console.warn(
+                    'Unable to load comments separately:',
+                    commentError
+                );
+
+            }
+
+        }
+
+
         renderStudentResult(
-            response.result
+            currentViewedResult
         );
 
     } catch (error) {
@@ -1899,10 +1939,12 @@ async function openStudentResult(
             modalBody.innerHTML = `
 
                 <div class="result-error">
+
                     ${escapeHtml(
                         error.message ||
                         'Unable to load the student result.'
                     )}
+
                 </div>
 
             `;
@@ -1971,25 +2013,24 @@ function renderStudentResult(
 
 
     /*
-     * IMPORTANT:
      * FinalResults.gs returns:
      *
      * position: {
      *     position: number,
      *     status: string
      * }
-     *
-     * Therefore result.position itself must NOT
-     * be displayed as the position number.
      */
 
     const position =
         firstValue(
             result.position &&
             result.position.position,
+
             summary.position,
+
             result.position &&
             result.position.value,
+
             null
         );
 
@@ -2008,9 +2049,9 @@ function renderStudentResult(
     let html = '';
 
 
-    /* ----------------------------------------------------------
+    /* ========================================================
        STUDENT / SCHOOL INFORMATION
-    ---------------------------------------------------------- */
+    ======================================================== */
 
     html += `
 
@@ -2073,6 +2114,7 @@ function renderStudentResult(
             </div>
 
             <div>
+
                 ${escapeHtml(
                     session.sessionName ||
                     ''
@@ -2089,6 +2131,7 @@ function renderStudentResult(
                     result.term ||
                     ''
                 )}
+
             </div>
 
         </div>
@@ -2096,9 +2139,9 @@ function renderStudentResult(
     `;
 
 
-    /* ----------------------------------------------------------
+    /* ========================================================
        SUBJECT TABLE
-    ---------------------------------------------------------- */
+    ======================================================== */
 
     html += `
 
@@ -2257,9 +2300,9 @@ function renderStudentResult(
     `;
 
 
-    /* ----------------------------------------------------------
+    /* ========================================================
        SUMMARY
-    ---------------------------------------------------------- */
+    ======================================================== */
 
     html += `
 
@@ -2370,9 +2413,9 @@ function renderStudentResult(
     `;
 
 
-    /* ----------------------------------------------------------
-       COMMENTS
-    ---------------------------------------------------------- */
+    /* ========================================================
+       COMMENTS EDITOR
+    ======================================================== */
 
     const teacherComment =
         comments
@@ -2382,6 +2425,7 @@ function renderStudentResult(
                 ''
             )
             : '';
+
 
     const principalComment =
         comments
@@ -2395,6 +2439,116 @@ function renderStudentResult(
 
     html += `
 
+        <section class="result-comments-editor">
+
+            <div class="result-comments-editor-header">
+
+                <div>
+
+                    <div class="result-comment-title">
+                        Result Comments
+                    </div>
+
+                    <p class="result-comments-help">
+                        Add or update the comments that will
+                        appear on the student's final result.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="result-comment-field">
+
+                <label
+                    for="teacherCommentInput"
+                >
+                    Teacher's Comment
+                </label>
+
+                <textarea
+                    id="teacherCommentInput"
+                    class="result-comment-input"
+                    maxlength="500"
+                    rows="4"
+                    placeholder="Enter teacher's comment..."
+                >${escapeHtml(
+                    teacherComment
+                )}</textarea>
+
+                <div class="result-comment-counter">
+                    <span>
+                        Maximum 500 characters
+                    </span>
+
+                    <span id="teacherCommentCounter">
+                        ${teacherComment.length}/500
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="result-comment-field">
+
+                <label
+                    for="principalCommentInput"
+                >
+                    Principal's Comment
+                </label>
+
+                <textarea
+                    id="principalCommentInput"
+                    class="result-comment-input"
+                    maxlength="500"
+                    rows="4"
+                    placeholder="Enter principal's comment..."
+                >${escapeHtml(
+                    principalComment
+                )}</textarea>
+
+                <div class="result-comment-counter">
+                    <span>
+                        Maximum 500 characters
+                    </span>
+
+                    <span id="principalCommentCounter">
+                        ${principalComment.length}/500
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="result-comment-actions">
+
+                <button
+                    type="button"
+                    class="primary-button"
+                    id="saveResultCommentsButton"
+                >
+                    Save Comments
+                </button>
+
+                <span
+                    class="result-comment-save-status"
+                    id="resultCommentSaveStatus"
+                ></span>
+
+            </div>
+
+        </section>
+
+    `;
+
+
+    /* ========================================================
+       EXISTING COMMENT DISPLAY
+    ======================================================== */
+
+    html += `
+
         <div class="result-comments">
 
             <div class="result-comment">
@@ -2403,13 +2557,14 @@ function renderStudentResult(
                     Teacher's Comment
                 </div>
 
-                <div class="result-comment-text">
-
+                <div
+                    class="result-comment-text"
+                    id="displayTeacherComment"
+                >
                     ${escapeHtml(
                         teacherComment ||
                         'No teacher comment provided.'
                     )}
-
                 </div>
 
             </div>
@@ -2421,13 +2576,14 @@ function renderStudentResult(
                     Principal's Comment
                 </div>
 
-                <div class="result-comment-text">
-
+                <div
+                    class="result-comment-text"
+                    id="displayPrincipalComment"
+                >
                     ${escapeHtml(
                         principalComment ||
                         'No principal comment provided.'
                     )}
-
                 </div>
 
             </div>
@@ -2437,9 +2593,9 @@ function renderStudentResult(
     `;
 
 
-    /* ----------------------------------------------------------
+    /* ========================================================
        PDF ACTION
-    ---------------------------------------------------------- */
+    ======================================================== */
 
     html += `
 
@@ -2466,7 +2622,492 @@ function renderStudentResult(
         html;
 
 
+    bindCommentEditor();
+
     bindPdfButton();
+
+}
+
+
+/* ============================================================
+   BIND COMMENT EDITOR
+============================================================ */
+
+function bindCommentEditor() {
+
+    const teacherInput =
+        document.getElementById(
+            'teacherCommentInput'
+        );
+
+    const principalInput =
+        document.getElementById(
+            'principalCommentInput'
+        );
+
+    const saveButton =
+        document.getElementById(
+            'saveResultCommentsButton'
+        );
+
+
+    if (teacherInput) {
+
+        teacherInput.addEventListener(
+            'input',
+            function () {
+
+                updateCommentCounter(
+                    teacherInput,
+                    'teacherCommentCounter'
+                );
+
+            }
+        );
+
+    }
+
+
+    if (principalInput) {
+
+        principalInput.addEventListener(
+            'input',
+            function () {
+
+                updateCommentCounter(
+                    principalInput,
+                    'principalCommentCounter'
+                );
+
+            }
+        );
+
+    }
+
+
+    if (saveButton) {
+
+        saveButton.addEventListener(
+            'click',
+            saveCurrentResultComments
+        );
+
+    }
+
+
+    updateCommentCounter(
+        teacherInput,
+        'teacherCommentCounter'
+    );
+
+    updateCommentCounter(
+        principalInput,
+        'principalCommentCounter'
+    );
+
+}
+
+
+/* ============================================================
+   UPDATE COMMENT COUNTER
+============================================================ */
+
+function updateCommentCounter(
+    input,
+    counterId
+) {
+
+    const counter =
+        document.getElementById(
+            counterId
+        );
+
+
+    if (!counter) {
+        return;
+    }
+
+
+    const length =
+        input
+            ? String(
+                input.value ||
+                ''
+            ).length
+            : 0;
+
+
+    counter.textContent =
+        length +
+        '/500';
+
+}
+
+
+/* ============================================================
+   SAVE CURRENT RESULT COMMENTS
+============================================================ */
+
+async function saveCurrentResultComments() {
+
+    if (!currentViewedStudentId) {
+
+        showPageMessage(
+            'Student information is missing.'
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !currentSelected.sessionId ||
+        !currentSelected.term
+    ) {
+
+        showPageMessage(
+            'Session and term information are required.'
+        );
+
+        return;
+
+    }
+
+
+    const teacherInput =
+        document.getElementById(
+            'teacherCommentInput'
+        );
+
+    const principalInput =
+        document.getElementById(
+            'principalCommentInput'
+        );
+
+    const saveButton =
+        document.getElementById(
+            'saveResultCommentsButton'
+        );
+
+    const status =
+        document.getElementById(
+            'resultCommentSaveStatus'
+        );
+
+
+    const teacherComment =
+        teacherInput
+            ? String(
+                teacherInput.value ||
+                ''
+            ).trim()
+            : '';
+
+
+    const principalComment =
+        principalInput
+            ? String(
+                principalInput.value ||
+                ''
+            ).trim()
+            : '';
+
+
+    if (
+        !teacherComment &&
+        !principalComment
+    ) {
+
+        showCommentSaveStatus(
+            'Enter a teacher comment or principal comment.',
+            true
+        );
+
+        return;
+
+    }
+
+
+    if (
+        teacherComment.length >
+        500
+    ) {
+
+        showCommentSaveStatus(
+            'Teacher comment cannot exceed 500 characters.',
+            true
+        );
+
+        return;
+
+    }
+
+
+    if (
+        principalComment.length >
+        500
+    ) {
+
+        showCommentSaveStatus(
+            'Principal comment cannot exceed 500 characters.',
+            true
+        );
+
+        return;
+
+    }
+
+
+    if (saveButton) {
+
+        saveButton.disabled =
+            true;
+
+        saveButton.textContent =
+            'Saving...';
+
+    }
+
+
+    if (status) {
+
+        status.textContent =
+            'Saving comments...';
+
+        status.classList.remove(
+            'error',
+            'success'
+        );
+
+    }
+
+
+    try {
+
+        const response =
+            await apiRequest(
+                'saveResultComments',
+                {
+                    schoolId:
+                        currentSession.schoolId,
+
+                    sessionId:
+                        currentSelected.sessionId,
+
+                    term:
+                        currentSelected.term,
+
+                    studentId:
+                        currentViewedStudentId,
+
+                    teacherComment:
+                        teacherComment,
+
+                    principalComment:
+                        principalComment,
+
+                    updatedBy:
+                        currentSession.fullName ||
+                        currentSession.userId ||
+                        'System User'
+                }
+            );
+
+
+        if (
+            !response ||
+            !response.success
+        ) {
+
+            throw new Error(
+                response &&
+                response.error
+                    ? response.error
+                    : 'Unable to save result comments.'
+            );
+
+        }
+
+
+        /*
+         * Keep the frontend result state
+         * synchronized with the saved comments.
+         */
+
+        if (!currentViewedResult) {
+
+            currentViewedResult = {};
+
+        }
+
+
+        currentViewedResult.comments = {
+
+            'Comment ID':
+                response.comment &&
+                response.comment['Comment ID']
+                    ? response.comment['Comment ID']
+                    : '',
+
+            'School ID':
+                currentSession.schoolId,
+
+            'Session ID':
+                currentSelected.sessionId,
+
+            'Term':
+                currentSelected.term,
+
+            'Student ID':
+                currentViewedStudentId,
+
+            'Teacher Comment':
+                teacherComment,
+
+            'Principal Comment':
+                principalComment,
+
+            'Updated By':
+                currentSession.fullName ||
+                currentSession.userId ||
+                'System User',
+
+            'Updated At':
+                response.comment &&
+                response.comment['Updated At']
+                    ? response.comment['Updated At']
+                    : ''
+
+        };
+
+
+        updateDisplayedComments(
+            teacherComment,
+            principalComment
+        );
+
+
+        showCommentSaveStatus(
+            response.message ||
+            'Result comments saved successfully.',
+            false
+        );
+
+
+        showPageMessage(
+            response.message ||
+            'Result comments saved successfully.'
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            'Save comments error:',
+            error
+        );
+
+
+        showCommentSaveStatus(
+            error.message ||
+            'Unable to save result comments.',
+            true
+        );
+
+    } finally {
+
+        if (saveButton) {
+
+            saveButton.disabled =
+                false;
+
+            saveButton.textContent =
+                'Save Comments';
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+   UPDATE DISPLAYED COMMENTS
+============================================================ */
+
+function updateDisplayedComments(
+    teacherComment,
+    principalComment
+) {
+
+    const teacherDisplay =
+        document.getElementById(
+            'displayTeacherComment'
+        );
+
+    const principalDisplay =
+        document.getElementById(
+            'displayPrincipalComment'
+        );
+
+
+    if (teacherDisplay) {
+
+        teacherDisplay.textContent =
+            teacherComment ||
+            'No teacher comment provided.';
+
+    }
+
+
+    if (principalDisplay) {
+
+        principalDisplay.textContent =
+            principalComment ||
+            'No principal comment provided.';
+
+    }
+
+}
+
+
+/* ============================================================
+   COMMENT SAVE STATUS
+============================================================ */
+
+function showCommentSaveStatus(
+    message,
+    isError
+) {
+
+    const status =
+        document.getElementById(
+            'resultCommentSaveStatus'
+        );
+
+
+    if (!status) {
+        return;
+    }
+
+
+    status.textContent =
+        message ||
+        '';
+
+
+    status.classList.remove(
+        'error',
+        'success'
+    );
+
+
+    status.classList.add(
+        isError
+            ? 'error'
+            : 'success'
+    );
 
 }
 
@@ -2587,17 +3228,6 @@ async function generateStudentPdf(
 
         }
 
-
-        /*
-         * ResultPDF.gs returns:
-         *
-         * file: {
-         *     id,
-         *     name,
-         *     url,
-         *     downloadUrl
-         * }
-         */
 
         const pdfUrl =
             response.file &&
@@ -3101,10 +3731,6 @@ function formatNumberValue(
     }
 
 
-    /*
-     * Keep whole numbers clean.
-     */
-
     if (
         Number.isInteger(
             number
@@ -3143,11 +3769,6 @@ function formatPositionValue(
 
     }
 
-
-    /*
-     * Protect against accidentally passing
-     * the position object.
-     */
 
     if (
         typeof value === 'object'
