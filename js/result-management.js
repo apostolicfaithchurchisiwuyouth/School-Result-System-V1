@@ -1,7 +1,7 @@
 /* ============================================================
    SCHOOL RESULTS SYSTEM
    FILE: result-management.js
-   VERSION: 1.0.0
+   VERSION: 1.0.1
 
    RESULT MANAGEMENT FRONTEND
 ============================================================ */
@@ -115,20 +115,6 @@ function loadStoredSession() {
         }
 
 
-        /*
-         * The login response is normally stored
-         * as one session object.
-         *
-         * This normalization supports both:
-         *
-         * {
-         *   user: {...},
-         *   school: {...}
-         * }
-         *
-         * and older flattened structures.
-         */
-
         const user =
             parsed.user ||
             parsed.User ||
@@ -153,7 +139,6 @@ function loadStoredSession() {
             parsed.fullName ||
             user.fullName ||
             user.name ||
-            school.fullName ||
             'User';
 
 
@@ -564,7 +549,11 @@ async function loadSetup() {
 
     showSelectionLoading();
 
-    hidePageMessage();
+    /*
+     * CORRECTED:
+     * The actual function in this file is hideMessage().
+     */
+    hideMessage();
 
 
     try {
@@ -848,10 +837,6 @@ function chooseDefaultSelection() {
         );
 
 
-    /*
-     * Prefer active session.
-     */
-
     let selectedSession =
         setupData.sessions.find(
             function (session) {
@@ -863,10 +848,6 @@ function chooseDefaultSelection() {
             }
         );
 
-
-    /*
-     * Otherwise use first session.
-     */
 
     if (!selectedSession) {
 
@@ -887,10 +868,6 @@ function chooseDefaultSelection() {
 
     }
 
-
-    /*
-     * Prefer First Term.
-     */
 
     let selectedTerm =
         setupData.terms.find(
@@ -921,10 +898,6 @@ function chooseDefaultSelection() {
 
     }
 
-
-    /*
-     * Use first active class.
-     */
 
     let selectedClass =
         setupData.classes.find(
@@ -1041,7 +1014,7 @@ function handleSelectionChange() {
     };
 
 
-    hidePageMessage();
+    hideMessage();
 
     hideResultSections();
 
@@ -1076,8 +1049,7 @@ async function loadResultManagement() {
 
     showSelectionLoading();
 
-    hidePageMessage();
-
+    hideMessage();
 
     setOverviewLoading();
 
@@ -1085,13 +1057,6 @@ async function loadResultManagement() {
 
 
     try {
-
-        /*
-         * Load overview and student list.
-         *
-         * These calls use the exact parameters
-         * required by ResultManagement.gs.
-         */
 
         const payload = {
 
@@ -1356,14 +1321,19 @@ function renderOverview(data) {
 
         overviewSubtitle.textContent =
             (
-                (data.session &&
-                    data.session.sessionName
+                data.session &&
+                data.session.sessionName
+            )
+                ? (
+                    data.session.sessionName +
+                    ' • ' +
+                    currentSelected.term
                 )
-                    ? data.session.sessionName
-                    : currentSelected.sessionId
-            ) +
-            ' • ' +
-            currentSelected.term;
+                : (
+                    currentSelected.sessionId +
+                    ' • ' +
+                    currentSelected.term
+                );
 
     }
 
@@ -2280,13 +2250,6 @@ function renderStudentResult(
     }
 
 
-    /*
-     * FinalResults.gs may contain slightly different
-     * nested structures depending on the existing
-     * result engine. We read the common structures
-     * safely rather than assuming a single shape.
-     */
-
     const student =
         result.student ||
         {};
@@ -3005,7 +2968,7 @@ async function apiRequest(
 
 
 /* ============================================================
-   MESSAGE
+   PAGE MESSAGE
 ============================================================ */
 
 function showMessage(
@@ -3053,6 +3016,13 @@ function showMessage(
 
 }
 
+
+/*
+ * This is the function that was missing.
+ *
+ * All previous calls to hidePageMessage()
+ * have been standardized to this function.
+ */
 
 function hideMessage() {
 
