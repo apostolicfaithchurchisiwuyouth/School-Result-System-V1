@@ -1,7 +1,7 @@
 /* ============================================================
    SCHOOL RESULTS SYSTEM
    FILE: result-management.js
-   VERSION: 1.1.0
+   VERSION: 1.1.1
 
    PURPOSE:
    - Result management
@@ -33,6 +33,7 @@ const SESSION_KEY =
 let currentSession = null;
 let setupData = null;
 let currentStudents = [];
+
 let currentSelection = {
     sessionId: '',
     term: '',
@@ -46,11 +47,12 @@ let currentStudentResult = null;
    DOM READY
 ============================================================ */
 
-document.addEventListener('DOMContentLoaded', function () {
-
-    initializePage();
-
-});
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        initializePage();
+    }
+);
 
 
 /* ============================================================
@@ -81,27 +83,47 @@ async function initializePage() {
 
 function restoreSession() {
 
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw =
+        localStorage.getItem(
+            SESSION_KEY
+        );
 
     if (!raw) {
+
         currentSession = null;
+
         return;
+
     }
+
 
     try {
 
-        const parsed = JSON.parse(raw);
+        const parsed =
+            JSON.parse(raw);
 
-        if (!parsed || typeof parsed !== 'object') {
+        if (
+            !parsed ||
+            typeof parsed !== 'object'
+        ) {
+
             currentSession = null;
+
             return;
+
         }
 
-        currentSession = normalizeSession(parsed);
+
+        currentSession =
+            normalizeSession(parsed);
+
 
     } catch (error) {
 
-        console.error('Session parsing failed:', error);
+        console.error(
+            'Session parsing failed:',
+            error
+        );
 
         currentSession = null;
 
@@ -112,12 +134,17 @@ function restoreSession() {
 
 function normalizeSession(parsed) {
 
-    const user = parsed.user || {};
-    const school = parsed.school || {};
+    const user =
+        parsed.user || {};
+
+    const school =
+        parsed.school || {};
+
 
     return {
 
         user: {
+
             userId:
                 parsed.userId ||
                 user.userId ||
@@ -149,9 +176,11 @@ function normalizeSession(parsed) {
                 user.role ||
                 user['Role'] ||
                 ''
+
         },
 
         school: {
+
             schoolId:
                 parsed.schoolId ||
                 school.schoolId ||
@@ -188,6 +217,7 @@ function normalizeSession(parsed) {
                 school.expiryDate ||
                 school['Expiry Date'] ||
                 ''
+
         }
 
     };
@@ -197,15 +227,29 @@ function normalizeSession(parsed) {
 
 function getSchoolId() {
 
-    return (
+    if (
         currentSession &&
         currentSession.user &&
         currentSession.user.schoolId
-    ) || (
+    ) {
+
+        return currentSession.user.schoolId;
+
+    }
+
+
+    if (
         currentSession &&
         currentSession.school &&
         currentSession.school.schoolId
-    ) || '';
+    ) {
+
+        return currentSession.school.schoolId;
+
+    }
+
+
+    return '';
 
 }
 
@@ -216,16 +260,33 @@ function getSchoolId() {
 
 function populateUserInformation() {
 
-    const schoolName = document.getElementById('schoolName');
-    const userName = document.getElementById('userName');
-    const userRole = document.getElementById('userRole');
-    const userInitials = document.getElementById('userInitials');
+    const schoolName =
+        document.getElementById(
+            'schoolName'
+        );
+
+    const userName =
+        document.getElementById(
+            'userName'
+        );
+
+    const userRole =
+        document.getElementById(
+            'userRole'
+        );
+
+    const userInitials =
+        document.getElementById(
+            'userInitials'
+        );
+
 
     const school =
         currentSession.school || {};
 
     const user =
         currentSession.user || {};
+
 
     if (schoolName) {
 
@@ -235,6 +296,7 @@ function populateUserInformation() {
 
     }
 
+
     if (userName) {
 
         userName.textContent =
@@ -243,6 +305,7 @@ function populateUserInformation() {
 
     }
 
+
     if (userRole) {
 
         userRole.textContent =
@@ -250,6 +313,7 @@ function populateUserInformation() {
             'Administrator';
 
     }
+
 
     if (userInitials) {
 
@@ -273,9 +337,13 @@ function getInitials(name) {
             .split(/\s+/)
             .filter(Boolean);
 
+
     if (!words.length) {
+
         return 'SR';
+
     }
+
 
     if (words.length === 1) {
 
@@ -284,6 +352,7 @@ function getInitials(name) {
             .toUpperCase();
 
     }
+
 
     return (
         words[0].charAt(0) +
@@ -300,22 +369,34 @@ function getInitials(name) {
 function bindEvents() {
 
     const sessionSelect =
-        document.getElementById('sessionSelect');
+        document.getElementById(
+            'sessionSelect'
+        );
 
     const termSelect =
-        document.getElementById('termSelect');
+        document.getElementById(
+            'termSelect'
+        );
 
     const classSelect =
-        document.getElementById('classSelect');
+        document.getElementById(
+            'classSelect'
+        );
 
     const menuButton =
-        document.getElementById('menuButton');
+        document.getElementById(
+            'menuButton'
+        );
 
     const logoutButton =
-        document.getElementById('logoutButton');
+        document.getElementById(
+            'logoutButton'
+        );
 
     const closeMessage =
-        document.getElementById('closeMessage');
+        document.getElementById(
+            'closeMessage'
+        );
 
     const closeStudentResultButton =
         document.getElementById(
@@ -413,14 +494,19 @@ function bindEvents() {
             'studentResultModal'
         );
 
+
     if (modal) {
 
         modal.addEventListener(
             'click',
             function (event) {
 
-                if (event.target === modal) {
+                if (
+                    event.target === modal
+                ) {
+
                     closeStudentResultModal();
+
                 }
 
             }
@@ -433,7 +519,9 @@ function bindEvents() {
         'keydown',
         function (event) {
 
-            if (event.key === 'Escape') {
+            if (
+                event.key === 'Escape'
+            ) {
 
                 closeStudentResultModal();
 
@@ -452,13 +540,21 @@ function bindEvents() {
 function toggleSidebar() {
 
     const sidebar =
-        document.getElementById('sidebar');
+        document.getElementById(
+            'sidebar'
+        );
+
 
     if (!sidebar) {
+
         return;
+
     }
 
-    sidebar.classList.toggle('open');
+
+    sidebar.classList.toggle(
+        'open'
+    );
 
 }
 
@@ -470,10 +566,13 @@ function toggleSidebar() {
 async function loadSetup() {
 
     hideMessage();
+
     hideSelectionMessage();
+
 
     const schoolId =
         getSchoolId();
+
 
     if (!schoolId) {
 
@@ -507,15 +606,19 @@ async function loadSetup() {
         }
 
 
-        setupData = response;
+        setupData =
+            response;
+
 
         populateSessions(
             response.sessions || []
         );
 
+
         populateTerms(
             response.terms || []
         );
+
 
         populateClasses(
             response.classes || []
@@ -537,10 +640,12 @@ async function loadSetup() {
             error
         );
 
+
         showMessage(
             error.message ||
             'Unable to load result management.'
         );
+
 
         hideResultSections();
 
@@ -560,28 +665,41 @@ function populateSessions(sessions) {
             'sessionSelect'
         );
 
+
     if (!select) {
+
         return;
+
     }
+
 
     select.innerHTML =
         '<option value="">Select session</option>';
 
 
-    sessions.forEach(function (session) {
+    sessions.forEach(
+        function (session) {
 
-        const option =
-            document.createElement('option');
+            const option =
+                document.createElement(
+                    'option'
+                );
 
-        option.value =
-            session.sessionId || '';
 
-        option.textContent =
-            session.sessionName || '';
+            option.value =
+                session.sessionId || '';
 
-        select.appendChild(option);
 
-    });
+            option.textContent =
+                session.sessionName || '';
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
 
 }
 
@@ -597,28 +715,41 @@ function populateTerms(terms) {
             'termSelect'
         );
 
+
     if (!select) {
+
         return;
+
     }
+
 
     select.innerHTML =
         '<option value="">Select term</option>';
 
 
-    terms.forEach(function (term) {
+    terms.forEach(
+        function (term) {
 
-        const option =
-            document.createElement('option');
+            const option =
+                document.createElement(
+                    'option'
+                );
 
-        option.value =
-            term;
 
-        option.textContent =
-            term;
+            option.value =
+                term;
 
-        select.appendChild(option);
 
-    });
+            option.textContent =
+                term;
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
 
 }
 
@@ -634,28 +765,41 @@ function populateClasses(classes) {
             'classSelect'
         );
 
+
     if (!select) {
+
         return;
+
     }
+
 
     select.innerHTML =
         '<option value="">Select class</option>';
 
 
-    classes.forEach(function (item) {
+    classes.forEach(
+        function (item) {
 
-        const option =
-            document.createElement('option');
+            const option =
+                document.createElement(
+                    'option'
+                );
 
-        option.value =
-            item.classId || '';
 
-        option.textContent =
-            buildClassName(item);
+            option.value =
+                item.classId || '';
 
-        select.appendChild(option);
 
-    });
+            option.textContent =
+                buildClassName(item);
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
 
 }
 
@@ -668,11 +812,15 @@ function buildClassName(item) {
     const section =
         item.section || '';
 
+
     if (section) {
 
-        return name + ' - ' + section;
+        return name +
+            ' - ' +
+            section;
 
     }
+
 
     return name;
 
@@ -711,19 +859,22 @@ function selectDefaultValues(response) {
         response.classes || [];
 
 
-    let selectedSession = null;
+    let selectedSession =
+        sessions.find(
+            function (session) {
 
-    selectedSession =
-        sessions.find(function (session) {
+                return normalizeStatus(
+                    session.status
+                ) === 'active';
 
-            return normalizeStatus(
-                session.status
-            ) === 'active';
-
-        });
+            }
+        );
 
 
-    if (!selectedSession && sessions.length) {
+    if (
+        !selectedSession &&
+        sessions.length
+    ) {
 
         selectedSession =
             sessions[0];
@@ -731,7 +882,10 @@ function selectDefaultValues(response) {
     }
 
 
-    if (selectedSession && sessionSelect) {
+    if (
+        selectedSession &&
+        sessionSelect
+    ) {
 
         sessionSelect.value =
             selectedSession.sessionId || '';
@@ -743,15 +897,22 @@ function selectDefaultValues(response) {
 
 
     let selectedTerm =
-        terms.find(function (term) {
+        terms.find(
+            function (term) {
 
-            return String(term).trim() ===
-                'First Term';
+                return String(term)
+                    .trim()
+                    .toLowerCase() ===
+                    'first term';
 
-        });
+            }
+        );
 
 
-    if (!selectedTerm && terms.length) {
+    if (
+        !selectedTerm &&
+        terms.length
+    ) {
 
         selectedTerm =
             terms[0];
@@ -759,7 +920,10 @@ function selectDefaultValues(response) {
     }
 
 
-    if (selectedTerm && termSelect) {
+    if (
+        selectedTerm &&
+        termSelect
+    ) {
 
         termSelect.value =
             selectedTerm;
@@ -770,19 +934,22 @@ function selectDefaultValues(response) {
     }
 
 
-    let selectedClass = null;
+    let selectedClass =
+        classes.find(
+            function (item) {
 
-    selectedClass =
-        classes.find(function (item) {
+                return normalizeStatus(
+                    item.status
+                ) === 'active';
 
-            return normalizeStatus(
-                item.status
-            ) === 'active';
-
-        });
+            }
+        );
 
 
-    if (!selectedClass && classes.length) {
+    if (
+        !selectedClass &&
+        classes.length
+    ) {
 
         selectedClass =
             classes[0];
@@ -790,7 +957,10 @@ function selectDefaultValues(response) {
     }
 
 
-    if (selectedClass && classSelect) {
+    if (
+        selectedClass &&
+        classSelect
+    ) {
 
         classSelect.value =
             selectedClass.classId || '';
@@ -907,10 +1077,17 @@ async function loadResultManagement() {
 
     const payload = {
 
-        schoolId,
-        sessionId,
-        term,
-        classId
+        schoolId:
+            schoolId,
+
+        sessionId:
+            sessionId,
+
+        term:
+            term,
+
+        classId:
+            classId
 
     };
 
@@ -940,7 +1117,9 @@ async function loadResultManagement() {
             responses[1];
 
 
-        if (!overviewResponse.success) {
+        if (
+            !overviewResponse.success
+        ) {
 
             throw new Error(
                 overviewResponse.message ||
@@ -950,7 +1129,9 @@ async function loadResultManagement() {
         }
 
 
-        if (!studentsResponse.success) {
+        if (
+            !studentsResponse.success
+        ) {
 
             throw new Error(
                 studentsResponse.message ||
@@ -964,6 +1145,7 @@ async function loadResultManagement() {
             overviewResponse
         );
 
+
         renderStudents(
             studentsResponse
         );
@@ -976,7 +1158,9 @@ async function loadResultManagement() {
             error
         );
 
+
         hideResultSections();
+
 
         showMessage(
             error.message ||
@@ -1090,16 +1274,24 @@ function renderOverview(response) {
 
 
     const total =
-        Number(students.total || 0);
+        Number(
+            students.total || 0
+        );
 
     const complete =
-        Number(students.complete || 0);
+        Number(
+            students.complete || 0
+        );
 
     const incomplete =
-        Number(students.incomplete || 0);
+        Number(
+            students.incomplete || 0
+        );
 
     const notStarted =
-        Number(students.notStarted || 0);
+        Number(
+            students.notStarted || 0
+        );
 
 
     setText(
@@ -1107,15 +1299,18 @@ function renderOverview(response) {
         total
     );
 
+
     setText(
         'completedStudents',
         complete
     );
 
+
     setText(
         'incompleteStudents',
         incomplete
     );
+
 
     setText(
         'notStartedStudents',
@@ -1137,7 +1332,10 @@ function renderOverview(response) {
     if (overviewTitle) {
 
         overviewTitle.textContent =
-            (classData.className || 'Class') +
+            (
+                classData.className ||
+                'Class'
+            ) +
             ' Result Overview';
 
     }
@@ -1149,8 +1347,12 @@ function renderOverview(response) {
             session.sessionName ||
             currentSelection.sessionId;
 
+
         overviewSubtitle.textContent =
-            (school.schoolName || 'School') +
+            (
+                school.schoolName ||
+                'School'
+            ) +
             ' • ' +
             sessionName +
             ' • ' +
@@ -1163,6 +1365,37 @@ function renderOverview(response) {
         response.readyForPdf === true,
         validation
     );
+
+}
+
+
+/* ============================================================
+   SET TEXT
+============================================================ */
+
+function setText(
+    elementId,
+    value
+) {
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!element) {
+
+        return;
+
+    }
+
+
+    element.textContent =
+        value === null ||
+        value === undefined
+            ? ''
+            : String(value);
 
 }
 
@@ -1204,12 +1437,14 @@ function renderReadiness(
                 ? 'Ready for PDF'
                 : 'Not Ready';
 
+
         badge.classList.remove(
             'ready',
             'not-ready',
             'success',
             'warning'
         );
+
 
         badge.classList.add(
             ready
@@ -1228,6 +1463,7 @@ function renderReadiness(
             'success',
             'warning'
         );
+
 
         panel.classList.add(
             ready
@@ -1301,7 +1537,10 @@ function getValidationMessage(
         );
 
 
-    if (missing > 0 && invalid > 0) {
+    if (
+        missing > 0 &&
+        invalid > 0
+    ) {
 
         return (
             missing +
@@ -1346,6 +1585,7 @@ function renderStudents(response) {
 
     const students =
         response.students || [];
+
 
     currentStudents =
         students;
@@ -1409,6 +1649,7 @@ function renderStudents(response) {
 
         }
 
+
         if (table) {
 
             table.classList.add(
@@ -1416,6 +1657,7 @@ function renderStudents(response) {
             );
 
         }
+
 
         return;
 
@@ -1441,20 +1683,26 @@ function renderStudents(response) {
 
 
     if (!tbody) {
+
         return;
+
     }
 
 
     tbody.innerHTML = '';
 
 
-    students.forEach(function (student) {
+    students.forEach(
+        function (student) {
 
-        tbody.appendChild(
-            createStudentRow(student)
-        );
+            tbody.appendChild(
+                createStudentRow(
+                    student
+                )
+            );
 
-    });
+        }
+    );
 
 }
 
@@ -1466,11 +1714,15 @@ function renderStudents(response) {
 function createStudentRow(student) {
 
     const row =
-        document.createElement('tr');
+        document.createElement(
+            'tr'
+        );
 
 
     const admissionCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
 
     admissionCell.textContent =
         safeDisplay(
@@ -1479,7 +1731,9 @@ function createStudentRow(student) {
 
 
     const nameCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
 
     nameCell.className =
         'student-name-cell';
@@ -1491,7 +1745,9 @@ function createStudentRow(student) {
 
 
     const totalCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
 
     totalCell.textContent =
         formatNumber(
@@ -1500,7 +1756,9 @@ function createStudentRow(student) {
 
 
     const averageCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
 
     averageCell.textContent =
         formatAverage(
@@ -1509,7 +1767,9 @@ function createStudentRow(student) {
 
 
     const positionCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
 
     positionCell.textContent =
         formatPosition(
@@ -1518,7 +1778,9 @@ function createStudentRow(student) {
 
 
     const statusCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
 
     statusCell.appendChild(
         createStatusBadge(
@@ -1528,10 +1790,16 @@ function createStudentRow(student) {
 
 
     const actionCell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
+
 
     const button =
-        document.createElement('button');
+        document.createElement(
+            'button'
+        );
+
 
     button.type =
         'button';
@@ -1541,6 +1809,7 @@ function createStudentRow(student) {
 
     button.textContent =
         'View Result';
+
 
     button.addEventListener(
         'click',
@@ -1600,10 +1869,15 @@ function createStudentRow(student) {
 function createStatusBadge(status) {
 
     const badge =
-        document.createElement('span');
+        document.createElement(
+            'span'
+        );
+
 
     const normalized =
-        normalizeStatus(status);
+        normalizeStatus(
+            status
+        );
 
 
     badge.className =
@@ -1611,7 +1885,8 @@ function createStatusBadge(status) {
 
 
     if (
-        normalized === 'complete'
+        normalized ===
+        'complete'
     ) {
 
         badge.classList.add(
@@ -1627,7 +1902,8 @@ function createStatusBadge(status) {
 
 
     if (
-        normalized === 'incomplete'
+        normalized ===
+        'incomplete'
     ) {
 
         badge.classList.add(
@@ -1646,6 +1922,7 @@ function createStatusBadge(status) {
         'status-not-started'
     );
 
+
     badge.textContent =
         'Not Started';
 
@@ -1659,9 +1936,14 @@ function createStatusBadge(status) {
    OPEN STUDENT RESULT
 ============================================================ */
 
-async function openStudentResult(student) {
+async function openStudentResult(
+    student
+) {
 
-    if (!student || !student.studentId) {
+    if (
+        !student ||
+        !student.studentId
+    ) {
 
         showMessage(
             'The selected student could not be identified.'
@@ -1688,8 +1970,13 @@ async function openStudentResult(student) {
         );
 
 
-    if (!modal || !body) {
+    if (
+        !modal ||
+        !body
+    ) {
+
         return;
+
     }
 
 
@@ -1726,11 +2013,15 @@ async function openStudentResult(student) {
             await apiRequest(
                 'getResultManagementStudent',
                 {
-                    schoolId,
+                    schoolId:
+                        schoolId,
+
                     sessionId:
                         currentSelection.sessionId,
+
                     term:
                         currentSelection.term,
+
                     studentId:
                         student.studentId
                 }
@@ -1787,8 +2078,11 @@ function closeStudentResultModal() {
             'studentResultModal'
         );
 
+
     if (!modal) {
+
         return;
+
     }
 
 
@@ -1833,7 +2127,9 @@ function getResultLoadingMarkup() {
    RESULT ERROR MARKUP
 ============================================================ */
 
-function getResultErrorMarkup(message) {
+function getResultErrorMarkup(
+    message
+) {
 
     return `
         <div class="result-error">
@@ -1866,8 +2162,11 @@ function renderStudentResult(
             'resultModalBody'
         );
 
+
     if (!body) {
+
         return;
+
     }
 
 
@@ -1883,9 +2182,13 @@ function renderStudentResult(
 
 
     const subjects =
-        Array.isArray(result.subjects)
+        Array.isArray(
+            result.subjects
+        )
             ? result.subjects
-            : Array.isArray(result.results)
+            : Array.isArray(
+                result.results
+            )
                 ? result.results
                 : [];
 
@@ -1940,17 +2243,24 @@ function buildStudentInformation(
 ) {
 
     const section =
-        document.createElement('section');
+        document.createElement(
+            'section'
+        );
+
 
     section.className =
         'result-section student-result-information';
 
 
     const title =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     title.className =
         'result-section-title';
+
 
     title.textContent =
         'STUDENT INFORMATION';
@@ -1962,7 +2272,10 @@ function buildStudentInformation(
 
 
     const grid =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     grid.className =
         'result-information-grid';
@@ -2028,35 +2341,49 @@ function addInformationItem(
 ) {
 
     const item =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     item.className =
         'result-information-item';
 
 
     const labelElement =
-        document.createElement('span');
+        document.createElement(
+            'span'
+        );
+
 
     labelElement.className =
         'result-information-label';
+
 
     labelElement.textContent =
         label;
 
 
     const valueElement =
-        document.createElement('strong');
+        document.createElement(
+            'strong'
+        );
+
 
     valueElement.className =
         'result-information-value';
 
+
     valueElement.textContent =
-        safeDisplay(value);
+        safeDisplay(
+            value
+        );
 
 
     item.appendChild(
         labelElement
     );
+
 
     item.appendChild(
         valueElement
@@ -2080,17 +2407,24 @@ function buildPerformanceSummary(
 ) {
 
     const section =
-        document.createElement('section');
+        document.createElement(
+            'section'
+        );
+
 
     section.className =
         'result-section';
 
 
     const title =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     title.className =
         'result-section-title';
+
 
     title.textContent =
         'PERFORMANCE SUMMARY';
@@ -2102,7 +2436,10 @@ function buildPerformanceSummary(
 
 
     const grid =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     grid.className =
         'result-performance-grid';
@@ -2164,35 +2501,49 @@ function addPerformanceItem(
 ) {
 
     const item =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     item.className =
         'performance-item';
 
 
     const labelElement =
-        document.createElement('span');
+        document.createElement(
+            'span'
+        );
+
 
     labelElement.className =
         'performance-label';
+
 
     labelElement.textContent =
         label;
 
 
     const valueElement =
-        document.createElement('strong');
+        document.createElement(
+            'strong'
+        );
+
 
     valueElement.className =
         'performance-value';
 
+
     valueElement.textContent =
-        safeDisplay(value);
+        safeDisplay(
+            value
+        );
 
 
     item.appendChild(
         labelElement
     );
+
 
     item.appendChild(
         valueElement
@@ -2215,17 +2566,24 @@ function buildSubjectResults(
 ) {
 
     const section =
-        document.createElement('section');
+        document.createElement(
+            'section'
+        );
+
 
     section.className =
         'result-section';
 
 
     const title =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     title.className =
         'result-section-title';
+
 
     title.textContent =
         'SUBJECT RESULTS';
@@ -2239,17 +2597,23 @@ function buildSubjectResults(
     if (!subjects.length) {
 
         const empty =
-            document.createElement('div');
+            document.createElement(
+                'div'
+            );
+
 
         empty.className =
             'result-empty';
 
+
         empty.textContent =
             'No subject results are available for this student.';
+
 
         section.appendChild(
             empty
         );
+
 
         return section;
 
@@ -2257,14 +2621,20 @@ function buildSubjectResults(
 
 
     const wrapper =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     wrapper.className =
         'result-subject-table-wrapper';
 
 
     const table =
-        document.createElement('table');
+        document.createElement(
+            'table'
+        );
+
 
     table.className =
         'result-subject-table';
@@ -2272,7 +2642,6 @@ function buildSubjectResults(
 
     table.innerHTML = `
         <thead>
-
             <tr>
                 <th>Subject</th>
                 <th>Test</th>
@@ -2281,7 +2650,6 @@ function buildSubjectResults(
                 <th>Grade</th>
                 <th>Remark</th>
             </tr>
-
         </thead>
 
         <tbody></tbody>
@@ -2289,121 +2657,132 @@ function buildSubjectResults(
 
 
     const tbody =
-        table.querySelector('tbody');
+        table.querySelector(
+            'tbody'
+        );
 
 
-    subjects.forEach(function (subject) {
+    subjects.forEach(
+        function (subject) {
 
-        const row =
-            document.createElement('tr');
+            const row =
+                document.createElement(
+                    'tr'
+                );
 
 
-        const subjectName =
-            getSubjectValue(
-                subject,
-                [
-                    'subjectName',
-                    'Subject Name',
-                    'subject'
-                ]
+            const subjectName =
+                getSubjectValue(
+                    subject,
+                    [
+                        'subjectName',
+                        'Subject Name',
+                        'subject'
+                    ]
+                );
+
+
+            const test =
+                getSubjectValue(
+                    subject,
+                    [
+                        'testScore',
+                        'Test Score',
+                        'test'
+                    ]
+                );
+
+
+            const exam =
+                getSubjectValue(
+                    subject,
+                    [
+                        'examScore',
+                        'Exam Score',
+                        'exam'
+                    ]
+                );
+
+
+            const total =
+                getSubjectValue(
+                    subject,
+                    [
+                        'totalScore',
+                        'Total Score',
+                        'total'
+                    ]
+                );
+
+
+            const grade =
+                getSubjectValue(
+                    subject,
+                    [
+                        'grade',
+                        'Grade'
+                    ]
+                );
+
+
+            const remark =
+                getSubjectValue(
+                    subject,
+                    [
+                        'remark',
+                        'Remark'
+                    ]
+                );
+
+
+            row.appendChild(
+                createTableCell(
+                    subjectName
+                )
             );
 
 
-        const test =
-            getSubjectValue(
-                subject,
-                [
-                    'testScore',
-                    'Test Score',
-                    'test'
-                ]
+            row.appendChild(
+                createTableCell(
+                    formatScore(test)
+                )
             );
 
 
-        const exam =
-            getSubjectValue(
-                subject,
-                [
-                    'examScore',
-                    'Exam Score',
-                    'exam'
-                ]
+            row.appendChild(
+                createTableCell(
+                    formatScore(exam)
+                )
             );
 
 
-        const total =
-            getSubjectValue(
-                subject,
-                [
-                    'totalScore',
-                    'Total Score',
-                    'total'
-                ]
+            row.appendChild(
+                createTableCell(
+                    formatScore(total)
+                )
             );
 
 
-        const grade =
-            getSubjectValue(
-                subject,
-                [
-                    'grade',
-                    'Grade'
-                ]
+            row.appendChild(
+                createTableCell(
+                    grade
+                )
             );
 
 
-        const remark =
-            getSubjectValue(
-                subject,
-                [
-                    'remark',
-                    'Remark'
-                ]
+            row.appendChild(
+                createTableCell(
+                    remark
+                )
             );
 
 
-        row.appendChild(
-            createTableCell(
-                subjectName
-            )
-        );
+            tbody.appendChild(
+                row
+            );
 
-        row.appendChild(
-            createTableCell(
-                formatScore(test)
-            )
-        );
-
-        row.appendChild(
-            createTableCell(
-                formatScore(exam)
-            )
-        );
-
-        row.appendChild(
-            createTableCell(
-                formatScore(total)
-            )
-        );
-
-        row.appendChild(
-            createTableCell(
-                grade
-            )
-        );
-
-        row.appendChild(
-            createTableCell(
-                remark
-            )
-        );
-
-
-        tbody.appendChild(
-            row
-        );
-
-    });
+        }
+    );
 
 
     wrapper.appendChild(
@@ -2430,17 +2809,24 @@ function buildCommentsSection(
 ) {
 
     const section =
-        document.createElement('section');
+        document.createElement(
+            'section'
+        );
+
 
     section.className =
         'result-section';
 
 
     const title =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     title.className =
         'result-section-title';
+
 
     title.textContent =
         'COMMENTS';
@@ -2464,7 +2850,10 @@ function buildCommentsSection(
 
 
     const commentsGrid =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     commentsGrid.className =
         'result-comments-grid';
@@ -2502,21 +2891,30 @@ function createCommentBox(
 ) {
 
     const box =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     box.className =
         'result-comment-box';
 
 
     const heading =
-        document.createElement('strong');
+        document.createElement(
+            'strong'
+        );
+
 
     heading.textContent =
         label;
 
 
     const text =
-        document.createElement('p');
+        document.createElement(
+            'p'
+        );
+
 
     text.textContent =
         safeDisplay(
@@ -2528,6 +2926,7 @@ function createCommentBox(
     box.appendChild(
         heading
     );
+
 
     box.appendChild(
         text
@@ -2543,13 +2942,21 @@ function createCommentBox(
    RESULT HELPERS
 ============================================================ */
 
-function getResultClassName(result) {
+function getResultClassName(
+    result
+) {
 
     if (result.class) {
 
-        if (typeof result.class === 'string') {
+        if (
+            typeof result.class ===
+            'string'
+        ) {
+
             return result.class;
+
         }
+
 
         return buildClassName(
             result.class
@@ -2559,7 +2966,9 @@ function getResultClassName(result) {
 
 
     if (result.className) {
+
         return result.className;
+
     }
 
 
@@ -2568,7 +2977,9 @@ function getResultClassName(result) {
 }
 
 
-function getResultSessionName(result) {
+function getResultSessionName(
+    result
+) {
 
     if (result.session) {
 
@@ -2580,6 +2991,7 @@ function getResultSessionName(result) {
             return result.session;
 
         }
+
 
         return (
             result.session.sessionName ||
@@ -2612,9 +3024,12 @@ function getSubjectValue(
         const key =
             keys[index];
 
+
         if (
-            subject[key] !== undefined &&
-            subject[key] !== null
+            subject[key] !==
+                undefined &&
+            subject[key] !==
+                null
         ) {
 
             return subject[key];
@@ -2623,18 +3038,26 @@ function getSubjectValue(
 
     }
 
+
     return '';
 
 }
 
 
-function createTableCell(value) {
+function createTableCell(
+    value
+) {
 
     const cell =
-        document.createElement('td');
+        document.createElement(
+            'td'
+        );
+
 
     cell.textContent =
-        safeDisplay(value);
+        safeDisplay(
+            value
+        );
 
 
     return cell;
@@ -2646,7 +3069,9 @@ function createTableCell(value) {
    FORMATTING
 ============================================================ */
 
-function formatNumber(value) {
+function formatNumber(
+    value
+) {
 
     if (
         value === null ||
@@ -2663,7 +3088,9 @@ function formatNumber(value) {
         Number(value);
 
 
-    if (Number.isNaN(number)) {
+    if (
+        Number.isNaN(number)
+    ) {
 
         return safeDisplay(
             value,
@@ -2678,7 +3105,9 @@ function formatNumber(value) {
 }
 
 
-function formatScore(value) {
+function formatScore(
+    value
+) {
 
     if (
         value === null ||
@@ -2695,7 +3124,9 @@ function formatScore(value) {
         Number(value);
 
 
-    if (Number.isNaN(number)) {
+    if (
+        Number.isNaN(number)
+    ) {
 
         return safeDisplay(
             value,
@@ -2710,7 +3141,9 @@ function formatScore(value) {
 }
 
 
-function formatAverage(value) {
+function formatAverage(
+    value
+) {
 
     if (
         value === null ||
@@ -2727,7 +3160,9 @@ function formatAverage(value) {
         Number(value);
 
 
-    if (Number.isNaN(number)) {
+    if (
+        Number.isNaN(number)
+    ) {
 
         return safeDisplay(
             value,
@@ -2742,7 +3177,9 @@ function formatAverage(value) {
 }
 
 
-function formatPosition(value) {
+function formatPosition(
+    value
+) {
 
     if (
         value === null ||
@@ -2767,10 +3204,15 @@ function formatCompletionStatus(
 ) {
 
     const normalized =
-        normalizeStatus(value);
+        normalizeStatus(
+            value
+        );
 
 
-    if (normalized === 'complete') {
+    if (
+        normalized ===
+        'complete'
+    ) {
 
         return 'Complete';
 
@@ -2792,7 +3234,9 @@ function formatCompletionStatus(
 }
 
 
-function normalizeStatus(value) {
+function normalizeStatus(
+    value
+) {
 
     return String(
         value || ''
@@ -2815,11 +3259,13 @@ function safeDisplay(
         String(value).trim() === ''
     ) {
 
-        return fallback !== undefined
+        return fallback !==
+            undefined
             ? fallback
             : '—';
 
     }
+
 
     return String(value);
 
@@ -2830,14 +3276,33 @@ function safeDisplay(
    HTML ESCAPING
 ============================================================ */
 
-function escapeHtml(value) {
+function escapeHtml(
+    value
+) {
 
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    return String(
+        value || ''
+    )
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /'/g,
+            '&#039;'
+        );
 
 }
 
@@ -2846,7 +3311,9 @@ function escapeHtml(value) {
    PAGE MESSAGE
 ============================================================ */
 
-function showMessage(message) {
+function showMessage(
+    message
+) {
 
     const container =
         document.getElementById(
@@ -2859,8 +3326,13 @@ function showMessage(message) {
         );
 
 
-    if (!container || !text) {
+    if (
+        !container ||
+        !text
+    ) {
+
         return;
+
     }
 
 
@@ -2882,8 +3354,11 @@ function hideMessage() {
             'pageMessage'
         );
 
+
     if (!container) {
+
         return;
+
     }
 
 
@@ -2913,8 +3388,13 @@ function showSelectionMessage(
         );
 
 
-    if (!container || !text) {
+    if (
+        !container ||
+        !text
+    ) {
+
         return;
+
     }
 
 
@@ -2936,8 +3416,11 @@ function hideSelectionMessage() {
             'selectionMessage'
         );
 
+
     if (!container) {
+
         return;
+
     }
 
 
@@ -2986,7 +3469,7 @@ function hideResultSections() {
 
 
 /* ============================================================
-   API
+   API REQUEST
 ============================================================ */
 
 async function apiRequest(
@@ -2996,7 +3479,8 @@ async function apiRequest(
 
     const payload = {
 
-        action: action,
+        action:
+            action,
 
         ...data
 
@@ -3032,7 +3516,9 @@ async function apiRequest(
     try {
 
         parsed =
-            JSON.parse(text);
+            JSON.parse(
+                text
+            );
 
     } catch (error) {
 
@@ -3040,6 +3526,7 @@ async function apiRequest(
             'Invalid API response:',
             text
         );
+
 
         throw new Error(
             'The server returned an invalid response.'
@@ -3063,8 +3550,10 @@ function logout() {
         SESSION_KEY
     );
 
+
     currentSession =
         null;
+
 
     window.location.href =
         'index.html';
