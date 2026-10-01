@@ -1,27 +1,29 @@
+/**
+ * ============================================================
+ * SCHOOL RESULTS SYSTEM
+ * FILE: result-management.js
+ * VERSION: 1.2.0
+ *
+ * PURPOSE:
+ * Result Management frontend.
+ *
+ * FEATURES:
+ * - Load school result management setup
+ * - Select session, term and class
+ * - Show result overview
+ * - Show completion status
+ * - Show validation/readiness
+ * - List students
+ * - Show individual final result
+ * - Generate individual student result PDF
+ * - Persistent login session
+ * - Logout
+ * ============================================================
+ */
+
+
 /* ============================================================
-   SCHOOL RESULTS SYSTEM
-   FILE: result-management.js
-   VERSION: 1.2.0
-
-   RESULT MANAGEMENT FRONTEND
-
-   FEATURES:
-   - Result management setup
-   - Session / Term / Class selection
-   - Result overview
-   - Student result list
-   - Student result modal
-   - Subject result display
-   - Comments display
-   - Student result PDF generation
-   - Google Drive PDF opening
-   - Responsive sidebar
-   - Persistent login session
-============================================================ */
-
-
-/* ============================================================
-   CONFIG
+   CONFIGURATION
 ============================================================ */
 
 const API_URL =
@@ -32,20 +34,12 @@ const SESSION_KEY =
 
 
 /* ============================================================
-   STATE
+   GLOBAL STATE
 ============================================================ */
 
 let currentSession = null;
 
-let setupData = {
-    sessions: [],
-    classes: [],
-    terms: []
-};
-
-let currentOverview = null;
-
-let currentStudents = [];
+let currentSetup = null;
 
 let currentSelected = {
     sessionId: '',
@@ -57,30 +51,28 @@ let currentViewedStudentId = '';
 
 let currentViewedResult = null;
 
+let currentOverview = null;
+
 
 /* ============================================================
    DOM READY
 ============================================================ */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
+document.addEventListener('DOMContentLoaded', function () {
 
-        initializePage();
+    initializePage();
 
-    }
-);
+});
 
 
 /* ============================================================
-   INITIALIZE
+   INITIALIZE PAGE
 ============================================================ */
 
 function initializePage() {
 
     currentSession =
-        loadStoredSession();
-
+        getStoredSession();
 
     if (!currentSession) {
 
@@ -90,8 +82,7 @@ function initializePage() {
 
     }
 
-
-    applySessionToHeader();
+    setupUserInterface();
 
     bindEvents();
 
@@ -104,7 +95,7 @@ function initializePage() {
    SESSION
 ============================================================ */
 
-function loadStoredSession() {
+function getStoredSession() {
 
     try {
 
@@ -113,99 +104,21 @@ function loadStoredSession() {
                 SESSION_KEY
             );
 
-
         if (!raw) {
-
             return null;
-
         }
-
 
         const parsed =
             JSON.parse(raw);
 
-
-        if (!parsed) {
-
-            return null;
-
-        }
-
-
-        const user =
-            parsed.user ||
-            parsed.User ||
-            parsed;
-
-
-        const school =
-            parsed.school ||
-            parsed.School ||
-            {};
-
-
-        const schoolId =
-            parsed.schoolId ||
-            user.schoolId ||
-            school.schoolId ||
-            school['School ID'] ||
-            '';
-
-
-        const userName =
-            parsed.fullName ||
-            user.fullName ||
-            user.name ||
-            'User';
-
-
-        const role =
-            parsed.role ||
-            user.role ||
-            'User';
-
-
-        const schoolName =
-            parsed.schoolName ||
-            school.schoolName ||
-            school['School Name'] ||
-            'School Results System';
-
-
-        if (!schoolId) {
-
-            return null;
-
-        }
-
-
-        return {
-
-            schoolId:
-                String(schoolId).trim(),
-
-            userId:
-                String(
-                    parsed.userId ||
-                    user.userId ||
-                    ''
-                ).trim(),
-
-            fullName:
-                String(userName).trim(),
-
-            role:
-                String(role).trim(),
-
-            schoolName:
-                String(schoolName).trim()
-
-        };
+        return normalizeSession(
+            parsed
+        );
 
     } catch (error) {
 
         console.error(
-            'Could not load saved session:',
+            'Session read error:',
             error
         );
 
@@ -217,153 +130,200 @@ function loadStoredSession() {
 
 
 /* ============================================================
-   HEADER
+   NORMALIZE SESSION
 ============================================================ */
 
-function applySessionToHeader() {
+function normalizeSession(data) {
 
-    if (!currentSession) {
-
-        return;
-
+    if (!data) {
+        return null;
     }
 
+    /*
+     * Handles both:
+     *
+     * {
+     *   schoolId,
+     *   schoolName,
+     *   ...
+     * }
+     *
+     * and:
+     *
+     * {
+     *   user: {...},
+     *   school: {...}
+     * }
+     */
 
-    const schoolName =
-        document.getElementById(
-            'schoolName'
-        );
+    const user =
+        data.user ||
+        {};
+
+    const school =
+        data.school ||
+        {};
+
+    const schoolId =
+        data.schoolId ||
+        school.schoolId ||
+        school['School ID'] ||
+        user.schoolId ||
+        user['School ID'] ||
+        '';
+
+    if (!schoolId) {
+        return null;
+    }
+
+    return {
+
+        schoolId:
+            schoolId,
+
+        schoolName:
+            data.schoolName ||
+            school.schoolName ||
+            school['School Name'] ||
+            '',
+
+        schoolCode:
+            data.schoolCode ||
+            school.schoolCode ||
+            school['School Code'] ||
+            '',
+
+        userId:
+            data.userId ||
+            user.userId ||
+            user['User ID'] ||
+            '',
+
+        fullName:
+            data.fullName ||
+            user.fullName ||
+            user['Full Name'] ||
+            '',
+
+        email:
+            data.email ||
+            user.email ||
+            user['Email'] ||
+            '',
+
+        role:
+            data.role ||
+            user.role ||
+            user['Role'] ||
+            '',
+
+        plan:
+            data.plan ||
+            school.plan ||
+            school['Plan'] ||
+            '',
+
+        status:
+            data.status ||
+            school.status ||
+            school['Status'] ||
+            '',
+
+        expiryDate:
+            data.expiryDate ||
+            school.expiryDate ||
+            school['Expiry Date'] ||
+            ''
+
+    };
+
+}
 
 
-    const userName =
-        document.getElementById(
-            'userName'
-        );
+/* ============================================================
+   REDIRECT TO LOGIN
+============================================================ */
+
+function redirectToLogin() {
+
+    window.location.href =
+        'index.html';
+
+}
 
 
-    const userRole =
-        document.getElementById(
-            'userRole'
-        );
+/* ============================================================
+   USER INTERFACE
+============================================================ */
 
+function setupUserInterface() {
+
+    setText(
+        'schoolName',
+        currentSession.schoolName ||
+        'School Results System'
+    );
+
+    setText(
+        'userName',
+        currentSession.fullName ||
+        'User'
+    );
+
+    setText(
+        'userRole',
+        currentSession.role ||
+        ''
+    );
 
     const initials =
-        document.getElementById(
-            'userInitials'
+        getInitials(
+            currentSession.fullName ||
+            currentSession.schoolName ||
+            'User'
         );
 
-
-    if (schoolName) {
-
-        schoolName.textContent =
-            currentSession.schoolName ||
-            'School Results System';
-
-    }
-
-
-    if (userName) {
-
-        userName.textContent =
-            currentSession.fullName ||
-            'User';
-
-    }
-
-
-    if (userRole) {
-
-        userRole.textContent =
-            currentSession.role ||
-            'User';
-
-    }
-
-
-    if (initials) {
-
-        initials.textContent =
-            getInitials(
-                currentSession.fullName
-            );
-
-    }
+    setText(
+        'userInitials',
+        initials
+    );
 
 }
 
 
 /* ============================================================
-   INITIALS
-============================================================ */
-
-function getInitials(name) {
-
-    if (!name) {
-
-        return 'SR';
-
-    }
-
-
-    const parts =
-        String(name)
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-
-    if (!parts.length) {
-
-        return 'SR';
-
-    }
-
-
-    if (parts.length === 1) {
-
-        return parts[0]
-            .substring(0, 2)
-            .toUpperCase();
-
-    }
-
-
-    return (
-        parts[0].charAt(0) +
-        parts[parts.length - 1].charAt(0)
-    ).toUpperCase();
-
-}
-
-
-/* ============================================================
-   EVENTS
+   BIND EVENTS
 ============================================================ */
 
 function bindEvents() {
-
-    const sessionSelect =
-        document.getElementById(
-            'sessionSelect'
-        );
-
-
-    const termSelect =
-        document.getElementById(
-            'termSelect'
-        );
-
-
-    const classSelect =
-        document.getElementById(
-            'classSelect'
-        );
-
 
     const menuButton =
         document.getElementById(
             'menuButton'
         );
+
+    const sidebar =
+        document.getElementById(
+            'sidebar'
+        );
+
+    if (
+        menuButton &&
+        sidebar
+    ) {
+
+        menuButton.addEventListener(
+            'click',
+            function () {
+
+                sidebar.classList.toggle(
+                    'open'
+                );
+
+            }
+        );
+
+    }
 
 
     const logoutButton =
@@ -371,84 +331,101 @@ function bindEvents() {
             'logoutButton'
         );
 
+    if (logoutButton) {
+
+        logoutButton.addEventListener(
+            'click',
+            logoutUser
+        );
+
+    }
+
+
+    const sessionSelect =
+        document.getElementById(
+            'sessionSelect'
+        );
+
+    if (sessionSelect) {
+
+        sessionSelect.addEventListener(
+            'change',
+            function () {
+
+                currentSelected.sessionId =
+                    this.value;
+
+                refreshSelectedResults();
+
+            }
+        );
+
+    }
+
+
+    const termSelect =
+        document.getElementById(
+            'termSelect'
+        );
+
+    if (termSelect) {
+
+        termSelect.addEventListener(
+            'change',
+            function () {
+
+                currentSelected.term =
+                    this.value;
+
+                refreshSelectedResults();
+
+            }
+        );
+
+    }
+
+
+    const classSelect =
+        document.getElementById(
+            'classSelect'
+        );
+
+    if (classSelect) {
+
+        classSelect.addEventListener(
+            'change',
+            function () {
+
+                currentSelected.classId =
+                    this.value;
+
+                refreshSelectedResults();
+
+            }
+        );
+
+    }
+
 
     const closeMessage =
         document.getElementById(
             'closeMessage'
         );
 
+    if (closeMessage) {
+
+        closeMessage.addEventListener(
+            'click',
+            hidePageMessage
+        );
+
+    }
+
 
     const closeStudentResultButton =
         document.getElementById(
             'closeStudentResultButton'
         );
-
-
-    const cancelResultButton =
-        document.getElementById(
-            'cancelResultButton'
-        );
-
-
-    if (sessionSelect) {
-
-        sessionSelect.addEventListener(
-            'change',
-            handleSelectionChange
-        );
-
-    }
-
-
-    if (termSelect) {
-
-        termSelect.addEventListener(
-            'change',
-            handleSelectionChange
-        );
-
-    }
-
-
-    if (classSelect) {
-
-        classSelect.addEventListener(
-            'change',
-            handleSelectionChange
-        );
-
-    }
-
-
-    if (menuButton) {
-
-        menuButton.addEventListener(
-            'click',
-            toggleSidebar
-        );
-
-    }
-
-
-    if (logoutButton) {
-
-        logoutButton.addEventListener(
-            'click',
-            logout
-        );
-
-    }
-
-
-    if (closeMessage) {
-
-        closeMessage.addEventListener(
-            'click',
-            hideMessage
-        );
-
-    }
-
 
     if (closeStudentResultButton) {
 
@@ -460,6 +437,11 @@ function bindEvents() {
     }
 
 
+    const cancelResultButton =
+        document.getElementById(
+            'cancelResultButton'
+        );
+
     if (cancelResultButton) {
 
         cancelResultButton.addEventListener(
@@ -470,20 +452,20 @@ function bindEvents() {
     }
 
 
-    const modal =
+    const studentResultModal =
         document.getElementById(
             'studentResultModal'
         );
 
+    if (studentResultModal) {
 
-    if (modal) {
-
-        modal.addEventListener(
+        studentResultModal.addEventListener(
             'click',
             function (event) {
 
                 if (
-                    event.target === modal
+                    event.target ===
+                    studentResultModal
                 ) {
 
                     closeStudentResultModal();
@@ -495,72 +477,6 @@ function bindEvents() {
 
     }
 
-
-    document.addEventListener(
-        'keydown',
-        function (event) {
-
-            if (
-                event.key === 'Escape'
-            ) {
-
-                closeStudentResultModal();
-
-                closeSidebar();
-
-            }
-
-        }
-    );
-
-}
-
-
-/* ============================================================
-   SIDEBAR
-============================================================ */
-
-function toggleSidebar() {
-
-    const sidebar =
-        document.getElementById(
-            'sidebar'
-        );
-
-
-    if (!sidebar) {
-
-        return;
-
-    }
-
-
-    sidebar.classList.toggle(
-        'open'
-    );
-
-}
-
-
-function closeSidebar() {
-
-    const sidebar =
-        document.getElementById(
-            'sidebar'
-        );
-
-
-    if (!sidebar) {
-
-        return;
-
-    }
-
-
-    sidebar.classList.remove(
-        'open'
-    );
-
 }
 
 
@@ -570,14 +486,13 @@ function closeSidebar() {
 
 async function loadSetup() {
 
-    showSelectionLoading();
-
-    hideMessage();
-
+    showSelectionLoading(
+        'Loading result management setup...'
+    );
 
     try {
 
-        const result =
+        const response =
             await apiRequest(
                 'getResultManagementSetup',
                 {
@@ -586,64 +501,54 @@ async function loadSetup() {
                 }
             );
 
-
-        if (!result.success) {
+        if (
+            !response ||
+            !response.success
+        ) {
 
             throw new Error(
-                result.error ||
-                result.message ||
-                'Could not load result management setup.'
+                response &&
+                response.error
+                    ? response.error
+                    : 'Unable to load result management setup.'
             );
 
         }
 
+        currentSetup =
+            response;
 
-        setupData = {
+        populateSessionSelect(
+            response.sessions ||
+            []
+        );
 
-            sessions:
-                Array.isArray(
-                    result.sessions
-                )
-                    ? result.sessions
-                    : [],
+        populateTermSelect(
+            response.terms ||
+            []
+        );
 
-            classes:
-                Array.isArray(
-                    result.classes
-                )
-                    ? result.classes
-                    : [],
+        populateClassSelect(
+            response.classes ||
+            []
+        );
 
-            terms:
-                Array.isArray(
-                    result.terms
-                )
-                    ? result.terms
-                    : []
+        setDefaultSelections();
 
-        };
+        hideSelectionMessage();
 
-
-        populateSessions();
-
-        populateTerms();
-
-        populateClasses();
-
-        chooseDefaultSelection();
-
+        await refreshSelectedResults();
 
     } catch (error) {
 
         console.error(
-            'Result management setup error:',
+            'Setup error:',
             error
         );
 
-
-        showMessage(
+        showSelectionMessage(
             error.message ||
-            'Could not load result management setup.'
+            'Unable to load result management setup.'
         );
 
     }
@@ -652,29 +557,26 @@ async function loadSetup() {
 
 
 /* ============================================================
-   POPULATE SESSION
+   POPULATE SESSION SELECT
 ============================================================ */
 
-function populateSessions() {
+function populateSessionSelect(
+    sessions
+) {
 
     const select =
         document.getElementById(
             'sessionSelect'
         );
 
-
     if (!select) {
-
         return;
-
     }
-
 
     select.innerHTML =
         '<option value="">Select session</option>';
 
-
-    setupData.sessions.forEach(
+    sessions.forEach(
         function (session) {
 
             const option =
@@ -682,16 +584,13 @@ function populateSessions() {
                     'option'
                 );
 
-
             option.value =
-                session.sessionId || '';
-
+                session.sessionId ||
+                '';
 
             option.textContent =
                 session.sessionName ||
-                session.sessionId ||
-                'Unnamed Session';
-
+                '';
 
             select.appendChild(
                 option
@@ -704,29 +603,26 @@ function populateSessions() {
 
 
 /* ============================================================
-   POPULATE TERM
+   POPULATE TERM SELECT
 ============================================================ */
 
-function populateTerms() {
+function populateTermSelect(
+    terms
+) {
 
     const select =
         document.getElementById(
             'termSelect'
         );
 
-
     if (!select) {
-
         return;
-
     }
-
 
     select.innerHTML =
         '<option value="">Select term</option>';
 
-
-    setupData.terms.forEach(
+    terms.forEach(
         function (term) {
 
             const option =
@@ -734,14 +630,11 @@ function populateTerms() {
                     'option'
                 );
 
-
             option.value =
                 term;
 
-
             option.textContent =
                 term;
-
 
             select.appendChild(
                 option
@@ -754,46 +647,41 @@ function populateTerms() {
 
 
 /* ============================================================
-   POPULATE CLASS
+   POPULATE CLASS SELECT
 ============================================================ */
 
-function populateClasses() {
+function populateClassSelect(
+    classes
+) {
 
     const select =
         document.getElementById(
             'classSelect'
         );
 
-
     if (!select) {
-
         return;
-
     }
-
 
     select.innerHTML =
         '<option value="">Select class</option>';
 
-
-    setupData.classes.forEach(
-        function (classRecord) {
+    classes.forEach(
+        function (classItem) {
 
             const option =
                 document.createElement(
                     'option'
                 );
 
-
             option.value =
-                classRecord.classId || '';
-
+                classItem.classId ||
+                '';
 
             option.textContent =
                 buildClassName(
-                    classRecord
+                    classItem
                 );
-
 
             select.appendChild(
                 option
@@ -806,98 +694,97 @@ function populateClasses() {
 
 
 /* ============================================================
-   CLASS LABEL
+   DEFAULT SELECTIONS
 ============================================================ */
 
-function buildClassName(classRecord) {
+function setDefaultSelections() {
 
-    const className =
-        classRecord.className ||
-        'Unnamed Class';
+    const sessions =
+        currentSetup &&
+        Array.isArray(
+            currentSetup.sessions
+        )
+            ? currentSetup.sessions
+            : [];
 
+    const terms =
+        currentSetup &&
+        Array.isArray(
+            currentSetup.terms
+        )
+            ? currentSetup.terms
+            : [];
 
-    const section =
-        classRecord.section ||
-        '';
-
-
-    if (!section) {
-
-        return className;
-
-    }
-
-
-    return (
-        className +
-        ' — ' +
-        section
-    );
-
-}
-
-
-/* ============================================================
-   DEFAULT SELECTION
-============================================================ */
-
-function chooseDefaultSelection() {
-
-    const sessionSelect =
-        document.getElementById(
-            'sessionSelect'
-        );
+    const classes =
+        currentSetup &&
+        Array.isArray(
+            currentSetup.classes
+        )
+            ? currentSetup.classes
+            : [];
 
 
-    const termSelect =
-        document.getElementById(
-            'termSelect'
-        );
-
-
-    const classSelect =
-        document.getElementById(
-            'classSelect'
-        );
-
+    /*
+     * Prefer active session.
+     */
 
     let selectedSession =
-        setupData.sessions.find(
+        sessions.find(
             function (session) {
 
-                return normalize(
-                    session.status
-                ) === 'active';
+                return String(
+                    session.status ||
+                    ''
+                ).toLowerCase() ===
+                'active';
 
             }
         );
 
 
+    /*
+     * Fall back to first session.
+     */
+
     if (!selectedSession) {
 
         selectedSession =
-            setupData.sessions[0];
+            sessions[0];
 
     }
 
 
-    if (
-        selectedSession &&
-        sessionSelect
-    ) {
+    if (selectedSession) {
 
-        sessionSelect.value =
+        currentSelected.sessionId =
             selectedSession.sessionId ||
             '';
 
+        const sessionSelect =
+            document.getElementById(
+                'sessionSelect'
+            );
+
+        if (sessionSelect) {
+
+            sessionSelect.value =
+                currentSelected.sessionId;
+
+        }
+
     }
 
 
+    /*
+     * Prefer First Term.
+     */
+
     let selectedTerm =
-        setupData.terms.find(
+        terms.find(
             function (term) {
 
-                return normalize(term) ===
+                return String(term)
+                    .toLowerCase() ===
                     'first term';
 
             }
@@ -907,29 +794,44 @@ function chooseDefaultSelection() {
     if (!selectedTerm) {
 
         selectedTerm =
-            setupData.terms[0];
+            terms[0];
 
     }
 
 
-    if (
-        selectedTerm &&
-        termSelect
-    ) {
+    if (selectedTerm) {
 
-        termSelect.value =
+        currentSelected.term =
             selectedTerm;
 
+        const termSelect =
+            document.getElementById(
+                'termSelect'
+            );
+
+        if (termSelect) {
+
+            termSelect.value =
+                selectedTerm;
+
+        }
+
     }
 
 
-    let selectedClass =
-        setupData.classes.find(
-            function (classRecord) {
+    /*
+     * Select first active class.
+     */
 
-                return normalize(
-                    classRecord.status
-                ) === 'active';
+    let selectedClass =
+        classes.find(
+            function (classItem) {
+
+                return String(
+                    classItem.status ||
+                    ''
+                ).toLowerCase() ===
+                'active';
 
             }
         );
@@ -938,56 +840,28 @@ function chooseDefaultSelection() {
     if (!selectedClass) {
 
         selectedClass =
-            setupData.classes[0];
+            classes[0];
 
     }
 
 
-    if (
-        selectedClass &&
-        classSelect
-    ) {
+    if (selectedClass) {
 
-        classSelect.value =
+        currentSelected.classId =
             selectedClass.classId ||
             '';
 
-    }
+        const classSelect =
+            document.getElementById(
+                'classSelect'
+            );
 
+        if (classSelect) {
 
-    currentSelected = {
+            classSelect.value =
+                currentSelected.classId;
 
-        sessionId:
-            sessionSelect
-                ? sessionSelect.value
-                : '',
-
-        term:
-            termSelect
-                ? termSelect.value
-                : '',
-
-        classId:
-            classSelect
-                ? classSelect.value
-                : ''
-
-    };
-
-
-    if (
-        currentSelected.sessionId &&
-        currentSelected.term &&
-        currentSelected.classId
-    ) {
-
-        loadResultManagement();
-
-    } else {
-
-        showSelectionMessage(
-            'Select a session, term and class to view results.'
-        );
+        }
 
     }
 
@@ -995,151 +869,70 @@ function chooseDefaultSelection() {
 
 
 /* ============================================================
-   SELECTION CHANGE
+   REFRESH SELECTED RESULTS
 ============================================================ */
 
-function handleSelectionChange() {
+async function refreshSelectedResults() {
 
-    const sessionSelect =
-        document.getElementById(
-            'sessionSelect'
-        );
+    hidePageMessage();
 
-
-    const termSelect =
-        document.getElementById(
-            'termSelect'
-        );
-
-
-    const classSelect =
-        document.getElementById(
-            'classSelect'
-        );
-
-
-    currentSelected = {
-
-        sessionId:
-            sessionSelect
-                ? sessionSelect.value
-                : '',
-
-        term:
-            termSelect
-                ? termSelect.value
-                : '',
-
-        classId:
-            classSelect
-                ? classSelect.value
-                : ''
-
-    };
-
-
-    hideMessage();
-
-    hideResultSections();
+    const {
+        sessionId,
+        term,
+        classId
+    } =
+        currentSelected;
 
 
     if (
-        !currentSelected.sessionId ||
-        !currentSelected.term ||
-        !currentSelected.classId
+        !sessionId ||
+        !term ||
+        !classId
     ) {
 
-        showSelectionMessage(
-            'Select a session, term and class to view results.'
-        );
+        hideResultSections();
 
         return;
 
     }
 
 
-    hideSelectionMessage();
-
-    loadResultManagement();
-
-}
-
-
-/* ============================================================
-   LOAD RESULTS
-============================================================ */
-
-async function loadResultManagement() {
-
-    showSelectionLoading();
-
-    hideMessage();
-
-    setOverviewLoading();
-
-    setTableLoading();
+    showSelectionLoading(
+        'Loading class results...'
+    );
 
 
     try {
 
-        const payload = {
-
-            schoolId:
-                currentSession.schoolId,
-
-            sessionId:
-                currentSelected.sessionId,
-
-            term:
-                currentSelected.term,
-
-            classId:
-                currentSelected.classId
-
-        };
-
-
-        const responses =
-            await Promise.all([
-
-                apiRequest(
-                    'getResultManagementOverview',
-                    payload
-                ),
-
-                apiRequest(
-                    'getResultManagementStudents',
-                    payload
-                )
-
-            ]);
-
-
         const overview =
-            responses[0];
+            await apiRequest(
+                'getResultManagementOverview',
+                {
+                    schoolId:
+                        currentSession.schoolId,
 
+                    sessionId:
+                        sessionId,
 
-        const students =
-            responses[1];
+                    term:
+                        term,
 
-
-        if (!overview.success) {
-
-            throw new Error(
-                overview.error ||
-                overview.message ||
-                'Could not load result overview.'
+                    classId:
+                        classId
+                }
             );
 
-        }
 
-
-        if (!students.success) {
+        if (
+            !overview ||
+            !overview.success
+        ) {
 
             throw new Error(
-                students.error ||
-                students.message ||
-                'Could not load student results.'
+                overview &&
+                overview.error
+                    ? overview.error
+                    : 'Unable to load result overview.'
             );
 
         }
@@ -1149,44 +942,65 @@ async function loadResultManagement() {
             overview;
 
 
-        currentStudents =
-            Array.isArray(
-                students.students
-            )
-                ? students.students
-                : [];
-
-
         renderOverview(
             overview
         );
 
 
+        const students =
+            await apiRequest(
+                'getResultManagementStudents',
+                {
+                    schoolId:
+                        currentSession.schoolId,
+
+                    sessionId:
+                        sessionId,
+
+                    term:
+                        term,
+
+                    classId:
+                        classId
+                }
+            );
+
+
+        if (
+            !students ||
+            !students.success
+        ) {
+
+            throw new Error(
+                students &&
+                students.error
+                    ? students.error
+                    : 'Unable to load students.'
+            );
+
+        }
+
+
         renderStudents(
-            currentStudents
+            students.students ||
+            []
         );
 
 
-        hideSelectionLoading();
-
         hideSelectionMessage();
-
 
     } catch (error) {
 
         console.error(
-            'Result management error:',
+            'Result loading error:',
             error
         );
 
-
-        hideSelectionLoading();
-
         hideResultSections();
 
-        showMessage(
+        showSelectionMessage(
             error.message ||
-            'Could not load result management data.'
+            'Unable to load class results.'
         );
 
     }
@@ -1195,95 +1009,167 @@ async function loadResultManagement() {
 
 
 /* ============================================================
-   OVERVIEW LOADING
+   HIDE RESULT SECTIONS
 ============================================================ */
 
-function setOverviewLoading() {
+function hideResultSections() {
 
-    const section =
+    const overviewSection =
         document.getElementById(
             'overviewSection'
         );
 
+    const studentsSection =
+        document.getElementById(
+            'studentsSection'
+        );
 
-    if (!section) {
+    if (overviewSection) {
 
-        return;
+        overviewSection.classList.add(
+            'hidden'
+        );
 
     }
 
+    if (studentsSection) {
 
-    section.classList.remove(
-        'hidden'
-    );
-
-
-    setText(
-        'overviewTitle',
-        'Loading result overview...'
-    );
-
-
-    setText(
-        'overviewSubtitle',
-        'Please wait while result information is loaded.'
-    );
-
-
-    setText(
-        'totalStudents',
-        '—'
-    );
-
-
-    setText(
-        'completedStudents',
-        '—'
-    );
-
-
-    setText(
-        'incompleteStudents',
-        '—'
-    );
-
-
-    setText(
-        'notStartedStudents',
-        '—'
-    );
-
-
-    setText(
-        'readinessBadge',
-        'Checking...'
-    );
-
-
-    const badge =
-        document.getElementById(
-            'readinessBadge'
+        studentsSection.classList.add(
+            'hidden'
         );
-
-
-    if (badge) {
-
-        badge.className =
-            'readiness-badge';
 
     }
 
+}
 
-    const validationPanel =
+
+/* ============================================================
+   SHOW RESULT SECTIONS
+============================================================ */
+
+function showResultSections() {
+
+    const overviewSection =
         document.getElementById(
-            'validationPanel'
+            'overviewSection'
+        );
+
+    const studentsSection =
+        document.getElementById(
+            'studentsSection'
+        );
+
+    if (overviewSection) {
+
+        overviewSection.classList.remove(
+            'hidden'
+        );
+
+    }
+
+    if (studentsSection) {
+
+        studentsSection.classList.remove(
+            'hidden'
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   SELECTION LOADING
+============================================================ */
+
+function showSelectionLoading(
+    message
+) {
+
+    const messageBox =
+        document.getElementById(
+            'selectionMessage'
+        );
+
+    const messageText =
+        document.getElementById(
+            'selectionMessageText'
         );
 
 
-    if (validationPanel) {
+    if (messageText) {
 
-        validationPanel.className =
-            'validation-panel';
+        messageText.textContent =
+            message ||
+            'Loading...';
+
+    }
+
+    if (messageBox) {
+
+        messageBox.classList.remove(
+            'hidden'
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   SELECTION MESSAGE
+============================================================ */
+
+function showSelectionMessage(
+    message
+) {
+
+    const messageBox =
+        document.getElementById(
+            'selectionMessage'
+        );
+
+    const messageText =
+        document.getElementById(
+            'selectionMessageText'
+        );
+
+
+    if (messageText) {
+
+        messageText.textContent =
+            message ||
+            'Something went wrong.';
+
+    }
+
+    if (messageBox) {
+
+        messageBox.classList.remove(
+            'hidden'
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   HIDE SELECTION MESSAGE
+============================================================ */
+
+function hideSelectionMessage() {
+
+    const messageBox =
+        document.getElementById(
+            'selectionMessage'
+        );
+
+    if (messageBox) {
+
+        messageBox.classList.add(
+            'hidden'
+        );
 
     }
 
@@ -1294,66 +1180,46 @@ function setOverviewLoading() {
    RENDER OVERVIEW
 ============================================================ */
 
-function renderOverview(data) {
+function renderOverview(
+    data
+) {
 
-    const section =
-        document.getElementById(
-            'overviewSection'
-        );
-
-
-    if (section) {
-
-        section.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    const classData =
-        data.class || {};
-
+    showResultSections();
 
     const students =
-        data.students || {};
-
-
-    const validation =
-        data.validation || {};
-
+        data.students ||
+        {};
 
     setText(
         'overviewTitle',
-        buildClassName({
-
-            className:
-                classData.className,
-
-            section:
-                classData.section
-
-        })
+        buildClassName(
+            data.class || {}
+        )
     );
+
+
+    const sessionName =
+        data.session &&
+        data.session.sessionName
+            ? data.session.sessionName
+            : '';
+
+
+    const term =
+        data.term ||
+        '';
 
 
     setText(
         'overviewSubtitle',
-
+        sessionName +
         (
-            data.session &&
-            data.session.sessionName
-        )
-            ? (
-                data.session.sessionName +
-                ' • ' +
-                currentSelected.term
-            )
-            : (
-                currentSelected.sessionId +
-                ' • ' +
-                currentSelected.term
-            )
+            sessionName &&
+            term
+                ? ' • '
+                : ''
+        ) +
+        term
     );
 
 
@@ -1390,20 +1256,18 @@ function renderOverview(data) {
 
 
     renderReadiness(
-        data.readyForPdf === true,
-        validation
+        data
     );
 
 }
 
 
 /* ============================================================
-   READINESS
+   RENDER READINESS
 ============================================================ */
 
 function renderReadiness(
-    ready,
-    validation
+    data
 ) {
 
     const badge =
@@ -1411,124 +1275,90 @@ function renderReadiness(
             'readinessBadge'
         );
 
-
-    const panel =
+    const validationPanel =
         document.getElementById(
             'validationPanel'
         );
 
-
-    const title =
+    const validationTitle =
         document.getElementById(
             'validationTitle'
         );
 
-
-    const message =
+    const validationMessage =
         document.getElementById(
             'validationMessage'
         );
 
 
-    const icon =
-        panel
-            ? panel.querySelector(
-                '.validation-icon'
-            )
-            : null;
+    const validation =
+        data.validation ||
+        {};
 
 
-    if (ready) {
-
-        if (badge) {
-
-            badge.textContent =
-                'Ready for PDF';
-
-            badge.className =
-                'readiness-badge ready';
-
-        }
-
-
-        if (panel) {
-
-            panel.className =
-                'validation-panel ready';
-
-        }
-
-
-        if (icon) {
-
-            icon.textContent =
-                '✓';
-
-        }
-
-
-        if (title) {
-
-            title.textContent =
-                'Results are ready';
-
-        }
-
-
-        if (message) {
-
-            message.textContent =
-                'The class has passed the current result validation checks and is ready for result generation.';
-
-        }
-
-
-        return;
-
-    }
+    const ready =
+        data.readyForPdf === true ||
+        validation.ready === true;
 
 
     if (badge) {
 
         badge.textContent =
-            'Not Ready';
+            ready
+                ? 'Ready for PDF'
+                : 'Not Ready';
 
-        badge.className =
-            'readiness-badge not-ready';
+        badge.classList.remove(
+            'ready',
+            'not-ready',
+            'success',
+            'danger'
+        );
 
-    }
-
-
-    if (panel) {
-
-        panel.className =
-            'validation-panel error';
-
-    }
-
-
-    if (icon) {
-
-        icon.textContent =
-            '!';
+        badge.classList.add(
+            ready
+                ? 'ready'
+                : 'not-ready'
+        );
 
     }
 
 
-    if (title) {
+    if (validationTitle) {
 
-        title.textContent =
-            'Results need attention';
+        validationTitle.textContent =
+            ready
+                ? 'Results are ready'
+                : 'Results need attention';
 
     }
 
 
-    if (message) {
+    if (validationMessage) {
 
-        message.textContent =
+        validationMessage.textContent =
             buildValidationMessage(
-                validation
+                validation,
+                ready
             );
+
+    }
+
+
+    if (validationPanel) {
+
+        validationPanel.classList.remove(
+            'ready',
+            'not-ready',
+            'success',
+            'danger'
+        );
+
+        validationPanel.classList.add(
+            ready
+                ? 'ready'
+                : 'not-ready'
+        );
 
     }
 
@@ -1536,31 +1366,30 @@ function renderReadiness(
 
 
 /* ============================================================
-   VALIDATION MESSAGE
+   BUILD VALIDATION MESSAGE
 ============================================================ */
 
 function buildValidationMessage(
-    validation
+    validation,
+    ready
 ) {
 
-    if (!validation) {
+    if (ready) {
 
         return (
-            'The result validation could not confirm that this class is ready.'
+            'All required scores are available. ' +
+            'The class results can be prepared for PDF generation.'
         );
 
     }
-
-
-    const parts = [];
 
 
     const missing =
         getValidationCount(
             validation,
             [
-                'missingScores',
                 'missing',
+                'missingScores',
                 'missingCount'
             ]
         );
@@ -1570,11 +1399,14 @@ function buildValidationMessage(
         getValidationCount(
             validation,
             [
-                'invalidScores',
                 'invalid',
+                'invalidScores',
                 'invalidCount'
             ]
         );
+
+
+    const parts = [];
 
 
     if (missing > 0) {
@@ -1582,7 +1414,11 @@ function buildValidationMessage(
         parts.push(
             missing +
             ' missing score' +
-            (missing === 1 ? '' : 's')
+            (
+                missing === 1
+                    ? ''
+                    : 's'
+            )
         );
 
     }
@@ -1593,32 +1429,36 @@ function buildValidationMessage(
         parts.push(
             invalid +
             ' invalid score' +
-            (invalid === 1 ? '' : 's')
+            (
+                invalid === 1
+                    ? ''
+                    : 's'
+            )
         );
 
     }
 
 
-    if (parts.length) {
+    if (!parts.length) {
 
         return (
-            'Please resolve ' +
-            parts.join(' and ') +
-            ' before generating final results.'
+            validation.message ||
+            'Some results require attention before PDF generation.'
         );
 
     }
 
 
     return (
-        'Some result requirements are not yet complete. Review the student statuses below.'
+        parts.join(' and ') +
+        ' require attention before the class results are ready.'
     );
 
 }
 
 
 /* ============================================================
-   VALIDATION COUNT
+   GET VALIDATION COUNT
 ============================================================ */
 
 function getValidationCount(
@@ -1633,34 +1473,29 @@ function getValidationCount(
     ) {
 
         const value =
-            validation[keys[i]];
+            validation[
+                keys[i]
+            ];
 
 
         if (
-            typeof value === 'number'
+            value !== undefined &&
+            value !== null &&
+            value !== ''
         ) {
 
-            return value;
+            const number =
+                Number(value);
 
-        }
+            if (
+                Number.isFinite(
+                    number
+                )
+            ) {
 
+                return number;
 
-        if (
-            Array.isArray(value)
-        ) {
-
-            return value.length;
-
-        }
-
-
-        if (
-            value &&
-            typeof value === 'object' &&
-            typeof value.count === 'number'
-        ) {
-
-            return value.count;
+            }
 
         }
 
@@ -1673,74 +1508,6 @@ function getValidationCount(
 
 
 /* ============================================================
-   TABLE LOADING
-============================================================ */
-
-function setTableLoading() {
-
-    const loading =
-        document.getElementById(
-            'tableLoading'
-        );
-
-
-    const empty =
-        document.getElementById(
-            'tableEmpty'
-        );
-
-
-    const table =
-        document.getElementById(
-            'resultsTable'
-        );
-
-
-    const section =
-        document.getElementById(
-            'studentsSection'
-        );
-
-
-    if (section) {
-
-        section.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (loading) {
-
-        loading.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (empty) {
-
-        empty.classList.add(
-            'hidden'
-        );
-
-    }
-
-
-    if (table) {
-
-        table.classList.add(
-            'hidden'
-        );
-
-    }
-
-}
-
-
-/* ============================================================
    RENDER STUDENTS
 ============================================================ */
 
@@ -1748,49 +1515,30 @@ function renderStudents(
     students
 ) {
 
-    const section =
+    const body =
         document.getElementById(
-            'studentsSection'
+            'resultsTableBody'
         );
-
-
-    const loading =
-        document.getElementById(
-            'tableLoading'
-        );
-
-
-    const empty =
-        document.getElementById(
-            'tableEmpty'
-        );
-
 
     const table =
         document.getElementById(
             'resultsTable'
         );
 
-
-    const tbody =
+    const loading =
         document.getElementById(
-            'resultsTableBody'
+            'tableLoading'
         );
 
+    const empty =
+        document.getElementById(
+            'tableEmpty'
+        );
 
-    const count =
+    const recordCount =
         document.getElementById(
             'recordCount'
         );
-
-
-    if (section) {
-
-        section.classList.remove(
-            'hidden'
-        );
-
-    }
 
 
     if (loading) {
@@ -1802,9 +1550,9 @@ function renderStudents(
     }
 
 
-    if (count) {
+    if (recordCount) {
 
-        count.textContent =
+        recordCount.textContent =
             students.length +
             (
                 students.length === 1
@@ -1815,16 +1563,15 @@ function renderStudents(
     }
 
 
+    if (!body) {
+        return;
+    }
+
+
+    body.innerHTML = '';
+
+
     if (!students.length) {
-
-        if (empty) {
-
-            empty.classList.remove(
-                'hidden'
-            );
-
-        }
-
 
         if (table) {
 
@@ -1834,17 +1581,15 @@ function renderStudents(
 
         }
 
+        if (empty) {
+
+            empty.classList.remove(
+                'hidden'
+            );
+
+        }
 
         return;
-
-    }
-
-
-    if (empty) {
-
-        empty.classList.add(
-            'hidden'
-        );
 
     }
 
@@ -1858,196 +1603,22 @@ function renderStudents(
     }
 
 
-    if (!tbody) {
+    if (empty) {
 
-        return;
+        empty.classList.add(
+            'hidden'
+        );
 
     }
-
-
-    tbody.innerHTML = '';
 
 
     students.forEach(
         function (student) {
 
-            const row =
-                document.createElement(
-                    'tr'
-                );
-
-
-            const admissionCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            admissionCell.innerHTML =
-                '<span class="admission-number">' +
-                escapeHtml(
-                    student.admissionNo ||
-                    '—'
-                ) +
-                '</span>';
-
-
-            const nameCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            nameCell.innerHTML =
-                '<span class="student-name">' +
-                escapeHtml(
-                    student.fullName ||
-                    'Unnamed Student'
-                ) +
-                '</span>';
-
-
-            const totalCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            totalCell.innerHTML =
-                '<span class="numeric-value">' +
-                formatNumber(
-                    student.total
-                ) +
-                '</span>';
-
-
-            const averageCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            averageCell.innerHTML =
-                '<span class="numeric-value">' +
-                formatAverage(
-                    student.average
-                ) +
-                '</span>';
-
-
-            const positionCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            if (
-                student.position !== null &&
-                student.position !== undefined &&
-                student.position !== ''
-            ) {
-
-                positionCell.innerHTML =
-                    '<span class="position-value">' +
-                    escapeHtml(
-                        String(
-                            student.position
-                        )
-                    ) +
-                    '</span>';
-
-            } else {
-
-                positionCell.innerHTML =
-                    '<span class="position-empty">—</span>';
-
-            }
-
-
-            const statusCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            statusCell.innerHTML =
-                createStatusBadge(
-                    student.completionStatus
-                );
-
-
-            const actionCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            const viewButton =
-                document.createElement(
-                    'button'
-                );
-
-
-            viewButton.type =
-                'button';
-
-
-            viewButton.className =
-                'view-button';
-
-
-            viewButton.textContent =
-                'View Result';
-
-
-            viewButton.addEventListener(
-                'click',
-                function () {
-
-                    openStudentResult(
-                        student.studentId
-                    );
-
-                }
-            );
-
-
-            actionCell.appendChild(
-                viewButton
-            );
-
-
-            row.appendChild(
-                admissionCell
-            );
-
-            row.appendChild(
-                nameCell
-            );
-
-            row.appendChild(
-                totalCell
-            );
-
-            row.appendChild(
-                averageCell
-            );
-
-            row.appendChild(
-                positionCell
-            );
-
-            row.appendChild(
-                statusCell
-            );
-
-            row.appendChild(
-                actionCell
-            );
-
-
-            tbody.appendChild(
-                row
+            body.appendChild(
+                createStudentRow(
+                    student
+                )
             );
 
         }
@@ -2057,66 +1628,142 @@ function renderStudents(
 
 
 /* ============================================================
-   STATUS BADGE
+   CREATE STUDENT ROW
 ============================================================ */
 
-function createStatusBadge(
-    status
+function createStudentRow(
+    student
 ) {
 
-    const normalized =
-        normalize(
+    const row =
+        document.createElement(
+            'tr'
+        );
+
+
+    const status =
+        normalizeStatus(
+            student.completionStatus
+        );
+
+
+    const position =
+        firstValue(
+            student.position,
+            ''
+        );
+
+
+    const total =
+        firstValue(
+            student.total,
+            ''
+        );
+
+
+    const average =
+        firstValue(
+            student.average,
+            ''
+        );
+
+
+    const statusClass =
+        getStatusClass(
             status
         );
 
 
-    let className =
-        'status-not-started';
+    row.innerHTML = `
+
+        <td>
+            ${escapeHtml(
+                student.admissionNo ||
+                ''
+            )}
+        </td>
+
+        <td>
+            <strong>
+                ${escapeHtml(
+                    student.fullName ||
+                    ''
+                )}
+            </strong>
+        </td>
+
+        <td>
+            ${escapeHtml(
+                formatNumberValue(
+                    total
+                )
+            )}
+        </td>
+
+        <td>
+            ${escapeHtml(
+                formatNumberValue(
+                    average
+                )
+            )}
+        </td>
+
+        <td>
+            ${escapeHtml(
+                formatPositionValue(
+                    position
+                )
+            )}
+        </td>
+
+        <td>
+            <span class="status-badge ${statusClass}">
+                ${escapeHtml(
+                    student.completionStatus ||
+                    'Not Started'
+                )}
+            </span>
+        </td>
+
+        <td>
+            <button
+                type="button"
+                class="view-button"
+                data-student-id="${escapeHtmlAttribute(
+                    student.studentId ||
+                    ''
+                )}"
+            >
+                View Result
+            </button>
+        </td>
+
+    `;
 
 
-    let label =
-        status ||
-        'Not Started';
+    const viewButton =
+        row.querySelector(
+            '.view-button'
+        );
 
 
-    if (
-        normalized === 'complete'
-    ) {
+    if (viewButton) {
 
-        className =
-            'status-complete';
+        viewButton.addEventListener(
+            'click',
+            function () {
 
-        label =
-            'Complete';
+                openStudentResult(
+                    student.studentId
+                );
 
-    } else if (
-        normalized === 'incomplete'
-    ) {
-
-        className =
-            'status-incomplete';
-
-        label =
-            'Incomplete';
-
-    } else {
-
-        className =
-            'status-not-started';
-
-        label =
-            'Not Started';
+            }
+        );
 
     }
 
 
-    return (
-        '<span class="status-badge ' +
-        className +
-        '">' +
-        escapeHtml(label) +
-        '</span>'
-    );
+    return row;
 
 }
 
@@ -2131,28 +1778,9 @@ async function openStudentResult(
 
     if (!studentId) {
 
-        showMessage(
-            'Student ID is missing.'
+        showPageMessage(
+            'Student information is missing.'
         );
-
-        return;
-
-    }
-
-
-    const modal =
-        document.getElementById(
-            'studentResultModal'
-        );
-
-
-    const body =
-        document.getElementById(
-            'resultModalBody'
-        );
-
-
-    if (!modal || !body) {
 
         return;
 
@@ -2160,37 +1788,65 @@ async function openStudentResult(
 
 
     currentViewedStudentId =
-        String(studentId);
-
+        studentId;
 
     currentViewedResult =
         null;
 
 
-    modal.classList.remove(
-        'hidden'
-    );
+    const modal =
+        document.getElementById(
+            'studentResultModal'
+        );
+
+    const modalBody =
+        document.getElementById(
+            'resultModalBody'
+        );
+
+    const modalTitle =
+        document.getElementById(
+            'studentResultTitle'
+        );
 
 
-    body.innerHTML = `
-        <div class="result-loading">
-            <div class="loading-spinner"></div>
-            <span>Loading result...</span>
-        </div>
-    `;
+    if (modalTitle) {
+
+        modalTitle.textContent =
+            'Student Result';
+
+    }
 
 
-    document.body.style.overflow =
-        'hidden';
+    if (modalBody) {
+
+        modalBody.innerHTML = `
+
+            <div class="result-loading">
+                <div class="loading-spinner"></div>
+                <p>Loading student result...</p>
+            </div>
+
+        `;
+
+    }
+
+
+    if (modal) {
+
+        modal.classList.remove(
+            'hidden'
+        );
+
+    }
 
 
     try {
 
-        const result =
+        const response =
             await apiRequest(
                 'getResultManagementStudent',
                 {
-
                     schoolId:
                         currentSession.schoolId,
 
@@ -2202,30 +1858,33 @@ async function openStudentResult(
 
                     studentId:
                         studentId
-
                 }
             );
 
 
-        if (!result.success) {
+        if (
+            !response ||
+            !response.success ||
+            !response.result
+        ) {
 
             throw new Error(
-                result.error ||
-                result.message ||
-                'Student result could not be loaded.'
+                response &&
+                response.error
+                    ? response.error
+                    : 'Unable to load the student result.'
             );
 
         }
 
 
         currentViewedResult =
-            result.result;
+            response.result;
 
 
         renderStudentResult(
-            result.result
+            response.result
         );
-
 
     } catch (error) {
 
@@ -2235,22 +1894,20 @@ async function openStudentResult(
         );
 
 
-        body.innerHTML = `
-            <div class="table-empty">
-                <div class="empty-icon">!</div>
+        if (modalBody) {
 
-                <strong>
-                    Could not load result
-                </strong>
+            modalBody.innerHTML = `
 
-                <span>
+                <div class="result-error">
                     ${escapeHtml(
                         error.message ||
-                        'An error occurred.'
+                        'Unable to load the student result.'
                     )}
-                </span>
-            </div>
-        `;
+                </div>
+
+            `;
+
+        }
 
     }
 
@@ -2265,41 +1922,19 @@ function renderStudentResult(
     result
 ) {
 
-    const body =
+    const modalBody =
         document.getElementById(
             'resultModalBody'
         );
 
+    const modalTitle =
+        document.getElementById(
+            'studentResultTitle'
+        );
 
-    if (!body) {
 
+    if (!modalBody) {
         return;
-
-    }
-
-
-    if (!result) {
-
-        body.innerHTML = `
-            <div class="table-empty">
-
-                <div class="empty-icon">
-                    !
-                </div>
-
-                <strong>
-                    No result found
-                </strong>
-
-                <span>
-                    This student does not have a result for the selected period.
-                </span>
-
-            </div>
-        `;
-
-        return;
-
     }
 
 
@@ -2307,662 +1942,592 @@ function renderStudentResult(
         result.student ||
         {};
 
-
-    const summary =
-        result.summary ||
+    const school =
+        result.school ||
         {};
 
+    const session =
+        result.session ||
+        {};
+
+    const classInfo =
+        result.class ||
+        {};
 
     const subjects =
         Array.isArray(
             result.subjects
         )
             ? result.subjects
-            : (
-                Array.isArray(
-                    result.results
-                )
-                    ? result.results
-                    : []
-            );
-
-
-    const comments =
-        result.comments ||
-        {};
-
-
-    const positionData =
-        result.position &&
-        typeof result.position === 'object'
-            ? result.position
-            : null;
-
-
-    const position =
-        positionData &&
-        positionData.position !== null &&
-        positionData.position !== undefined
-            ? positionData.position
-            : (
-                typeof result.position === 'number'
-                    ? result.position
-                    : null
-            );
-
-
-    const fullName =
-        firstValue(
-            student.fullName,
-            student.name,
-            result.fullName,
-            'Student'
-        );
-
-
-    const admissionNo =
-        firstValue(
-            student.admissionNo,
-            student.admissionNumber,
-            result.admissionNo,
-            '—'
-        );
-
-
-    const total =
-        firstValue(
-            summary.overallTotal,
-            summary.total,
-            result.total,
-            null
-        );
-
-
-    const average =
-        firstValue(
-            summary.average,
-            result.average,
-            null
-        );
-
-
-    const completionStatus =
-        firstValue(
-            summary.completionStatus,
-            result.completionStatus,
-            'Not Started'
-        );
-
-
-    const studentTitle =
-        document.getElementById(
-            'studentResultTitle'
-        );
-
-
-    if (studentTitle) {
-
-        studentTitle.textContent =
-            fullName;
-
-    }
-
-
-    const session =
-        result.session ||
-        {};
-
-
-    const classInfo =
-        result.class ||
-        {};
-
-
-    const sessionName =
-        firstValue(
-            session.sessionName,
-            'Session'
-        );
-
-
-    const className =
-        buildClassName({
-
-            className:
-                classInfo.className,
-
-            section:
-                classInfo.section
-
-        });
-
-
-    const isComplete =
-        normalize(
-            completionStatus
-        ) === 'complete';
-
-
-    body.innerHTML = `
-
-        <div class="result-student-header">
-
-            <h3>
-                ${escapeHtml(fullName)}
-            </h3>
-
-            <div class="result-student-meta">
-
-                <span>
-                    Admission No.:
-                    <strong>
-                        ${escapeHtml(
-                            admissionNo
-                        )}
-                    </strong>
-                </span>
-
-                <span>
-                    ${escapeHtml(
-                        className
-                    )}
-                </span>
-
-                <span>
-                    ${escapeHtml(
-                        sessionName
-                    )}
-                </span>
-
-                <span>
-                    ${escapeHtml(
-                        currentSelected.term
-                    )}
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="result-detail-summary">
-
-            <div class="result-detail-card">
-
-                <span>
-                    TOTAL
-                </span>
-
-                <strong>
-                    ${formatNumber(total)}
-                </strong>
-
-            </div>
-
-
-            <div class="result-detail-card">
-
-                <span>
-                    AVERAGE
-                </span>
-
-                <strong>
-                    ${formatAverage(average)}
-                </strong>
-
-            </div>
-
-
-            <div class="result-detail-card">
-
-                <span>
-                    POSITION
-                </span>
-
-                <strong>
-                    ${
-                        position !== null &&
-                        position !== undefined &&
-                        position !== ''
-                            ? escapeHtml(
-                                String(position)
-                            )
-                            : '—'
-                    }
-                </strong>
-
-            </div>
-
-        </div>
-
-
-        <div class="result-detail-section">
-
-            <h4>
-                Result Status
-            </h4>
-
-            ${createStatusBadge(
-                completionStatus
-            )}
-
-        </div>
-
-
-        ${
-            subjects.length
-                ? createSubjectResultsTable(
-                    subjects
-                )
-                : `
-                    <div class="result-detail-section">
-
-                        <h4>
-                            Subject Results
-                        </h4>
-
-                        <p>
-                            No subject results are available for this student.
-                        </p>
-
-                    </div>
-                `
-        }
-
-
-        ${createCommentsSection(
-            comments
-        )}
-
-
-        ${createPdfSection(
-            isComplete
-        )}
-
-    `;
-
-}
-
-
-/* ============================================================
-   PDF SECTION
-============================================================ */
-
-function createPdfSection(
-    isComplete
-) {
-
-    if (isComplete) {
-
-        return `
-
-            <div class="result-detail-section result-pdf-section">
-
-                <h4>
-                    Final Result
-                </h4>
-
-                <p>
-                    This student's result is complete and can be generated as a PDF.
-                </p>
-
-                <button
-                    type="button"
-                    class="primary-button result-pdf-button"
-                    id="generateStudentPdfButton"
-                >
-                    Generate PDF
-                </button>
-
-                <div
-                    id="pdfGenerationMessage"
-                    class="result-pdf-message hidden"
-                ></div>
-
-            </div>
-
-        `;
-
-    }
-
-
-    return `
-
-        <div class="result-detail-section result-pdf-section">
-
-            <h4>
-                Final Result
-            </h4>
-
-            <p>
-                The PDF will become available when all required scores have been completed.
-            </p>
-
-            <button
-                type="button"
-                class="primary-button result-pdf-button"
-                disabled
-            >
-                Generate PDF
-            </button>
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   SUBJECT TABLE
-============================================================ */
-
-function createSubjectResultsTable(
-    subjects
-) {
-
-    let rows = '';
-
-
-    subjects.forEach(
-        function (subject) {
-
-            const subjectName =
-                firstValue(
-                    subject.subjectName,
-                    subject.subject,
-                    subject.name,
-                    subject['Subject Name'],
-                    'Subject'
-                );
-
-
-            const test =
-                firstValue(
-                    subject.testScore,
-                    subject.test,
-                    subject.testMark,
-                    null
-                );
-
-
-            const exam =
-                firstValue(
-                    subject.examScore,
-                    subject.exam,
-                    subject.examMark,
-                    null
-                );
-
-
-            const total =
-                firstValue(
-                    subject.totalScore,
-                    subject.total,
-                    null
-                );
-
-
-            const grade =
-                firstValue(
-                    subject.grade,
-                    subject.Grade,
-                    '—'
-                );
-
-
-            const remark =
-                firstValue(
-                    subject.remark,
-                    subject.Remark,
-                    '—'
-                );
-
-
-            rows += `
-
-                <tr>
-
-                    <td>
-                        ${escapeHtml(
-                            subjectName
-                        )}
-                    </td>
-
-                    <td>
-                        ${formatNumber(test)}
-                    </td>
-
-                    <td>
-                        ${formatNumber(exam)}
-                    </td>
-
-                    <td>
-                        ${formatNumber(total)}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            String(grade)
-                        )}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            String(remark)
-                        )}
-                    </td>
-
-                </tr>
-
-            `;
-
-        }
-    );
-
-
-    return `
-
-        <div class="result-detail-section">
-
-            <h4>
-                Subject Results
-            </h4>
-
-            <div class="result-detail-table-wrapper">
-
-                <table class="result-detail-table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Subject
-                            </th>
-
-                            <th>
-                                Test
-                            </th>
-
-                            <th>
-                                Exam
-                            </th>
-
-                            <th>
-                                Total
-                            </th>
-
-                            <th>
-                                Grade
-                            </th>
-
-                            <th>
-                                Remark
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        ${rows}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   COMMENTS
-============================================================ */
-
-function createCommentsSection(
-    comments
-) {
-
-    if (!comments) {
-
-        return '';
-
-    }
-
-
-    const teacherComment =
-        firstValue(
-            comments.teacherComment,
-            comments['Teacher Comment'],
-            ''
-        );
-
-
-    const principalComment =
-        firstValue(
-            comments.principalComment,
-            comments['Principal Comment'],
-            ''
-        );
-
-
-    if (
-        !teacherComment &&
-        !principalComment
-    ) {
-
-        return '';
-
-    }
-
-
-    return `
-
-        <div class="result-detail-section">
-
-            <h4>
-                Comments
-            </h4>
-
-
-            ${
-                teacherComment
-                    ? `
-                        <p>
-                            <strong>
-                                Teacher:
-                            </strong>
-                            ${escapeHtml(
-                                teacherComment
-                            )}
-                        </p>
-                    `
-                    : ''
-            }
-
-
-            ${
-                principalComment
-                    ? `
-                        <p>
-                            <strong>
-                                Principal:
-                            </strong>
-                            ${escapeHtml(
-                                principalComment
-                            )}
-                        </p>
-                    `
-                    : ''
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   GENERATE STUDENT RESULT PDF
-============================================================ */
-
-async function generateStudentResultPdf() {
-
-    if (!currentViewedStudentId) {
-
-        showMessage(
-            'Student ID is missing. Please close the result and open it again.'
-        );
-
-        return;
-
-    }
-
-
-    const result =
-        currentViewedResult;
-
-
-    if (!result) {
-
-        showMessage(
-            'The student result is not loaded.'
-        );
-
-        return;
-
-    }
-
+            : [];
 
     const summary =
         result.summary ||
         {};
 
+    const comments =
+        result.comments ||
+        null;
 
-    const completionStatus =
+
+    /*
+     * IMPORTANT:
+     * FinalResults.gs returns:
+     *
+     * position: {
+     *     position: number,
+     *     status: string
+     * }
+     *
+     * Therefore result.position itself must NOT
+     * be displayed as the position number.
+     */
+
+    const position =
         firstValue(
-            summary.completionStatus,
-            result.completionStatus,
-            'Not Started'
+            result.position &&
+            result.position.position,
+            summary.position,
+            result.position &&
+            result.position.value,
+            null
         );
 
 
+    if (modalTitle) {
+
+        modalTitle.textContent =
+            student.fullName
+                ? student.fullName +
+                  ' — Result'
+                : 'Student Result';
+
+    }
+
+
+    let html = '';
+
+
+    /* ----------------------------------------------------------
+       STUDENT / SCHOOL INFORMATION
+    ---------------------------------------------------------- */
+
+    html += `
+
+        <div class="result-student-header">
+
+            <div class="result-student-name">
+                ${escapeHtml(
+                    student.fullName ||
+                    ''
+                )}
+            </div>
+
+            <div class="result-student-meta">
+
+                <span>
+                    Admission No:
+                    <strong>
+                        ${escapeHtml(
+                            student.admissionNo ||
+                            ''
+                        )}
+                    </strong>
+                </span>
+
+                <span>
+                    Class:
+                    <strong>
+                        ${escapeHtml(
+                            buildClassName(
+                                classInfo
+                            )
+                        )}
+                    </strong>
+                </span>
+
+                <span>
+                    Gender:
+                    <strong>
+                        ${escapeHtml(
+                            student.gender ||
+                            ''
+                        )}
+                    </strong>
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="result-school-meta">
+
+            <div>
+                <strong>
+                    ${escapeHtml(
+                        school.schoolName ||
+                        ''
+                    )}
+                </strong>
+            </div>
+
+            <div>
+                ${escapeHtml(
+                    session.sessionName ||
+                    ''
+                )}
+
+                ${
+                    session.sessionName &&
+                    result.term
+                        ? ' • '
+                        : ''
+                }
+
+                ${escapeHtml(
+                    result.term ||
+                    ''
+                )}
+            </div>
+
+        </div>
+
+    `;
+
+
+    /* ----------------------------------------------------------
+       SUBJECT TABLE
+    ---------------------------------------------------------- */
+
+    html += `
+
+        <div class="result-table-wrapper">
+
+            <table class="result-subject-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Subject</th>
+                        <th>Test</th>
+                        <th>Exam</th>
+                        <th>Total</th>
+                        <th>Grade</th>
+                        <th>Remark</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+    `;
+
+
+    if (!subjects.length) {
+
+        html += `
+
+                    <tr>
+
+                        <td
+                            colspan="6"
+                            class="result-empty-cell"
+                        >
+                            No subject results available.
+                        </td>
+
+                    </tr>
+
+        `;
+
+    } else {
+
+        subjects.forEach(
+            function (subject) {
+
+                const test =
+                    firstValue(
+                        subject.testScore,
+                        ''
+                    );
+
+                const exam =
+                    firstValue(
+                        subject.examScore,
+                        ''
+                    );
+
+                const total =
+                    firstValue(
+                        subject.totalScore,
+                        ''
+                    );
+
+                const grade =
+                    firstValue(
+                        subject.grade,
+                        ''
+                    );
+
+                const remark =
+                    firstValue(
+                        subject.remark,
+                        ''
+                    );
+
+                const subjectName =
+                    firstValue(
+                        subject.subjectName,
+                        subject.subject,
+                        ''
+                    );
+
+
+                html += `
+
+                    <tr>
+
+                        <td class="subject-name">
+                            ${escapeHtml(
+                                subjectName
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                formatNumberValue(
+                                    test
+                                )
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                formatNumberValue(
+                                    exam
+                                )
+                            )}
+                        </td>
+
+                        <td>
+                            <strong>
+                                ${escapeHtml(
+                                    formatNumberValue(
+                                        total
+                                    )
+                                )}
+                            </strong>
+                        </td>
+
+                        <td>
+                            <strong>
+                                ${escapeHtml(
+                                    grade
+                                )}
+                            </strong>
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                remark
+                            )}
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        );
+
+    }
+
+
+    html += `
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+
+    /* ----------------------------------------------------------
+       SUMMARY
+    ---------------------------------------------------------- */
+
+    html += `
+
+        <div class="result-summary-grid">
+
+            <div class="result-summary-item">
+
+                <span class="result-summary-label">
+                    Subjects Offered
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        formatNumberValue(
+                            summary.subjectCount
+                        )
+                    )}
+                </strong>
+
+            </div>
+
+
+            <div class="result-summary-item">
+
+                <span class="result-summary-label">
+                    Subjects Scored
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        formatNumberValue(
+                            summary.scoredSubjects
+                        )
+                    )}
+                </strong>
+
+            </div>
+
+
+            <div class="result-summary-item">
+
+                <span class="result-summary-label">
+                    Overall Total
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        formatNumberValue(
+                            summary.overallTotal
+                        )
+                    )}
+                </strong>
+
+            </div>
+
+
+            <div class="result-summary-item">
+
+                <span class="result-summary-label">
+                    Average
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        formatNumberValue(
+                            summary.average
+                        )
+                    )}
+                </strong>
+
+            </div>
+
+
+            <div class="result-summary-item">
+
+                <span class="result-summary-label">
+                    Position
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        formatPositionValue(
+                            position
+                        )
+                    )}
+                </strong>
+
+            </div>
+
+
+            <div class="result-summary-item">
+
+                <span class="result-summary-label">
+                    Status
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        summary.completionStatus ||
+                        'Not Started'
+                    )}
+                </strong>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    /* ----------------------------------------------------------
+       COMMENTS
+    ---------------------------------------------------------- */
+
+    const teacherComment =
+        comments
+            ? firstValue(
+                comments.teacherComment,
+                comments['Teacher Comment'],
+                ''
+            )
+            : '';
+
+    const principalComment =
+        comments
+            ? firstValue(
+                comments.principalComment,
+                comments['Principal Comment'],
+                ''
+            )
+            : '';
+
+
+    html += `
+
+        <div class="result-comments">
+
+            <div class="result-comment">
+
+                <div class="result-comment-title">
+                    Teacher's Comment
+                </div>
+
+                <div class="result-comment-text">
+
+                    ${escapeHtml(
+                        teacherComment ||
+                        'No teacher comment provided.'
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="result-comment">
+
+                <div class="result-comment-title">
+                    Principal's Comment
+                </div>
+
+                <div class="result-comment-text">
+
+                    ${escapeHtml(
+                        principalComment ||
+                        'No principal comment provided.'
+                    )}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    /* ----------------------------------------------------------
+       PDF ACTION
+    ---------------------------------------------------------- */
+
+    html += `
+
+        <div class="result-pdf-action">
+
+            <button
+                type="button"
+                class="primary-button result-pdf-button"
+                id="generateStudentPdfButton"
+            >
+                Generate PDF
+            </button>
+
+            <span class="result-pdf-note">
+                Generate the final student result as a PDF.
+            </span>
+
+        </div>
+
+    `;
+
+
+    modalBody.innerHTML =
+        html;
+
+
+    bindPdfButton();
+
+}
+
+
+/* ============================================================
+   BIND PDF BUTTON
+============================================================ */
+
+function bindPdfButton() {
+
+    const button =
+        document.getElementById(
+            'generateStudentPdfButton'
+        );
+
+
+    if (!button) {
+        return;
+    }
+
+
+    button.addEventListener(
+        'click',
+        function () {
+
+            generateStudentPdf(
+                currentViewedStudentId
+            );
+
+        }
+    );
+
+}
+
+
+/* ============================================================
+   GENERATE STUDENT PDF
+============================================================ */
+
+async function generateStudentPdf(
+    studentId
+) {
+
+    if (!studentId) {
+
+        showPageMessage(
+            'Student information is missing.'
+        );
+
+        return;
+
+    }
+
+
     if (
-        normalize(
-            completionStatus
-        ) !== 'complete'
+        !currentSelected.sessionId ||
+        !currentSelected.term
     ) {
 
-        showMessage(
-            'This student has an incomplete result. Complete all required scores before generating the PDF.'
+        showPageMessage(
+            'Session and term information are required.'
         );
 
         return;
@@ -2973,12 +2538,6 @@ async function generateStudentResultPdf() {
     const button =
         document.getElementById(
             'generateStudentPdfButton'
-        );
-
-
-    const message =
-        document.getElementById(
-            'pdfGenerationMessage'
         );
 
 
@@ -2993,25 +2552,12 @@ async function generateStudentResultPdf() {
     }
 
 
-    if (message) {
-
-        message.classList.remove(
-            'hidden'
-        );
-
-        message.textContent =
-            'Preparing the student result PDF. Please wait...';
-
-    }
-
-
     try {
 
         const response =
             await apiRequest(
                 'generateStudentResultPdf',
                 {
-
                     schoolId:
                         currentSession.schoolId,
 
@@ -3022,112 +2568,80 @@ async function generateStudentResultPdf() {
                         currentSelected.term,
 
                     studentId:
-                        currentViewedStudentId
-
+                        studentId
                 }
             );
 
 
-        if (!response.success) {
-
-            throw new Error(
-                response.error ||
-                response.message ||
-                'The student result PDF could not be generated.'
-            );
-
-        }
-
-
         if (
-            !response.file
+            !response ||
+            !response.success
         ) {
 
             throw new Error(
-                'The PDF was generated, but no file information was returned.'
+                response &&
+                response.error
+                    ? response.error
+                    : 'The student result PDF could not be generated.'
             );
-
-        }
-
-
-        const pdfUrl =
-            response.file.url ||
-            response.file.downloadUrl ||
-            '';
-
-
-        if (!pdfUrl) {
-
-            throw new Error(
-                'The PDF was generated, but its file URL was not returned.'
-            );
-
-        }
-
-
-        if (message) {
-
-            message.textContent =
-                'PDF generated successfully. Opening the result...';
 
         }
 
 
         /*
-         * The PDF URL is opened immediately from the
-         * button-click flow to reduce popup-blocking issues.
+         * ResultPDF.gs returns:
+         *
+         * file: {
+         *     id,
+         *     name,
+         *     url,
+         *     downloadUrl
+         * }
          */
-        window.open(
-            pdfUrl,
-            '_blank',
-            'noopener,noreferrer'
+
+        const pdfUrl =
+            response.file &&
+            (
+                response.file.url ||
+                response.file.downloadUrl
+            );
+
+
+        if (!pdfUrl) {
+
+            throw new Error(
+                'The PDF was generated, but no PDF link was returned.'
+            );
+
+        }
+
+
+        showPageMessage(
+            response.message ||
+            'Student result PDF generated successfully.'
         );
 
 
-        if (message) {
-
-            message.innerHTML =
-                'PDF generated successfully. ' +
-                '<a href="' +
-                escapeHtml(pdfUrl) +
-                '" target="_blank" rel="noopener noreferrer">' +
-                'Open PDF' +
-                '</a>';
-
-        }
-
-
-        if (button) {
-
-            button.textContent =
-                'Generate PDF Again';
-
-            button.disabled =
-                false;
-
-        }
+        window.open(
+            pdfUrl,
+            '_blank'
+        );
 
 
     } catch (error) {
 
         console.error(
-            'Student PDF generation error:',
+            'Generate PDF error:',
             error
         );
 
 
-        if (message) {
+        showPageMessage(
+            error.message ||
+            'Unable to generate the student result PDF.'
+        );
 
-            message.classList.remove(
-                'hidden'
-            );
-
-            message.textContent =
-                error.message ||
-                'The PDF could not be generated.';
-
-        }
-
+    } finally {
 
         if (button) {
 
@@ -3145,33 +2659,7 @@ async function generateStudentResultPdf() {
 
 
 /* ============================================================
-   PDF BUTTON EVENT DELEGATION
-============================================================ */
-
-document.addEventListener(
-    'click',
-    function (event) {
-
-        const target =
-            event.target;
-
-
-        if (
-            target &&
-            target.id ===
-                'generateStudentPdfButton'
-        ) {
-
-            generateStudentResultPdf();
-
-        }
-
-    }
-);
-
-
-/* ============================================================
-   CLOSE RESULT MODAL
+   CLOSE STUDENT RESULT MODAL
 ============================================================ */
 
 function closeStudentResultModal() {
@@ -3194,240 +2682,8 @@ function closeStudentResultModal() {
     currentViewedStudentId =
         '';
 
-
     currentViewedResult =
         null;
-
-
-    document.body.style.overflow =
-        '';
-
-}
-
-
-/* ============================================================
-   HIDE RESULT SECTIONS
-============================================================ */
-
-function hideResultSections() {
-
-    const overview =
-        document.getElementById(
-            'overviewSection'
-        );
-
-
-    const students =
-        document.getElementById(
-            'studentsSection'
-        );
-
-
-    if (overview) {
-
-        overview.classList.add(
-            'hidden'
-        );
-
-    }
-
-
-    if (students) {
-
-        students.classList.add(
-            'hidden'
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   SELECTION LOADING
-============================================================ */
-
-function showSelectionLoading() {
-
-    const message =
-        document.getElementById(
-            'selectionMessage'
-        );
-
-
-    const text =
-        document.getElementById(
-            'selectionMessageText'
-        );
-
-
-    if (message) {
-
-        message.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (text) {
-
-        text.textContent =
-            'Loading result management data...';
-
-    }
-
-}
-
-
-function hideSelectionLoading() {
-
-    hideSelectionMessage();
-
-}
-
-
-/* ============================================================
-   SELECTION MESSAGE
-============================================================ */
-
-function showSelectionMessage(
-    messageText
-) {
-
-    const message =
-        document.getElementById(
-            'selectionMessage'
-        );
-
-
-    const text =
-        document.getElementById(
-            'selectionMessageText'
-        );
-
-
-    if (message) {
-
-        message.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (text) {
-
-        text.textContent =
-            messageText;
-
-    }
-
-}
-
-
-function hideSelectionMessage() {
-
-    const message =
-        document.getElementById(
-            'selectionMessage'
-        );
-
-
-    if (message) {
-
-        message.classList.add(
-            'hidden'
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   API REQUEST
-============================================================ */
-
-async function apiRequest(
-    action,
-    payload
-) {
-
-    const requestBody = {
-
-        action:
-            action,
-
-        ...payload
-
-    };
-
-
-    const response =
-        await fetch(
-            API_URL,
-            {
-
-                method: 'POST',
-
-                headers: {
-
-                    'Content-Type':
-                        'text/plain;charset=utf-8'
-
-                },
-
-                body:
-                    JSON.stringify(
-                        requestBody
-                    )
-
-            }
-        );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            'Server request failed with status ' +
-            response.status +
-            '.'
-        );
-
-    }
-
-
-    const text =
-        await response.text();
-
-
-    let data;
-
-
-    try {
-
-        data =
-            JSON.parse(
-                text
-            );
-
-    } catch (error) {
-
-        console.error(
-            'Invalid server response:',
-            text
-        );
-
-
-        throw new Error(
-            'The server returned an invalid response.'
-        );
-
-    }
-
-
-    return data;
 
 }
 
@@ -3436,7 +2692,7 @@ async function apiRequest(
    PAGE MESSAGE
 ============================================================ */
 
-function showMessage(
+function showPageMessage(
     message
 ) {
 
@@ -3445,18 +2701,10 @@ function showMessage(
             'pageMessage'
         );
 
-
     const messageText =
         document.getElementById(
             'messageText'
         );
-
-
-    if (!pageMessage) {
-
-        return;
-
-    }
 
 
     if (messageText) {
@@ -3468,18 +2716,13 @@ function showMessage(
     }
 
 
-    pageMessage.classList.remove(
-        'hidden'
-    );
+    if (pageMessage) {
 
+        pageMessage.classList.remove(
+            'hidden'
+        );
 
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: 'smooth'
-
-    });
+    }
 
 }
 
@@ -3488,7 +2731,7 @@ function showMessage(
    HIDE PAGE MESSAGE
 ============================================================ */
 
-function hideMessage() {
+function hidePageMessage() {
 
     const pageMessage =
         document.getElementById(
@@ -3508,19 +2751,115 @@ function hideMessage() {
 
 
 /* ============================================================
+   API REQUEST
+============================================================ */
+
+async function apiRequest(
+    action,
+    data
+) {
+
+    const payload =
+        Object.assign(
+            {
+                action:
+                    action
+            },
+            data ||
+            {}
+        );
+
+
+    const response =
+        await fetch(
+            API_URL,
+            {
+                method:
+                    'POST',
+
+                headers: {
+                    'Content-Type':
+                        'text/plain;charset=utf-8'
+                },
+
+                body:
+                    JSON.stringify(
+                        payload
+                    )
+
+            }
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            'Server request failed. Please try again.'
+        );
+
+    }
+
+
+    const text =
+        await response.text();
+
+
+    let result;
+
+
+    try {
+
+        result =
+            JSON.parse(
+                text
+            );
+
+    } catch (error) {
+
+        console.error(
+            'Invalid JSON response:',
+            text
+        );
+
+        throw new Error(
+            'The server returned an invalid response.'
+        );
+
+    }
+
+
+    return result;
+
+}
+
+
+/* ============================================================
    LOGOUT
 ============================================================ */
 
-function logout() {
+function logoutUser() {
 
     localStorage.removeItem(
         SESSION_KEY
     );
 
-
     currentSession =
         null;
 
+    currentSetup =
+        null;
+
+    currentSelected = {
+        sessionId: '',
+        term: '',
+        classId: ''
+    };
+
+    currentViewedStudentId =
+        '';
+
+    currentViewedResult =
+        null;
 
     window.location.href =
         'index.html';
@@ -3529,19 +2868,7 @@ function logout() {
 
 
 /* ============================================================
-   LOGIN REDIRECT
-============================================================ */
-
-function redirectToLogin() {
-
-    window.location.href =
-        'index.html';
-
-}
-
-
-/* ============================================================
-   SET TEXT
+   HELPERS — TEXT
 ============================================================ */
 
 function setText(
@@ -3556,164 +2883,132 @@ function setText(
 
 
     if (!element) {
-
         return;
-
     }
 
 
     element.textContent =
-        value === null ||
-        value === undefined
-            ? ''
-            : String(value);
+        value !== null &&
+        value !== undefined
+            ? String(value)
+            : '';
 
 }
 
 
 /* ============================================================
-   HELPERS
+   HELPERS — INITIALS
 ============================================================ */
 
-function normalize(value) {
+function getInitials(
+    name
+) {
 
-    if (
-        value === null ||
-        value === undefined
-    ) {
+    const value =
+        String(
+            name ||
+            ''
+        ).trim();
 
+
+    if (!value) {
+        return 'U';
+    }
+
+
+    const parts =
+        value
+            .split(/\s+/)
+            .filter(Boolean);
+
+
+    if (parts.length === 1) {
+
+        return parts[0]
+            .substring(
+                0,
+                2
+            )
+            .toUpperCase();
+
+    }
+
+
+    return (
+        parts[0].charAt(0) +
+        parts[
+            parts.length - 1
+        ].charAt(0)
+    ).toUpperCase();
+
+}
+
+
+/* ============================================================
+   HELPERS — CLASS NAME
+============================================================ */
+
+function buildClassName(
+    classInfo
+) {
+
+    if (!classInfo) {
         return '';
-
     }
 
 
-    return String(value)
-        .trim()
-        .toLowerCase();
-
-}
+    const className =
+        classInfo.className ||
+        '';
 
 
-function safeNumber(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ''
-    ) {
-
-        return '0';
-
-    }
-
-
-    const number =
-        Number(value);
+    const section =
+        classInfo.section ||
+        '';
 
 
     if (
-        Number.isNaN(number)
+        className &&
+        section
     ) {
 
-        return '0';
-
-    }
-
-
-    return String(number);
-
-}
-
-
-function formatNumber(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ''
-    ) {
-
-        return '—';
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return escapeHtml(
-            String(value)
+        return (
+            className +
+            ' - ' +
+            section
         );
 
     }
 
 
-    return Number.isInteger(number)
-        ? String(number)
-        : number.toFixed(2);
+    return (
+        className ||
+        section ||
+        ''
+    );
 
 }
 
 
-function formatAverage(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ''
-    ) {
-
-        return '—';
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return escapeHtml(
-            String(value)
-        );
-
-    }
-
-
-    return number.toFixed(2);
-
-}
-
+/* ============================================================
+   HELPERS — FIRST VALUE
+============================================================ */
 
 function firstValue() {
 
-    const values =
-        Array.from(
-            arguments
-        );
-
-
     for (
         let i = 0;
-        i < values.length;
+        i < arguments.length;
         i++
     ) {
 
         const value =
-            values[i];
+            arguments[i];
 
 
         if (
-            value !== null &&
             value !== undefined &&
+            value !== null &&
             value !== ''
         ) {
 
@@ -3724,16 +3019,278 @@ function firstValue() {
     }
 
 
-    return null;
+    return '';
 
 }
 
 
 /* ============================================================
-   ESCAPE HTML
+   HELPERS — SAFE NUMBER
 ============================================================ */
 
-function escapeHtml(value) {
+function safeNumber(
+    value
+) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ''
+    ) {
+
+        return '0';
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (
+        !Number.isFinite(
+            number
+        )
+    ) {
+
+        return '0';
+
+    }
+
+
+    return String(
+        number
+    );
+
+}
+
+
+/* ============================================================
+   HELPERS — FORMAT NUMBER
+============================================================ */
+
+function formatNumberValue(
+    value
+) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ''
+    ) {
+
+        return '';
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (
+        !Number.isFinite(
+            number
+        )
+    ) {
+
+        return String(
+            value
+        );
+
+    }
+
+
+    /*
+     * Keep whole numbers clean.
+     */
+
+    if (
+        Number.isInteger(
+            number
+        )
+    ) {
+
+        return String(
+            number
+        );
+
+    }
+
+
+    return number.toFixed(
+        2
+    );
+
+}
+
+
+/* ============================================================
+   HELPERS — FORMAT POSITION
+============================================================ */
+
+function formatPositionValue(
+    value
+) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ''
+    ) {
+
+        return 'Not Available';
+
+    }
+
+
+    /*
+     * Protect against accidentally passing
+     * the position object.
+     */
+
+    if (
+        typeof value === 'object'
+    ) {
+
+        value =
+            value.position !== undefined
+                ? value.position
+                : null;
+
+    }
+
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ''
+    ) {
+
+        return 'Not Available';
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (
+        !Number.isFinite(
+            number
+        )
+    ) {
+
+        return String(
+            value
+        );
+
+    }
+
+
+    const lastTwo =
+        number % 100;
+
+
+    if (
+        lastTwo >= 11 &&
+        lastTwo <= 13
+    ) {
+
+        return (
+            number +
+            'th'
+        );
+
+    }
+
+
+    switch (
+        number % 10
+    ) {
+
+        case 1:
+            return number + 'st';
+
+        case 2:
+            return number + 'nd';
+
+        case 3:
+            return number + 'rd';
+
+        default:
+            return number + 'th';
+
+    }
+
+}
+
+
+/* ============================================================
+   HELPERS — STATUS
+============================================================ */
+
+function normalizeStatus(
+    status
+) {
+
+    return String(
+        status ||
+        ''
+    )
+        .trim()
+        .toLowerCase();
+
+}
+
+
+/* ============================================================
+   HELPERS — STATUS CLASS
+============================================================ */
+
+function getStatusClass(
+    status
+) {
+
+    const normalized =
+        normalizeStatus(
+            status
+        );
+
+
+    if (
+        normalized ===
+        'complete'
+    ) {
+
+        return 'success';
+
+    }
+
+
+    if (
+        normalized ===
+        'incomplete'
+    ) {
+
+        return 'warning';
+
+    }
+
+
+    return 'neutral';
+
+}
+
+
+/* ============================================================
+   HELPERS — HTML ESCAPE
+============================================================ */
+
+function escapeHtml(
+    value
+) {
 
     if (
         value === null ||
@@ -3764,7 +3321,22 @@ function escapeHtml(value) {
         )
         .replace(
             /'/g,
-            '&#039;'
+            '&#39;'
         );
+
+}
+
+
+/* ============================================================
+   HELPERS — ATTRIBUTE ESCAPE
+============================================================ */
+
+function escapeHtmlAttribute(
+    value
+) {
+
+    return escapeHtml(
+        value
+    );
 
 }
