@@ -2632,159 +2632,299 @@ a {
 }
 
 
-/* =========================================================
-   RESULT COMMENTS
-========================================================= */
+/* ============================================================
+   RESULT COMMENTS EDITOR
+   VERSION 1.0
+============================================================ */
 
-.result-comments-section {
-    margin-top: 28px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
-}
-
-.result-comments-section h3 {
-    margin: 0 0 18px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text);
-}
-
-.comment-field {
-    margin-bottom: 18px;
-}
-
-.comment-field label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 0.84rem;
-    font-weight: 700;
-    color: var(--text);
-}
-
-.comment-field textarea {
-    width: 100%;
-    min-height: 110px;
-    padding: 12px 14px;
+.result-comments-editor {
+    margin-top: 24px;
+    padding: 20px;
     border: 1px solid var(--border);
     border-radius: var(--radius-medium);
     background: var(--surface);
-    color: var(--text);
-    font-family: "DM Sans", Arial, sans-serif;
-    font-size: 0.86rem;
-    line-height: 1.55;
-    resize: vertical;
-    outline: none;
     box-sizing: border-box;
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
 }
 
-.comment-field textarea::placeholder {
+.result-comments-editor-header {
+    margin-bottom: 18px;
+}
+
+.result-comments-editor .result-comment-title {
+    margin: 0 0 5px;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.result-comments-help {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+
+/* ------------------------------------------------------------
+   COMMENT FIELD
+------------------------------------------------------------ */
+
+.result-comment-field {
+    margin-top: 16px;
+}
+
+.result-comment-field label {
+    display: block;
+    margin: 0 0 7px;
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+
+/* ------------------------------------------------------------
+   TEXTAREA
+------------------------------------------------------------ */
+
+.result-comment-input {
+    display: block;
+    width: 100%;
+    min-height: 105px;
+    box-sizing: border-box;
+
+    padding: 12px 13px;
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+
+    background: var(--surface);
+    color: var(--text);
+
+    font-family: "DM Sans", Arial, sans-serif;
+    font-size: 0.84rem;
+    font-weight: 400;
+    line-height: 1.5;
+
+    resize: vertical;
+    outline: none;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+}
+
+.result-comment-input::placeholder {
     color: var(--soft-muted);
 }
 
-.comment-field textarea:hover {
-    border-color: #c7c7d4;
+.result-comment-input:hover {
+    border-color: #d5d5df;
 }
 
-.comment-field textarea:focus {
+.result-comment-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.10);
+
+    box-shadow:
+        0 0 0 3px rgba(79, 70, 229, 0.10);
+
+    background: #fff;
 }
 
-.comments-actions {
+
+/* ------------------------------------------------------------
+   CHARACTER COUNTER
+------------------------------------------------------------ */
+
+.result-comment-counter {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+
+    gap: 12px;
+
     margin-top: 6px;
+
+    color: var(--soft-muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
 }
 
-.comment-save-status {
-    min-height: 20px;
-    font-size: 0.78rem;
-    color: var(--muted);
+
+/* ------------------------------------------------------------
+   ACTION AREA
+------------------------------------------------------------ */
+
+.result-comment-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 18px;
 }
 
-.comment-save-status.success {
-    color: var(--success);
-}
 
-.comment-save-status.error {
-    color: var(--danger);
-}
+/* ------------------------------------------------------------
+   SAVE BUTTON
+------------------------------------------------------------ */
 
-.save-comments-button {
+#saveResultCommentsButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    min-height: 42px;
-    padding: 0 18px;
+
+    min-height: 40px;
+
+    padding: 0 17px;
+
     border: 0;
     border-radius: var(--radius-small);
+
     background: var(--primary);
     color: #ffffff;
+
     font-family: "DM Sans", Arial, sans-serif;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 700;
+
+    line-height: 1;
+
     cursor: pointer;
+
     transition:
-        background 0.2s ease,
-        transform 0.15s ease,
-        box-shadow 0.2s ease;
+        background 0.18s ease,
+        transform 0.18s ease,
+        opacity 0.18s ease;
 }
 
-.save-comments-button:hover {
+#saveResultCommentsButton:hover {
     background: var(--primary-dark);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18);
 }
 
-.save-comments-button:active {
+#saveResultCommentsButton:active {
     transform: translateY(1px);
 }
 
-.save-comments-button:disabled {
-    opacity: 0.65;
+#saveResultCommentsButton:disabled {
+    opacity: 0.60;
     cursor: not-allowed;
-    box-shadow: none;
     transform: none;
 }
 
-.save-comments-button .button-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.45);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: commentButtonSpin 0.7s linear infinite;
+
+/* ------------------------------------------------------------
+   SAVE STATUS
+------------------------------------------------------------ */
+
+.result-comment-save-status {
+    min-height: 20px;
+
+    color: var(--muted);
+
+    font-size: 0.76rem;
+    line-height: 1.5;
 }
 
-@keyframes commentButtonSpin {
-    to {
-        transform: rotate(360deg);
-    }
+.result-comment-save-status.success {
+    color: var(--success);
+}
+
+.result-comment-save-status.error {
+    color: var(--danger);
 }
 
 
-/* =========================================================
+/* ------------------------------------------------------------
+   DISPLAYED COMMENTS
+------------------------------------------------------------ */
+
+.result-comments {
+    margin-top: 24px;
+}
+
+.result-comments .result-comment {
+    padding: 15px 0;
+
+    border-top: 1px solid var(--border);
+}
+
+.result-comments .result-comment:first-child {
+    border-top: 0;
+}
+
+.result-comments .result-comment-title {
+    margin-bottom: 6px;
+
+    color: var(--text);
+
+    font-size: 0.80rem;
+    font-weight: 700;
+}
+
+.result-comment-text {
+    color: var(--muted);
+
+    font-size: 0.82rem;
+    line-height: 1.6;
+
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+
+/* ------------------------------------------------------------
+   PDF BUTTON AREA
+------------------------------------------------------------ */
+
+.result-pdf-actions {
+    display: flex;
+    justify-content: flex-end;
+
+    margin-top: 24px;
+    padding-top: 18px;
+
+    border-top: 1px solid var(--border);
+}
+
+.result-pdf-button {
+    min-height: 40px;
+}
+
+
+/* ------------------------------------------------------------
    MOBILE
-========================================================= */
+------------------------------------------------------------ */
 
 @media (max-width: 600px) {
 
-    .comments-actions {
+    .result-comments-editor {
+        padding: 16px;
+        border-radius: var(--radius-small);
+    }
+
+    .result-comment-actions {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .save-comments-button {
+    #saveResultCommentsButton {
         width: 100%;
     }
 
-    .comment-field textarea {
-        min-height: 120px;
+    .result-comment-save-status {
+        width: 100%;
     }
+
+    .result-pdf-actions {
+        justify-content: stretch;
+    }
+
+    .result-pdf-button {
+        width: 100%;
+    }
+
 }
