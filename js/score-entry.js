@@ -763,8 +763,14 @@ function populateSubjects() {
 
         const option = document.createElement('option');
 
+        let label = code ? `${name} (${code})` : name || id;
+
+        if (subject.assigned === false) {
+            label += ' — not assigned';
+        }
+
         option.value = id;
-        option.textContent = code ? `${name} (${code})` : name || id;
+        option.textContent = label;
 
         subjectSelect.appendChild(option);
 
