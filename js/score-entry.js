@@ -1,7 +1,15 @@
 /* =========================================================
    SCHOOL RESULTS SYSTEM
    FILE: score-entry.js
-   VERSION: 1.0.0
+   VERSION: 1.1.0
+
+   PURPOSE:
+   - Score entry frontend
+   - Loads active academic session
+   - Loads active classes
+   - Loads class-specific score entry setup
+   - Loads students and existing scores
+   - Saves scores in bulk
 ========================================================= */
 
 
@@ -22,22 +30,27 @@ const SESSION_KEY =
 
 let currentSession = null;
 
-let setupData = null;
+let setupData = {
+    sessions: [],
+    classes: [],
+    subjects: [],
+    assignments: []
+};
 
 let scoreRecords = [];
 
 let currentStudents = [];
 
 let currentSelection = {
-
     sessionId: '',
     term: '',
     classId: '',
     subjectId: ''
-
 };
 
 let isSaving = false;
+
+let isLoadingSetup = false;
 
 
 /* =========================================================
@@ -260,6 +273,7 @@ function populateUserInterface() {
 
     const role =
         user.role ||
+        user['Role'] ||
         currentSession.role ||
         '--';
 
@@ -317,64 +331,104 @@ function getInitials(name) {
 
 function setupEventListeners() {
 
-    menuButton.addEventListener(
-        'click',
-        toggleSidebar
-    );
+    if (menuButton) {
+
+        menuButton.addEventListener(
+            'click',
+            toggleSidebar
+        );
+
+    }
 
 
-    sidebarOverlay.addEventListener(
-        'click',
-        closeSidebar
-    );
+    if (sidebarOverlay) {
+
+        sidebarOverlay.addEventListener(
+            'click',
+            closeSidebar
+        );
+
+    }
 
 
-    logoutButton.addEventListener(
-        'click',
-        handleLogout
-    );
+    if (logoutButton) {
+
+        logoutButton.addEventListener(
+            'click',
+            handleLogout
+        );
+
+    }
 
 
-    loadRecordsButton.addEventListener(
-        'click',
-        loadScoreRecords
-    );
+    if (loadRecordsButton) {
+
+        loadRecordsButton.addEventListener(
+            'click',
+            loadScoreRecords
+        );
+
+    }
 
 
-    saveScoresButton.addEventListener(
-        'click',
-        saveScores
-    );
+    if (saveScoresButton) {
+
+        saveScoresButton.addEventListener(
+            'click',
+            saveScores
+        );
+
+    }
 
 
-    closeMessage.addEventListener(
-        'click',
-        hideMessage
-    );
+    if (closeMessage) {
+
+        closeMessage.addEventListener(
+            'click',
+            hideMessage
+        );
+
+    }
 
 
-    sessionSelect.addEventListener(
-        'change',
-        handleSetupChange
-    );
+    if (sessionSelect) {
+
+        sessionSelect.addEventListener(
+            'change',
+            handleSessionChange
+        );
+
+    }
 
 
-    termSelect.addEventListener(
-        'change',
-        handleSetupChange
-    );
+    if (termSelect) {
+
+        termSelect.addEventListener(
+            'change',
+            handleSetupChange
+        );
+
+    }
 
 
-    classSelect.addEventListener(
-        'change',
-        handleSetupChange
-    );
+    if (classSelect) {
+
+        classSelect.addEventListener(
+            'change',
+            handleClassChange
+        );
+
+    }
 
 
-    subjectSelect.addEventListener(
-        'change',
-        handleSetupChange
-    );
+    if (subjectSelect) {
+
+        subjectSelect.addEventListener(
+            'change',
+            handleSetupChange
+        );
+
+    }
 
 }
 
@@ -385,26 +439,44 @@ function setupEventListeners() {
 
 function toggleSidebar() {
 
-    sidebar.classList.toggle(
-        'open'
-    );
+    if (sidebar) {
 
-    sidebarOverlay.classList.toggle(
-        'visible'
-    );
+        sidebar.classList.toggle(
+            'open'
+        );
+
+    }
+
+
+    if (sidebarOverlay) {
+
+        sidebarOverlay.classList.toggle(
+            'visible'
+        );
+
+    }
 
 }
 
 
 function closeSidebar() {
 
-    sidebar.classList.remove(
-        'open'
-    );
+    if (sidebar) {
 
-    sidebarOverlay.classList.remove(
-        'visible'
-    );
+        sidebar.classList.remove(
+            'open'
+        );
+
+    }
+
+
+    if (sidebarOverlay) {
+
+        sidebarOverlay.classList.remove(
+            'visible'
+        );
+
+    }
 
 }
 
@@ -487,10 +559,35 @@ async function callApi(
 
 
 /* =========================================================
-   LOAD SETUP
+   LOAD SCORE ENTRY SETUP
+=========================================================
+
+   IMPORTANT BACKEND FLOW:
+
+   getScoreEntrySetup requires:
+
+   schoolId
+   sessionId
+   classId
+
+   Therefore we must obtain:
+
+   1. School ID from login session
+   2. Active academic session
+   3. Active classes
+   4. Select a class
+   5. THEN call getScoreEntrySetup
 ========================================================= */
 
 async function loadScoreEntrySetup() {
+
+    if (isLoadingSetup) {
+        return;
+    }
+
+
+    isLoadingSetup = true;
+
 
     const schoolId =
         getSchoolId();
@@ -505,104 +602,441 @@ async function loadScoreEntrySetup() {
     }
 
 
-    /*
-     * The Score Entry backend requires a Session ID.
-     * Get the school's active session first.
-     */
-    const activeSessionResult =
-        await callApi(
-            'getActiveSession',
-            {
-                schoolId
-            }
+    try {
+
+        /*
+         * -------------------------------------------------
+         * STEP 1
+         * Load all sessions.
+         * -------------------------------------------------
+         */
+
+        const sessionsResult =
+            await callApi(
+                'getSessions',
+                {
+                    schoolId
+                }
+            );
+
+
+        setupData.sessions =
+            extractCollectionFromResult(
+                sessionsResult,
+                [
+                    'sessions',
+                    'Sessions',
+                    'records',
+                    'data'
+                ]
+            );
+
+
+        /*
+         * -------------------------------------------------
+         * STEP 2
+         * Get active session.
+         * -------------------------------------------------
+         */
+
+        const activeSessionResult =
+            await callApi(
+                'getActiveSession',
+                {
+                    schoolId
+                }
+            );
+
+
+        const activeSession =
+            extractActiveSession(
+                activeSessionResult
+            );
+
+
+        if (!activeSession) {
+
+            throw new Error(
+                'No active academic session has been set for this school.'
+            );
+
+        }
+
+
+        const activeSessionId =
+            getField(
+                activeSession,
+                [
+                    'Session ID',
+                    'sessionId'
+                ]
+            );
+
+
+        if (!activeSessionId) {
+
+            throw new Error(
+                'The active academic session does not have a valid Session ID.'
+            );
+
+        }
+
+
+        currentSelection.sessionId =
+            activeSessionId;
+
+
+        /*
+         * -------------------------------------------------
+         * STEP 3
+         * Load active classes.
+         * -------------------------------------------------
+         */
+
+        const classesResult =
+            await callApi(
+                'getActiveClasses',
+                {
+                    schoolId
+                }
+            );
+
+
+        setupData.classes =
+            extractCollectionFromResult(
+                classesResult,
+                [
+                    'classes',
+                    'Classes',
+                    'records',
+                    'data'
+                ]
+            );
+
+
+        if (!setupData.classes.length) {
+
+            throw new Error(
+                'No active classes were found. Please create an active class before entering scores.'
+            );
+
+        }
+
+
+        /*
+         * -------------------------------------------------
+         * STEP 4
+         * Populate session and class selectors.
+         * -------------------------------------------------
+         */
+
+        populateSessions();
+
+        sessionSelect.value =
+            activeSessionId;
+
+
+        populateClasses();
+
+
+        /*
+         * Automatically select the first active class
+         * if no class has already been selected.
+         */
+
+        let selectedClassId =
+            currentSelection.classId;
+
+
+        if (
+            !selectedClassId ||
+            !setupData.classes.some(
+                function (item) {
+
+                    return String(
+                        getField(
+                            item,
+                            [
+                                'Class ID',
+                                'classId'
+                            ]
+                        )
+                    ) === String(
+                        selectedClassId
+                    );
+
+                }
+            )
+        ) {
+
+            const firstClass =
+                setupData.classes[0];
+
+
+            selectedClassId =
+                getField(
+                    firstClass,
+                    [
+                        'Class ID',
+                        'classId'
+                    ]
+                );
+
+        }
+
+
+        if (!selectedClassId) {
+
+            throw new Error(
+                'The selected class does not have a valid Class ID.'
+            );
+
+        }
+
+
+        currentSelection.classId =
+            selectedClassId;
+
+
+        classSelect.value =
+            selectedClassId;
+
+
+        /*
+         * -------------------------------------------------
+         * STEP 5
+         * NOW call getScoreEntrySetup.
+         *
+         * This backend requires:
+         * schoolId
+         * sessionId
+         * classId
+         * -------------------------------------------------
+         */
+
+        await loadClassScoreEntrySetup(
+            selectedClassId
         );
 
 
-    const activeSession =
-        extractActiveSession(
-            activeSessionResult
-        );
+        updateSetupMessage();
+
+    } finally {
+
+        isLoadingSetup = false;
+
+    }
+
+}
 
 
-    if (!activeSession) {
+/* =========================================================
+   LOAD CLASS-SPECIFIC SETUP
+========================================================= */
+
+async function loadClassScoreEntrySetup(
+    classId
+) {
+
+    const schoolId =
+        getSchoolId();
+
+
+    const sessionId =
+        currentSelection.sessionId;
+
+
+    if (!schoolId) {
 
         throw new Error(
-            'No active academic session has been set for this school.'
+            'School information is missing from your session.'
         );
 
     }
 
 
-    const activeSessionId =
-        getField(
-            activeSession,
-            [
-                'Session ID',
-                'sessionId'
-            ]
-        );
-
-
-    if (!activeSessionId) {
+    if (!sessionId) {
 
         throw new Error(
-            'The active academic session does not have a valid Session ID.'
+            'Session ID is required.'
+        );
+
+    }
+
+
+    if (!classId) {
+
+        throw new Error(
+            'Class ID is required.'
         );
 
     }
 
 
     /*
-     * Remember the active session.
+     * Show a small loading message while the
+     * class-specific subjects are being retrieved.
      */
-    currentSelection.sessionId =
-        activeSessionId;
+
+    if (setupMessage) {
+
+        setupMessage.textContent =
+            'Loading subjects for the selected class...';
+
+        setupMessage.classList.remove(
+            'hidden'
+        );
+
+    }
 
 
-    /*
-     * Now load Score Entry setup with
-     * BOTH schoolId and sessionId.
-     */
     const result =
         await callApi(
             'getScoreEntrySetup',
             {
                 schoolId,
-                sessionId: activeSessionId
+                sessionId,
+                classId
             }
         );
 
 
-    setupData =
-        normalizeSetupData(result);
+    const normalized =
+        normalizeSetupData(
+            result
+        );
 
 
     /*
-     * Populate the session selector.
+     * Preserve the sessions/classes already loaded
+     * because the setup endpoint may return only the
+     * class-specific subjects/assignments.
      */
-    populateSessions();
+
+    if (
+        normalized.sessions.length
+    ) {
+
+        setupData.sessions =
+            normalized.sessions;
+
+    }
+
+
+    if (
+        normalized.classes.length
+    ) {
+
+        setupData.classes =
+            normalized.classes;
+
+    }
+
+
+    setupData.subjects =
+        normalized.subjects;
+
+
+    setupData.assignments =
+        normalized.assignments;
 
 
     /*
-     * Select the active session automatically.
+     * Populate subjects returned for this class.
      */
-    sessionSelect.value =
-        activeSessionId;
-
-
-    /*
-     * Populate the remaining academic data.
-     */
-    populateClasses();
 
     populateSubjects();
 
+
+    /*
+     * If there is only one subject, automatically
+     * select it.
+     */
+
+    if (
+        setupData.subjects.length === 1
+    ) {
+
+        const onlySubject =
+            setupData.subjects[0];
+
+
+        const subjectId =
+            getField(
+                onlySubject,
+                [
+                    'Subject ID',
+                    'subjectId'
+                ]
+            );
+
+
+        if (subjectId) {
+
+            currentSelection.subjectId =
+                subjectId;
+
+            subjectSelect.value =
+                subjectId;
+
+        }
+
+    } else {
+
+        /*
+         * If the previously selected subject is
+         * not available for this class, clear it.
+         */
+
+        const stillExists =
+            setupData.subjects.some(
+                function (subject) {
+
+                    const id =
+                        getField(
+                            subject,
+                            [
+                                'Subject ID',
+                                'subjectId'
+                            ]
+                        );
+
+                    return String(id) ===
+                        String(
+                            currentSelection.subjectId
+                        );
+
+                }
+            );
+
+
+        if (!stillExists) {
+
+            currentSelection.subjectId =
+                '';
+
+            subjectSelect.value =
+                '';
+
+        }
+
+    }
+
+
+    clearLoadedRecords();
 
     updateSetupMessage();
 
 }
 
-function extractActiveSession(result) {
+
+/* =========================================================
+   EXTRACT ACTIVE SESSION
+========================================================= */
+
+function extractActiveSession(
+    result
+) {
 
     const data =
         result?.data &&
@@ -610,15 +1044,6 @@ function extractActiveSession(result) {
             ? result.data
             : result || {};
 
-
-    /*
-     * Most likely response:
-     *
-     * {
-     *   success: true,
-     *   session: {...}
-     * }
-     */
 
     if (
         data.session &&
@@ -630,10 +1055,6 @@ function extractActiveSession(result) {
     }
 
 
-    /*
-     * Alternative response names.
-     */
-
     if (
         data.activeSession &&
         typeof data.activeSession === 'object'
@@ -643,11 +1064,6 @@ function extractActiveSession(result) {
 
     }
 
-
-    /*
-     * If the backend returns the session
-     * object directly.
-     */
 
     if (
         data['Session ID'] ||
@@ -659,15 +1075,37 @@ function extractActiveSession(result) {
     }
 
 
+    /*
+     * Some simple Apps Script responses may return
+     * the session directly inside data.
+     */
+
+    if (
+        result?.data &&
+        !Array.isArray(result.data) &&
+        (
+            result.data['Session ID'] ||
+            result.data.sessionId
+        )
+    ) {
+
+        return result.data;
+
+    }
+
+
     return null;
 
 }
+
 
 /* =========================================================
    SETUP NORMALIZATION
 ========================================================= */
 
-function normalizeSetupData(result) {
+function normalizeSetupData(
+    result
+) {
 
     const data =
         result?.data &&
@@ -704,7 +1142,8 @@ function normalizeSetupData(result) {
                 [
                     'subjects',
                     'Subjects',
-                    'availableSubjects'
+                    'availableSubjects',
+                    'classSubjects'
                 ]
             ),
 
@@ -723,12 +1162,79 @@ function normalizeSetupData(result) {
 }
 
 
+/* =========================================================
+   GENERIC RESULT COLLECTION EXTRACTION
+========================================================= */
+
+function extractCollectionFromResult(
+    result,
+    names
+) {
+
+    const data =
+        result?.data &&
+        !Array.isArray(result.data)
+            ? result.data
+            : result || {};
+
+
+    /*
+     * First look for named collections.
+     */
+
+    const named =
+        extractCollection(
+            data,
+            names
+        );
+
+
+    if (named.length) {
+        return named;
+    }
+
+
+    /*
+     * If data itself is an array.
+     */
+
+    if (
+        Array.isArray(
+            result?.data
+        )
+    ) {
+
+        return result.data;
+
+    }
+
+
+    /*
+     * If the response itself is an array.
+     */
+
+    if (
+        Array.isArray(result)
+    ) {
+
+        return result;
+
+    }
+
+
+    return [];
+
+}
+
+
 function extractCollection(
     source,
     names
 ) {
 
-    for (const name of names) {
+    for (
+        const name of names
+    ) {
 
         if (
             Array.isArray(
@@ -842,7 +1348,9 @@ function populateClasses() {
 
 
             const name =
-                getClassDisplayName(item);
+                getClassDisplayName(
+                    item
+                );
 
 
             if (!id) {
@@ -953,41 +1461,165 @@ function populateSubjects() {
 
 
 /* =========================================================
-   ACTIVE SESSION
+   SESSION CHANGE
 ========================================================= */
 
-function findActiveSession() {
+async function handleSessionChange() {
 
-    return (
-        setupData?.sessions || []
-    ).find(
-        function (session) {
+    clearPageMessage();
 
-            const status =
-                getField(
-                    session,
-                    [
-                        'Status',
-                        'status'
-                    ]
-                );
+    clearLoadedRecords();
 
 
-            return (
-                String(status || '')
-                    .trim()
-                    .toLowerCase() ===
-                'active'
-            );
+    const sessionId =
+        sessionSelect.value;
 
-        }
-    ) || null;
+
+    currentSelection.sessionId =
+        sessionId;
+
+
+    currentSelection.subjectId =
+        '';
+
+
+    subjectSelect.innerHTML =
+        '<option value="">Select subject</option>';
+
+
+    if (!sessionId) {
+
+        updateSetupMessage();
+
+        return;
+
+    }
+
+
+    const classId =
+        classSelect.value;
+
+
+    if (!classId) {
+
+        updateSetupMessage();
+
+        return;
+
+    }
+
+
+    try {
+
+        await loadClassScoreEntrySetup(
+            classId
+        );
+
+    } catch (error) {
+
+        console.error(
+            'Session change setup error:',
+            error
+        );
+
+
+        showMessage(
+            error.message ||
+            'Unable to load score entry setup.',
+            'error'
+        );
+
+    }
+
+
+    updateSetupMessage();
 
 }
 
 
 /* =========================================================
-   SETUP CHANGE
+   CLASS CHANGE
+========================================================= */
+
+async function handleClassChange() {
+
+    clearPageMessage();
+
+    clearLoadedRecords();
+
+
+    const classId =
+        classSelect.value;
+
+
+    currentSelection.classId =
+        classId;
+
+
+    currentSelection.subjectId =
+        '';
+
+
+    subjectSelect.innerHTML =
+        '<option value="">Select subject</option>';
+
+
+    if (!classId) {
+
+        updateSetupMessage();
+
+        return;
+
+    }
+
+
+    const sessionId =
+        sessionSelect.value;
+
+
+    if (!sessionId) {
+
+        updateSetupMessage();
+
+        return;
+
+    }
+
+
+    try {
+
+        await loadClassScoreEntrySetup(
+            classId
+        );
+
+    } catch (error) {
+
+        console.error(
+            'Class change setup error:',
+            error
+        );
+
+
+        showMessage(
+            error.message ||
+            'Unable to load subjects for this class.',
+            'error'
+        );
+
+
+        subjectSelect.innerHTML =
+            '<option value="">Unable to load subjects</option>';
+
+    }
+
+
+    updateSetupMessage();
+
+}
+
+
+/* =========================================================
+   GENERAL SETUP CHANGE
 ========================================================= */
 
 function handleSetupChange() {
@@ -996,8 +1628,25 @@ function handleSetupChange() {
 
     clearLoadedRecords();
 
+
+    currentSelection.sessionId =
+        sessionSelect.value;
+
+    currentSelection.term =
+        termSelect.value;
+
+    currentSelection.classId =
+        classSelect.value;
+
+    currentSelection.subjectId =
+        subjectSelect.value;
+
 }
 
+
+/* =========================================================
+   SETUP MESSAGE
+========================================================= */
 
 function updateSetupMessage() {
 
@@ -1016,16 +1665,73 @@ function updateSetupMessage() {
             'hidden'
         );
 
-    } else {
-
-        setupMessage.classList.remove(
-            'hidden'
-        );
+        return;
 
     }
 
+
+    setupMessage.classList.remove(
+        'hidden'
+    );
+
+
+    if (
+        !sessionSelect.value
+    ) {
+
+        setupMessage.textContent =
+            'Select an academic session.';
+
+        return;
+
+    }
+
+
+    if (
+        !termSelect.value
+    ) {
+
+        setupMessage.textContent =
+            'Select a term.';
+
+        return;
+
+    }
+
+
+    if (
+        !classSelect.value
+    ) {
+
+        setupMessage.textContent =
+            'Select a class.';
+
+        return;
+
+    }
+
+
+    if (
+        !subjectSelect.value
+    ) {
+
+        setupMessage.textContent =
+            'Select a subject.';
+
+        return;
+
+    }
+
+
+    setupMessage.textContent =
+        'Select the session, term, class and subject, then click Load Students.';
+
 }
 
+
+/* =========================================================
+   CLEAR LOADED RECORDS
+========================================================= */
 
 function clearLoadedRecords() {
 
@@ -1107,8 +1813,11 @@ async function loadScoreRecords() {
     currentSelection = {
 
         sessionId,
+
         term,
+
         classId,
+
         subjectId
 
     };
@@ -1180,6 +1889,7 @@ async function loadScoreRecords() {
             error
         );
 
+
         renderErrorState(
             error.message ||
             'Unable to load score records.'
@@ -1197,6 +1907,7 @@ async function loadScoreRecords() {
         loadRecordsButton.disabled =
             false;
 
+
         loadRecordsButton.textContent =
             'Load Students';
 
@@ -1209,7 +1920,9 @@ async function loadScoreRecords() {
    NORMALIZE SCORE RESPONSE
 ========================================================= */
 
-function normalizeScoreRecords(result) {
+function normalizeScoreRecords(
+    result
+) {
 
     const data =
         result?.data &&
@@ -1241,9 +1954,10 @@ function normalizeScoreRecords(result) {
 
 
     /*
-     * Some backend responses may return one combined
-     * records array containing student + score information.
+     * If the backend returns a combined records array,
+     * try to use it for both lists.
      */
+
     if (
         !students.length &&
         Array.isArray(data.records)
@@ -1252,15 +1966,33 @@ function normalizeScoreRecords(result) {
         students =
             data.records;
 
+    }
+
+
+    if (
+        !scores.length &&
+        Array.isArray(data.records)
+    ) {
+
         scores =
             data.records;
 
     }
 
 
+    /*
+     * Some backend responses may put the student list
+     * directly inside data.students and the score list
+     * inside data.scores, which the extraction above
+     * already handles.
+     */
+
     return {
+
         students,
+
         scores
+
     };
 
 }
@@ -1323,8 +2055,10 @@ function renderScoreTable() {
 
         `;
 
+
         saveScoresButton.disabled =
             true;
+
 
         return;
 
@@ -1347,33 +2081,19 @@ function renderScoreTable() {
 
             <tr>
 
-                <th>
-                    #
-                </th>
+                <th>#</th>
 
-                <th>
-                    ADMISSION NO.
-                </th>
+                <th>ADMISSION NO.</th>
 
-                <th>
-                    STUDENT
-                </th>
+                <th>STUDENT</th>
 
-                <th>
-                    TEST / 40
-                </th>
+                <th>TEST / 40</th>
 
-                <th>
-                    EXAM / 60
-                </th>
+                <th>EXAM / 60</th>
 
-                <th>
-                    TOTAL / 100
-                </th>
+                <th>TOTAL / 100</th>
 
-                <th>
-                    STATUS
-                </th>
+                <th>STATUS</th>
 
             </tr>
 
@@ -1564,6 +2284,7 @@ function renderScoreTable() {
                         40
                     );
 
+
                     validateAndUpdateRow(
                         row
                     );
@@ -1580,6 +2301,7 @@ function renderScoreTable() {
                         examInput,
                         60
                     );
+
 
                     validateAndUpdateRow(
                         row
@@ -1729,6 +2451,7 @@ function validateAndUpdateRow(
     testInput.classList.remove(
         'invalid'
     );
+
 
     examInput.classList.remove(
         'invalid'
@@ -2167,11 +2890,6 @@ async function saveScores() {
             }
 
 
-            /*
-             * The backend accepts the score rows.
-             * Blank values are retained as blanks so the
-             * backend can enforce its own score rules.
-             */
             if (
                 !testProvided ||
                 !examProvided
@@ -2332,6 +3050,7 @@ function getCurrentUserId() {
         user.userId ||
         user['User ID'] ||
         currentSession.userId ||
+        currentSession['User ID'] ||
         ''
     );
 
@@ -2415,6 +3134,11 @@ function showMessage(
     type = ''
 ) {
 
+    if (!pageMessage || !messageText) {
+        return;
+    }
+
+
     messageText.textContent =
         message;
 
@@ -2439,6 +3163,11 @@ function showMessage(
 
 function hideMessage() {
 
+    if (!pageMessage) {
+        return;
+    }
+
+
     pageMessage.classList.add(
         'hidden'
     );
@@ -2447,6 +3176,11 @@ function hideMessage() {
 
 
 function clearPageMessage() {
+
+    if (!pageMessage) {
+        return;
+    }
+
 
     pageMessage.classList.add(
         'hidden'
@@ -2469,7 +3203,9 @@ function getField(
     }
 
 
-    for (const field of fields) {
+    for (
+        const field of fields
+    ) {
 
         if (
             object[field] !== undefined &&
@@ -2487,6 +3223,10 @@ function getField(
 
 }
 
+
+/* =========================================================
+   CLASS DISPLAY NAME
+========================================================= */
 
 function getClassDisplayName(
     classRecord
@@ -2527,6 +3267,10 @@ function getClassDisplayName(
 }
 
 
+/* =========================================================
+   FORMAT NUMBER
+========================================================= */
+
 function formatNumber(
     number
 ) {
@@ -2542,7 +3286,10 @@ function formatNumber(
 
     return Number(number)
         .toFixed(2)
-        .replace(/\.?0+$/, '');
+        .replace(
+            /\.?0+$/,
+            ''
+        );
 
 }
 
