@@ -1,53 +1,72 @@
-/* ============================================================
+/* =========================================================
    SCHOOL RESULTS SYSTEM
    FILE: score-entry.js
    VERSION: 1.0.0
-
-   PURPOSE:
-   Score Entry Management frontend.
-============================================================ */
+========================================================= */
 
 
-/* ============================================================
+/* =========================================================
    CONFIGURATION
-============================================================ */
+========================================================= */
 
-const SCORE_API_URL =
+const API_URL =
     'https://script.google.com/macros/s/AKfycbwJOUmxayihKhry6HSZQl-tsnzbQYM8jDkHaQ4O_CdOqpnGTOJ8bi_80EjD6lLcxqCI/exec';
 
+const SESSION_KEY =
+    'school_results_system_session_v1';
 
-/* ============================================================
+
+/* =========================================================
    STATE
-============================================================ */
+========================================================= */
 
-const state = {
+let currentSession = null;
 
-    schoolId: '',
+let setupData = null;
 
-    setup: null,
+let scoreRecords = [];
 
-    students: [],
+let currentStudents = [];
 
-    currentRecords: [],
+let currentSelection = {
 
-    originalScores: {},
-
-    changedScores: {},
-
-    selectedSessionId: '',
-
-    selectedTerm: '',
-
-    selectedClassId: '',
-
-    selectedSubjectId: ''
+    sessionId: '',
+    term: '',
+    classId: '',
+    subjectId: ''
 
 };
 
+let isSaving = false;
 
-/* ============================================================
+
+/* =========================================================
    DOM
-============================================================ */
+========================================================= */
+
+const sidebar =
+    document.getElementById('sidebar');
+
+const menuButton =
+    document.getElementById('menuButton');
+
+const sidebarOverlay =
+    document.getElementById('sidebarOverlay');
+
+const logoutButton =
+    document.getElementById('logoutButton');
+
+const schoolName =
+    document.getElementById('schoolName');
+
+const userName =
+    document.getElementById('userName');
+
+const userRole =
+    document.getElementById('userRole');
+
+const userInitials =
+    document.getElementById('userInitials');
 
 const sessionSelect =
     document.getElementById('sessionSelect');
@@ -61,197 +80,392 @@ const classSelect =
 const subjectSelect =
     document.getElementById('subjectSelect');
 
-const selectionMessage =
-    document.getElementById('selectionMessage');
+const loadRecordsButton =
+    document.getElementById('loadRecordsButton');
+
+const setupMessage =
+    document.getElementById('setupMessage');
+
+const pageMessage =
+    document.getElementById('pageMessage');
+
+const messageText =
+    document.getElementById('messageText');
+
+const closeMessage =
+    document.getElementById('closeMessage');
 
 const scoreSummary =
     document.getElementById('scoreSummary');
 
-const scorePanel =
-    document.getElementById('scorePanel');
-
-const emptyState =
-    document.getElementById('emptyState');
-
-const scoreTableBody =
-    document.getElementById('scoreTableBody');
-
-const tableTitle =
-    document.getElementById('tableTitle');
-
-const tableSubtitle =
-    document.getElementById('tableSubtitle');
-
-const tableMessage =
-    document.getElementById('tableMessage');
-
 const studentCount =
     document.getElementById('studentCount');
 
-const completedCount =
-    document.getElementById('completedCount');
+const enteredCount =
+    document.getElementById('enteredCount');
 
 const missingCount =
     document.getElementById('missingCount');
 
-const changedCount =
-    document.getElementById('changedCount');
+const summarySubject =
+    document.getElementById('summarySubject');
 
-const saveScoresBtn =
-    document.getElementById('saveScoresBtn');
+const tableWrapper =
+    document.getElementById('tableWrapper');
 
-const clearChangesBtn =
-    document.getElementById('clearChangesBtn');
-
-const refreshBtn =
-    document.getElementById('refreshBtn');
-
-const loadingOverlay =
-    document.getElementById('loadingOverlay');
-
-const loadingText =
-    document.getElementById('loadingText');
+const saveScoresButton =
+    document.getElementById('saveScoresButton');
 
 
-/* ============================================================
-   INITIALIZATION
-============================================================ */
+/* =========================================================
+   INITIALIZE
+========================================================= */
 
 document.addEventListener(
     'DOMContentLoaded',
-    initialize
+    initializeScoreEntry
 );
 
 
-async function initialize() {
+async function initializeScoreEntry() {
 
-    state.schoolId =
-        getSchoolId();
+    currentSession =
+        loadSession();
 
-    if (!state.schoolId) {
 
-        showSelectionMessage(
-            'No school session was found. Please log in again.',
+    if (!currentSession) {
+
+        redirectToLogin();
+
+        return;
+
+    }
+
+
+    populateUserInterface();
+
+    setupEventListeners();
+
+
+    try {
+
+        await loadScoreEntrySetup();
+
+    } catch (error) {
+
+        console.error(
+            'Score entry setup error:',
+            error
+        );
+
+        showMessage(
+            error.message ||
+            'Unable to load score entry setup.',
             'error'
         );
 
-        disableSelectors();
+        renderErrorState(
+            error.message ||
+            'Unable to load score entry setup.'
+        );
 
-        return;
     }
 
-    bindEvents();
-
-    await loadSetup();
 }
 
 
-/* ============================================================
+/* =========================================================
+   SESSION
+========================================================= */
+
+function loadSession() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                SESSION_KEY
+            );
+
+
+        if (!saved) {
+            return null;
+        }
+
+
+        return JSON.parse(saved);
+
+    } catch (error) {
+
+        console.error(
+            'Session error:',
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+function getSchoolId() {
+
+    const user =
+        currentSession?.user || {};
+
+    const school =
+        currentSession?.school || {};
+
+
+    return (
+        school.schoolId ||
+        school['School ID'] ||
+        user.schoolId ||
+        user['School ID'] ||
+        currentSession.schoolId ||
+        currentSession['School ID'] ||
+        ''
+    );
+
+}
+
+
+/* =========================================================
+   USER INTERFACE
+========================================================= */
+
+function populateUserInterface() {
+
+    const user =
+        currentSession?.user || {};
+
+    const school =
+        currentSession?.school || {};
+
+
+    const name =
+        school.schoolName ||
+        school['School Name'] ||
+        currentSession.schoolName ||
+        'School Results System';
+
+
+    const fullName =
+        user.fullName ||
+        user['Full Name'] ||
+        currentSession.fullName ||
+        'User';
+
+
+    const role =
+        user.role ||
+        currentSession.role ||
+        '--';
+
+
+    schoolName.textContent =
+        name;
+
+    userName.textContent =
+        fullName;
+
+    userRole.textContent =
+        role;
+
+    userInitials.textContent =
+        getInitials(fullName);
+
+}
+
+
+function getInitials(name) {
+
+    const value =
+        String(name || '').trim();
+
+
+    if (!value) {
+        return '--';
+    }
+
+
+    const parts =
+        value.split(/\s+/);
+
+
+    if (parts.length === 1) {
+
+        return parts[0]
+            .substring(0, 2)
+            .toUpperCase();
+
+    }
+
+
+    return (
+        parts[0].charAt(0) +
+        parts[parts.length - 1].charAt(0)
+    ).toUpperCase();
+
+}
+
+
+/* =========================================================
    EVENTS
-============================================================ */
+========================================================= */
 
-function bindEvents() {
+function setupEventListeners() {
 
-    sessionSelect.addEventListener(
-        'change',
-        handleSessionChange
+    menuButton.addEventListener(
+        'click',
+        toggleSidebar
     );
 
-    termSelect.addEventListener(
-        'change',
-        handleTermChange
+
+    sidebarOverlay.addEventListener(
+        'click',
+        closeSidebar
     );
 
-    classSelect.addEventListener(
-        'change',
-        handleClassChange
+
+    logoutButton.addEventListener(
+        'click',
+        handleLogout
     );
 
-    subjectSelect.addEventListener(
-        'change',
-        handleSubjectChange
+
+    loadRecordsButton.addEventListener(
+        'click',
+        loadScoreRecords
     );
 
-    saveScoresBtn.addEventListener(
+
+    saveScoresButton.addEventListener(
         'click',
         saveScores
     );
 
-    clearChangesBtn.addEventListener(
+
+    closeMessage.addEventListener(
         'click',
-        clearChanges
+        hideMessage
     );
 
-    refreshBtn.addEventListener(
-        'click',
-        refreshCurrentSelection
+
+    sessionSelect.addEventListener(
+        'change',
+        handleSetupChange
     );
+
+
+    termSelect.addEventListener(
+        'change',
+        handleSetupChange
+    );
+
+
+    classSelect.addEventListener(
+        'change',
+        handleSetupChange
+    );
+
+
+    subjectSelect.addEventListener(
+        'change',
+        handleSetupChange
+    );
+
 }
 
 
-/* ============================================================
-   SCHOOL ID
-============================================================ */
+/* =========================================================
+   SIDEBAR
+========================================================= */
 
-function getSchoolId() {
+function toggleSidebar() {
 
-    const possibleKeys = [
-        'schoolId',
-        'school_id',
-        'School ID',
-        'schoolID',
-        'currentSchoolId'
-    ];
+    sidebar.classList.toggle(
+        'open'
+    );
 
-    for (const key of possibleKeys) {
+    sidebarOverlay.classList.toggle(
+        'visible'
+    );
 
-        const value =
-            localStorage.getItem(key);
-
-        if (value) {
-            return value.trim();
-        }
-    }
-
-    return '';
 }
 
 
-/* ============================================================
+function closeSidebar() {
+
+    sidebar.classList.remove(
+        'open'
+    );
+
+    sidebarOverlay.classList.remove(
+        'visible'
+    );
+
+}
+
+
+/* =========================================================
    API
-============================================================ */
+========================================================= */
 
-async function api(action, data = {}) {
+async function callApi(
+    action,
+    data = {}
+) {
 
     const payload = {
         action,
         ...data
     };
 
-    const response = await fetch(
-        SCORE_API_URL,
-        {
-            method: 'POST',
 
-            headers: {
-                'Content-Type':
-                    'text/plain;charset=utf-8'
-            },
+    const response =
+        await fetch(
+            API_URL,
+            {
+                method: 'POST',
 
-            body: JSON.stringify(payload)
-        }
-    );
+                headers: {
+                    'Content-Type':
+                        'text/plain;charset=utf-8'
+                },
 
-    if (!response.ok) {
+                body:
+                    JSON.stringify(payload)
+            }
+        );
+
+
+    const text =
+        await response.text();
+
+
+    let result;
+
+
+    try {
+
+        result =
+            JSON.parse(text);
+
+    } catch (error) {
+
+        console.error(
+            'Invalid API response:',
+            text
+        );
 
         throw new Error(
-            'Server request failed: ' +
-            response.status
+            'The server returned an invalid response.'
         );
+
     }
 
-    const result =
-        await response.json();
 
     if (
         result &&
@@ -259,802 +473,883 @@ async function api(action, data = {}) {
     ) {
 
         throw new Error(
+            result.error ||
             result.message ||
-            'The request was not successful.'
+            'Request failed.'
         );
+
     }
 
+
     return result;
+
 }
 
 
-/* ============================================================
+/* =========================================================
    LOAD SETUP
-============================================================ */
+========================================================= */
 
-async function loadSetup() {
+async function loadScoreEntrySetup() {
 
-    showLoading(
-        'Loading score entry setup...'
-    );
+    const schoolId =
+        getSchoolId();
 
-    hideTable();
 
-    try {
+    if (!schoolId) {
 
-        const result =
-            await api(
-                'getScoreEntrySetup',
-                {
-                    schoolId:
-                        state.schoolId
-                }
-            );
-
-        state.setup =
-            unwrapData(result);
-
-        populateSessions();
-
-        populateTerms();
-
-        populateClasses();
-
-        populateSubjects();
-
-        clearSelectionMessage();
-
-    } catch (error) {
-
-        console.error(error);
-
-        showSelectionMessage(
-            error.message ||
-            'Unable to load score entry setup.',
-            'error'
+        throw new Error(
+            'School information is missing from your session.'
         );
 
-    } finally {
-
-        hideLoading();
-    }
-}
-
-
-/* ============================================================
-   RESPONSE NORMALIZATION
-============================================================ */
-
-function unwrapData(result) {
-
-    if (!result) {
-        return {};
     }
 
-    if (
-        result.data &&
-        typeof result.data === 'object'
-    ) {
-        return result.data;
-    }
 
-    return result;
-}
-
-
-/* ============================================================
-   POPULATE SESSIONS
-============================================================ */
-
-function populateSessions() {
-
-    const sessions =
-        getArray(
-            state.setup,
-            [
-                'sessions',
-                'sessionList'
-            ]
+    const result =
+        await callApi(
+            'getScoreEntrySetup',
+            {
+                schoolId
+            }
         );
 
-    sessionSelect.innerHTML =
-        '<option value="">Select session</option>';
 
-    sessions.forEach(session => {
+    setupData =
+        normalizeSetupData(result);
 
-        const id =
-            getValue(
-                session,
-                [
-                    'sessionId',
-                    'Session ID',
-                    'id'
-                ]
-            );
 
-        const name =
-            getValue(
-                session,
-                [
-                    'sessionName',
-                    'Session Name',
-                    'name'
-                ]
-            );
+    populateSessions();
 
-        if (!id) {
-            return;
-        }
+    populateClasses();
 
-        const option =
-            document.createElement('option');
-
-        option.value = id;
-
-        option.textContent =
-            name || id;
-
-        sessionSelect.appendChild(option);
-    });
+    populateSubjects();
 
 
     const activeSession =
-        getValue(
-            state.setup,
-            [
-                'activeSessionId'
-            ]
-        );
+        findActiveSession();
 
 
     if (activeSession) {
 
-        sessionSelect.value =
-            activeSession;
+        const sessionId =
+            getField(
+                activeSession,
+                [
+                    'Session ID',
+                    'sessionId'
+                ]
+            );
 
-        state.selectedSessionId =
-            activeSession;
+
+        if (sessionId) {
+
+            sessionSelect.value =
+                sessionId;
+
+        }
+
     }
+
+
+    updateSetupMessage();
+
 }
 
 
-/* ============================================================
-   POPULATE TERMS
-============================================================ */
+/* =========================================================
+   SETUP NORMALIZATION
+========================================================= */
 
-function populateTerms() {
+function normalizeSetupData(result) {
 
-    const terms =
-        getArray(
-            state.setup,
-            [
-                'terms'
-            ]
-        );
-
-    termSelect.innerHTML =
-        '<option value="">Select term</option>';
+    const data =
+        result?.data &&
+        !Array.isArray(result.data)
+            ? result.data
+            : result || {};
 
 
-    terms.forEach(term => {
+    return {
 
-        const value =
-            typeof term === 'string'
-                ? term
-                : getValue(
-                    term,
+        sessions:
+            extractCollection(
+                data,
+                [
+                    'sessions',
+                    'Sessions',
+                    'availableSessions'
+                ]
+            ),
+
+        classes:
+            extractCollection(
+                data,
+                [
+                    'classes',
+                    'Classes',
+                    'availableClasses'
+                ]
+            ),
+
+        subjects:
+            extractCollection(
+                data,
+                [
+                    'subjects',
+                    'Subjects',
+                    'availableSubjects'
+                ]
+            ),
+
+        assignments:
+            extractCollection(
+                data,
+                [
+                    'assignments',
+                    'Assignments',
+                    'teacherAssignments'
+                ]
+            )
+
+    };
+
+}
+
+
+function extractCollection(
+    source,
+    names
+) {
+
+    for (const name of names) {
+
+        if (
+            Array.isArray(
+                source?.[name]
+            )
+        ) {
+
+            return source[name];
+
+        }
+
+    }
+
+
+    return [];
+
+}
+
+
+/* =========================================================
+   POPULATE SESSIONS
+========================================================= */
+
+function populateSessions() {
+
+    const sessions =
+        setupData?.sessions || [];
+
+
+    sessionSelect.innerHTML =
+        '<option value="">Select session</option>';
+
+
+    sessions.forEach(
+        function (session) {
+
+            const id =
+                getField(
+                    session,
                     [
-                        'term',
-                        'Term',
-                        'name'
+                        'Session ID',
+                        'sessionId'
                     ]
                 );
 
-        if (!value) {
-            return;
+
+            const name =
+                getField(
+                    session,
+                    [
+                        'Session Name',
+                        'sessionName'
+                    ]
+                );
+
+
+            if (!id) {
+                return;
+            }
+
+
+            const option =
+                document.createElement(
+                    'option'
+                );
+
+
+            option.value =
+                id;
+
+
+            option.textContent =
+                name || id;
+
+
+            sessionSelect.appendChild(
+                option
+            );
+
         }
+    );
 
-        const option =
-            document.createElement('option');
-
-        option.value = value;
-
-        option.textContent = value;
-
-        termSelect.appendChild(option);
-    });
 }
 
 
-/* ============================================================
+/* =========================================================
    POPULATE CLASSES
-============================================================ */
+========================================================= */
 
 function populateClasses() {
 
     const classes =
-        getArray(
-            state.setup,
-            [
-                'classes',
-                'classList'
-            ]
-        );
+        setupData?.classes || [];
+
 
     classSelect.innerHTML =
         '<option value="">Select class</option>';
 
 
-    classes.forEach(classItem => {
+    classes.forEach(
+        function (item) {
 
-        const id =
-            getValue(
-                classItem,
-                [
-                    'classId',
-                    'Class ID',
-                    'id'
-                ]
+            const id =
+                getField(
+                    item,
+                    [
+                        'Class ID',
+                        'classId'
+                    ]
+                );
+
+
+            const name =
+                getClassDisplayName(item);
+
+
+            if (!id) {
+                return;
+            }
+
+
+            const option =
+                document.createElement(
+                    'option'
+                );
+
+
+            option.value =
+                id;
+
+
+            option.textContent =
+                name || id;
+
+
+            classSelect.appendChild(
+                option
             );
 
-        const className =
-            getValue(
-                classItem,
-                [
-                    'className',
-                    'Class Name',
-                    'name'
-                ]
-            );
-
-        const section =
-            getValue(
-                classItem,
-                [
-                    'section',
-                    'Section'
-                ]
-            );
-
-
-        if (!id) {
-            return;
         }
+    );
 
-
-        const option =
-            document.createElement('option');
-
-        option.value = id;
-
-        option.textContent =
-            section
-                ? `${className} - ${section}`
-                : className || id;
-
-        classSelect.appendChild(option);
-    });
 }
 
 
-/* ============================================================
+/* =========================================================
    POPULATE SUBJECTS
-============================================================ */
+========================================================= */
 
 function populateSubjects() {
 
     const subjects =
-        getArray(
-            state.setup,
-            [
-                'subjects',
-                'subjectList'
-            ]
-        );
+        setupData?.subjects || [];
+
 
     subjectSelect.innerHTML =
         '<option value="">Select subject</option>';
 
 
-    subjects.forEach(subject => {
+    subjects.forEach(
+        function (subject) {
 
-        const id =
-            getValue(
-                subject,
-                [
-                    'subjectId',
-                    'Subject ID',
-                    'id'
-                ]
-            );
-
-        const name =
-            getValue(
-                subject,
-                [
-                    'subjectName',
-                    'Subject Name',
-                    'name'
-                ]
-            );
-
-        if (!id) {
-            return;
-        }
-
-        const option =
-            document.createElement('option');
-
-        option.value = id;
-
-        option.textContent =
-            name || id;
-
-        subjectSelect.appendChild(option);
-    });
-}
-
-
-/* ============================================================
-   SESSION CHANGE
-============================================================ */
-
-function handleSessionChange() {
-
-    state.selectedSessionId =
-        sessionSelect.value;
-
-    resetScoreTable();
-
-    clearSelectionMessage();
-}
-
-
-/* ============================================================
-   TERM CHANGE
-============================================================ */
-
-function handleTermChange() {
-
-    state.selectedTerm =
-        termSelect.value;
-
-    resetScoreTable();
-
-    clearSelectionMessage();
-}
-
-
-/* ============================================================
-   CLASS CHANGE
-============================================================ */
-
-function handleClassChange() {
-
-    state.selectedClassId =
-        classSelect.value;
-
-    resetScoreTable();
-
-    clearSelectionMessage();
-
-    filterSubjectsByClass();
-}
-
-
-/* ============================================================
-   SUBJECT CHANGE
-============================================================ */
-
-async function handleSubjectChange() {
-
-    state.selectedSubjectId =
-        subjectSelect.value;
-
-    clearSelectionMessage();
-
-    resetScoreTable();
-
-    if (!hasRequiredSelection()) {
-        return;
-    }
-
-    await loadScoreRecords();
-}
-
-
-/* ============================================================
-   FILTER SUBJECTS BY ASSIGNMENT
-============================================================ */
-
-function filterSubjectsByClass() {
-
-    const selectedClassId =
-        state.selectedClassId;
-
-    if (!selectedClassId) {
-        populateSubjects();
-        return;
-    }
-
-
-    const assignments =
-        getArray(
-            state.setup,
-            [
-                'assignments'
-            ]
-        );
-
-
-    if (!assignments.length) {
-        return;
-    }
-
-
-    const assignedSubjectIds =
-        new Set();
-
-
-    assignments.forEach(assignment => {
-
-        const classId =
-            getValue(
-                assignment,
-                [
-                    'classId',
-                    'Class ID'
-                ]
-            );
-
-        const subjectId =
-            getValue(
-                assignment,
-                [
-                    'subjectId',
-                    'Subject ID'
-                ]
-            );
-
-
-        if (
-            String(classId) ===
-            String(selectedClassId)
-        ) {
-
-            if (subjectId) {
-                assignedSubjectIds.add(
-                    String(subjectId)
+            const id =
+                getField(
+                    subject,
+                    [
+                        'Subject ID',
+                        'subjectId'
+                    ]
                 );
+
+
+            const name =
+                getField(
+                    subject,
+                    [
+                        'Subject Name',
+                        'subjectName'
+                    ]
+                );
+
+
+            const code =
+                getField(
+                    subject,
+                    [
+                        'Subject Code',
+                        'subjectCode'
+                    ]
+                );
+
+
+            if (!id) {
+                return;
             }
-        }
-    });
 
 
-    if (!assignedSubjectIds.size) {
-        return;
-    }
+            const option =
+                document.createElement(
+                    'option'
+                );
 
 
-    const allSubjects =
-        getArray(
-            state.setup,
-            [
-                'subjects',
-                'subjectList'
-            ]
-        );
+            option.value =
+                id;
 
 
-    subjectSelect.innerHTML =
-        '<option value="">Select subject</option>';
+            option.textContent =
+                code
+                    ? `${name} (${code})`
+                    : name || id;
 
 
-    allSubjects.forEach(subject => {
-
-        const id =
-            getValue(
-                subject,
-                [
-                    'subjectId',
-                    'Subject ID',
-                    'id'
-                ]
+            subjectSelect.appendChild(
+                option
             );
 
-
-        if (
-            !assignedSubjectIds.has(
-                String(id)
-            )
-        ) {
-            return;
         }
+    );
 
-
-        const name =
-            getValue(
-                subject,
-                [
-                    'subjectName',
-                    'Subject Name',
-                    'name'
-                ]
-            );
-
-
-        const option =
-            document.createElement('option');
-
-        option.value = id;
-
-        option.textContent =
-            name || id;
-
-        subjectSelect.appendChild(option);
-    });
 }
 
 
-/* ============================================================
+/* =========================================================
+   ACTIVE SESSION
+========================================================= */
+
+function findActiveSession() {
+
+    return (
+        setupData?.sessions || []
+    ).find(
+        function (session) {
+
+            const status =
+                getField(
+                    session,
+                    [
+                        'Status',
+                        'status'
+                    ]
+                );
+
+
+            return (
+                String(status || '')
+                    .trim()
+                    .toLowerCase() ===
+                'active'
+            );
+
+        }
+    ) || null;
+
+}
+
+
+/* =========================================================
+   SETUP CHANGE
+========================================================= */
+
+function handleSetupChange() {
+
+    updateSetupMessage();
+
+    clearLoadedRecords();
+
+}
+
+
+function updateSetupMessage() {
+
+    const complete =
+        Boolean(
+            sessionSelect.value &&
+            termSelect.value &&
+            classSelect.value &&
+            subjectSelect.value
+        );
+
+
+    if (complete) {
+
+        setupMessage.classList.add(
+            'hidden'
+        );
+
+    } else {
+
+        setupMessage.classList.remove(
+            'hidden'
+        );
+
+    }
+
+}
+
+
+function clearLoadedRecords() {
+
+    currentStudents = [];
+
+    scoreRecords = [];
+
+
+    scoreSummary.classList.add(
+        'hidden'
+    );
+
+
+    saveScoresButton.disabled =
+        true;
+
+
+    tableWrapper.innerHTML = `
+
+        <div class="empty-state">
+
+            <strong>
+                No students loaded
+            </strong>
+
+            <span>
+                Select the session, term, class and subject,
+                then click Load Students.
+            </span>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =========================================================
    LOAD SCORE RECORDS
-============================================================ */
+========================================================= */
 
 async function loadScoreRecords() {
 
-    if (!hasRequiredSelection()) {
+    clearPageMessage();
+
+
+    const sessionId =
+        sessionSelect.value;
+
+    const term =
+        termSelect.value;
+
+    const classId =
+        classSelect.value;
+
+    const subjectId =
+        subjectSelect.value;
+
+
+    if (
+        !sessionId ||
+        !term ||
+        !classId ||
+        !subjectId
+    ) {
+
+        setupMessage.textContent =
+            'Please select a session, term, class and subject before loading students.';
+
+        setupMessage.classList.remove(
+            'hidden'
+        );
+
         return;
+
     }
 
 
-    showLoading(
-        'Loading students and scores...'
-    );
+    currentSelection = {
+
+        sessionId,
+        term,
+        classId,
+        subjectId
+
+    };
+
+
+    loadRecordsButton.disabled =
+        true;
+
+
+    loadRecordsButton.textContent =
+        'Loading...';
+
+
+    renderLoadingState();
 
 
     try {
 
         const result =
-            await api(
+            await callApi(
                 'getScoreEntryRecords',
                 {
                     schoolId:
-                        state.schoolId,
+                        getSchoolId(),
 
-                    sessionId:
-                        state.selectedSessionId,
+                    sessionId,
 
-                    term:
-                        state.selectedTerm,
+                    term,
 
-                    classId:
-                        state.selectedClassId,
+                    classId,
 
-                    subjectId:
-                        state.selectedSubjectId
+                    subjectId
                 }
             );
 
 
-        const data =
-            unwrapData(result);
-
-
-        state.currentRecords =
-            getArray(
-                data,
-                [
-                    'students',
-                    'records',
-                    'scores'
-                ]
+        const normalized =
+            normalizeScoreRecords(
+                result
             );
 
 
-        state.students =
-            state.currentRecords;
+        currentStudents =
+            normalized.students;
 
 
-        state.originalScores = {};
-
-        state.changedScores = {};
-
-
-        state.currentRecords.forEach(record => {
-
-            const studentId =
-                getStudentId(record);
-
-            if (!studentId) {
-                return;
-            }
-
-
-            state.originalScores[studentId] =
-                {
-                    test:
-                        normalizeNumber(
-                            getValue(
-                                record,
-                                [
-                                    'testScore',
-                                    'Test Score',
-                                    'test'
-                                ]
-                            )
-                        ),
-
-                    exam:
-                        normalizeNumber(
-                            getValue(
-                                record,
-                                [
-                                    'examScore',
-                                    'Exam Score',
-                                    'exam'
-                                ]
-                            )
-                        )
-                };
-        });
+        scoreRecords =
+            normalized.scores;
 
 
         renderScoreTable();
 
-        showScorePanel();
+        updateSummary();
 
+
+        if (!currentStudents.length) {
+
+            showMessage(
+                'No active students were found in this class.',
+                'error'
+            );
+
+        }
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            'Load score records error:',
+            error
+        );
 
-        showSelectionMessage(
+        renderErrorState(
+            error.message ||
+            'Unable to load score records.'
+        );
+
+
+        showMessage(
             error.message ||
             'Unable to load score records.',
             'error'
         );
 
-        hideTable();
-
     } finally {
 
-        hideLoading();
+        loadRecordsButton.disabled =
+            false;
+
+        loadRecordsButton.textContent =
+            'Load Students';
+
     }
+
 }
 
 
-/* ============================================================
-   REQUIRED SELECTION
-============================================================ */
+/* =========================================================
+   NORMALIZE SCORE RESPONSE
+========================================================= */
 
-function hasRequiredSelection() {
+function normalizeScoreRecords(result) {
 
-    if (!state.selectedSessionId) {
+    const data =
+        result?.data &&
+        !Array.isArray(result.data)
+            ? result.data
+            : result || {};
 
-        showSelectionMessage(
-            'Please select a session.',
-            'info'
+
+    let students =
+        extractCollection(
+            data,
+            [
+                'students',
+                'Students',
+                'records'
+            ]
         );
 
-        return false;
+
+    let scores =
+        extractCollection(
+            data,
+            [
+                'scores',
+                'Scores',
+                'scoreRecords'
+            ]
+        );
+
+
+    /*
+     * Some backend responses may return one combined
+     * records array containing student + score information.
+     */
+    if (
+        !students.length &&
+        Array.isArray(data.records)
+    ) {
+
+        students =
+            data.records;
+
+        scores =
+            data.records;
+
     }
 
 
-    if (!state.selectedTerm) {
+    return {
+        students,
+        scores
+    };
 
-        showSelectionMessage(
-            'Please select a term.',
-            'info'
-        );
-
-        return false;
-    }
-
-
-    if (!state.selectedClassId) {
-
-        showSelectionMessage(
-            'Please select a class.',
-            'info'
-        );
-
-        return false;
-    }
-
-
-    if (!state.selectedSubjectId) {
-
-        showSelectionMessage(
-            'Please select a subject.',
-            'info'
-        );
-
-        return false;
-    }
-
-
-    return true;
 }
 
 
-/* ============================================================
-   RENDER TABLE
-============================================================ */
+/* =========================================================
+   FIND SCORE FOR STUDENT
+========================================================= */
+
+function getStudentScore(
+    studentId
+) {
+
+    return scoreRecords.find(
+        function (score) {
+
+            const id =
+                getField(
+                    score,
+                    [
+                        'Student ID',
+                        'studentId'
+                    ]
+                );
+
+
+            return (
+                String(id) ===
+                String(studentId)
+            );
+
+        }
+    ) || null;
+
+}
+
+
+/* =========================================================
+   RENDER SCORE TABLE
+========================================================= */
 
 function renderScoreTable() {
 
-    scoreTableBody.innerHTML = '';
+    if (!currentStudents.length) {
 
+        tableWrapper.innerHTML = `
 
-    if (!state.currentRecords.length) {
+            <div class="empty-state">
 
-        const row =
-            document.createElement('tr');
+                <strong>
+                    No students found
+                </strong>
 
-        row.innerHTML = `
-            <td colspan="6">
-                <div class="empty-state">
-                    <h2>No active students found</h2>
-                    <p>
-                        There are no active students
-                        in this class.
-                    </p>
-                </div>
-            </td>
+                <span>
+                    There are no active students available
+                    for the selected class.
+                </span>
+
+            </div>
+
         `;
 
-        scoreTableBody.appendChild(row);
-
-        updateSummary();
+        saveScoresButton.disabled =
+            true;
 
         return;
+
     }
 
 
-    state.currentRecords.forEach(
-        (record, index) => {
+    const table =
+        document.createElement(
+            'table'
+        );
+
+
+    table.className =
+        'score-table';
+
+
+    table.innerHTML = `
+
+        <thead>
+
+            <tr>
+
+                <th>
+                    #
+                </th>
+
+                <th>
+                    ADMISSION NO.
+                </th>
+
+                <th>
+                    STUDENT
+                </th>
+
+                <th>
+                    TEST / 40
+                </th>
+
+                <th>
+                    EXAM / 60
+                </th>
+
+                <th>
+                    TOTAL / 100
+                </th>
+
+                <th>
+                    STATUS
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody></tbody>
+
+    `;
+
+
+    const tbody =
+        table.querySelector(
+            'tbody'
+        );
+
+
+    currentStudents.forEach(
+        function (student, index) {
 
             const studentId =
-                getStudentId(record);
-
-            const studentName =
-                getValue(
-                    record,
+                getField(
+                    student,
                     [
-                        'fullName',
-                        'Full Name',
-                        'studentName',
-                        'Student Name',
-                        'name'
+                        'Student ID',
+                        'studentId'
                     ]
-                ) ||
-                'Unnamed Student';
+                );
 
 
             const admissionNo =
-                getValue(
-                    record,
+                getField(
+                    student,
                     [
-                        'admissionNo',
                         'Admission No',
-                        'admissionNumber'
+                        'admissionNo',
+                        'Admission Number'
                     ]
-                ) ||
-                '';
+                );
 
 
-            const original =
-                state.originalScores[
+            const fullName =
+                getField(
+                    student,
+                    [
+                        'Full Name',
+                        'fullName',
+                        'Student Name',
+                        'studentName'
+                    ]
+                );
+
+
+            const existing =
+                getStudentScore(
                     studentId
-                ] ||
-                {
-                    test: '',
-                    exam: ''
-                };
+                );
+
+
+            const testScore =
+                getScoreValue(
+                    existing,
+                    [
+                        'Test Score',
+                        'testScore'
+                    ]
+                );
+
+
+            const examScore =
+                getScoreValue(
+                    existing,
+                    [
+                        'Exam Score',
+                        'examScore'
+                    ]
+                );
 
 
             const row =
-                document.createElement('tr');
+                document.createElement(
+                    'tr'
+                );
+
 
             row.dataset.studentId =
                 studentId;
@@ -1062,212 +1357,213 @@ function renderScoreTable() {
 
             row.innerHTML = `
 
-                <td>
+                <td class="student-number">
                     ${index + 1}
                 </td>
 
-                <td>
-                    <div class="student-name">
-                        ${escapeHtml(studentName)}
-                    </div>
+                <td class="admission-cell">
+                    ${escapeHtml(admissionNo)}
+                </td>
+
+                <td class="student-name">
+                    ${escapeHtml(fullName)}
                 </td>
 
                 <td>
-                    <div class="admission-number">
-                        ${escapeHtml(admissionNo)}
-                    </div>
-                </td>
 
-                <td>
                     <input
                         type="number"
                         class="score-input test-input"
-                        data-student-id="${escapeAttribute(studentId)}"
-                        data-field="test"
+                        data-student-id="${escapeHtml(studentId)}"
+                        value="${formatInputScore(testScore)}"
                         min="0"
                         max="40"
-                        step="1"
-                        inputmode="numeric"
-                        value="${formatInputValue(original.test)}"
+                        step="0.01"
+                        placeholder="0–40"
+                        aria-label="Test score for ${escapeHtml(fullName)}"
                     >
+
                 </td>
 
                 <td>
+
                     <input
                         type="number"
                         class="score-input exam-input"
-                        data-student-id="${escapeAttribute(studentId)}"
-                        data-field="exam"
+                        data-student-id="${escapeHtml(studentId)}"
+                        value="${formatInputScore(examScore)}"
                         min="0"
                         max="60"
-                        step="1"
-                        inputmode="numeric"
-                        value="${formatInputValue(original.exam)}"
+                        step="0.01"
+                        placeholder="0–60"
+                        aria-label="Exam score for ${escapeHtml(fullName)}"
                     >
+
                 </td>
 
-                <td class="total-cell empty">
-                    -
+                <td class="total-cell">
+                    —
                 </td>
+
+                <td class="status-cell">
+                    —
+                </td>
+
             `;
 
 
-            scoreTableBody.appendChild(row);
+            const testInput =
+                row.querySelector(
+                    '.test-input'
+                );
+
+
+            const examInput =
+                row.querySelector(
+                    '.exam-input'
+                );
+
+
+            testInput.addEventListener(
+                'input',
+                function () {
+
+                    validateAndUpdateRow(
+                        row
+                    );
+
+                }
+            );
+
+
+            examInput.addEventListener(
+                'input',
+                function () {
+
+                    validateAndUpdateRow(
+                        row
+                    );
+
+                }
+            );
+
+
+            testInput.addEventListener(
+                'blur',
+                function () {
+
+                    normalizeInputValue(
+                        testInput,
+                        40
+                    );
+
+                    validateAndUpdateRow(
+                        row
+                    );
+
+                }
+            );
+
+
+            examInput.addEventListener(
+                'blur',
+                function () {
+
+                    normalizeInputValue(
+                        examInput,
+                        60
+                    );
+
+                    validateAndUpdateRow(
+                        row
+                    );
+
+                }
+            );
+
+
+            tbody.appendChild(
+                row
+            );
+
+
+            validateAndUpdateRow(
+                row
+            );
+
         }
     );
 
 
-    bindScoreInputs();
-
-    updateAllTotals();
-
-    updateSummary();
-}
+    tableWrapper.innerHTML =
+        '';
 
 
-/* ============================================================
-   BIND INPUTS
-============================================================ */
-
-function bindScoreInputs() {
-
-    const inputs =
-        scoreTableBody.querySelectorAll(
-            '.score-input'
-        );
-
-
-    inputs.forEach(input => {
-
-        input.addEventListener(
-            'input',
-            handleScoreInput
-        );
-
-        input.addEventListener(
-            'blur',
-            validateInput
-        );
-    });
-}
-
-
-/* ============================================================
-   SCORE INPUT
-============================================================ */
-
-function handleScoreInput(event) {
-
-    const input =
-        event.target;
-
-    const studentId =
-        input.dataset.studentId;
-
-    const field =
-        input.dataset.field;
-
-    let value =
-        input.value.trim();
-
-
-    if (value === '') {
-
-        value = '';
-
-    } else {
-
-        value =
-            Number(value);
-    }
-
-
-    if (
-        value !== '' &&
-        Number.isNaN(value)
-    ) {
-        value = '';
-    }
-
-
-    if (
-        field === 'test' &&
-        value !== '' &&
-        value > 40
-    ) {
-        value = 40;
-        input.value = 40;
-    }
-
-
-    if (
-        field === 'exam' &&
-        value !== '' &&
-        value > 60
-    ) {
-        value = 60;
-        input.value = 60;
-    }
-
-
-    if (
-        value !== '' &&
-        value < 0
-    ) {
-        value = 0;
-        input.value = 0;
-    }
-
-
-    if (!state.changedScores[studentId]) {
-
-        state.changedScores[studentId] = {};
-    }
-
-
-    state.changedScores[studentId][field] =
-        value;
-
-
-    markInputChanged(
-        input,
-        studentId,
-        field
+    tableWrapper.appendChild(
+        table
     );
 
 
-    updateRowTotal(
-        input.closest('tr')
+    scoreSummary.classList.remove(
+        'hidden'
     );
 
 
-    updateSummary();
+    saveScoresButton.disabled =
+        false;
+
 }
 
 
-/* ============================================================
-   VALIDATE INPUT
-============================================================ */
+/* =========================================================
+   SCORE VALUE
+========================================================= */
 
-function validateInput(event) {
+function getScoreValue(
+    record,
+    fields
+) {
 
-    const input =
-        event.target;
+    if (!record) {
+        return '';
+    }
 
-    const field =
-        input.dataset.field;
 
     const value =
-        input.value.trim();
+        getField(
+            record,
+            fields
+        );
 
 
-    input.classList.remove(
-        'invalid'
-    );
+    if (
+        value === '' ||
+        value === null ||
+        value === undefined
+    ) {
+
+        return '';
+
+    }
 
 
-    if (value === '') {
-        return;
+    return value;
+
+}
+
+
+function formatInputScore(
+    value
+) {
+
+    if (
+        value === '' ||
+        value === null ||
+        value === undefined
+    ) {
+
+        return '';
+
     }
 
 
@@ -1275,110 +1571,20 @@ function validateInput(event) {
         Number(value);
 
 
-    if (Number.isNaN(number)) {
+    return Number.isNaN(number)
+        ? ''
+        : number;
 
-        input.classList.add(
-            'invalid'
-        );
-
-        return;
-    }
-
-
-    if (
-        field === 'test' &&
-        (number < 0 || number > 40)
-    ) {
-
-        input.classList.add(
-            'invalid'
-        );
-
-        return;
-    }
-
-
-    if (
-        field === 'exam' &&
-        (number < 0 || number > 60)
-    ) {
-
-        input.classList.add(
-            'invalid'
-        );
-    }
 }
 
 
-/* ============================================================
-   MARK CHANGED
-============================================================ */
+/* =========================================================
+   ROW VALIDATION
+========================================================= */
 
-function markInputChanged(
-    input,
-    studentId,
-    field
+function validateAndUpdateRow(
+    row
 ) {
-
-    const original =
-        state.originalScores[
-            studentId
-        ] ||
-        {
-            test: '',
-            exam: ''
-        };
-
-
-    const current =
-        state.changedScores[
-            studentId
-        ] &&
-        state.changedScores[
-            studentId
-        ][field];
-
-
-    const originalValue =
-        normalizeComparable(
-            original[field]
-        );
-
-
-    const currentValue =
-        normalizeComparable(
-            current
-        );
-
-
-    if (
-        currentValue !==
-        originalValue
-    ) {
-
-        input.classList.add(
-            'changed'
-        );
-
-    } else {
-
-        input.classList.remove(
-            'changed'
-        );
-    }
-}
-
-
-/* ============================================================
-   UPDATE ROW TOTAL
-============================================================ */
-
-function updateRowTotal(row) {
-
-    if (!row) {
-        return;
-    }
-
 
     const testInput =
         row.querySelector(
@@ -1395,102 +1601,201 @@ function updateRowTotal(row) {
             '.total-cell'
         );
 
-
-    const test =
-        parseScoreInput(
-            testInput
-        );
-
-    const exam =
-        parseScoreInput(
-            examInput
+    const statusCell =
+        row.querySelector(
+            '.status-cell'
         );
 
 
-    totalCell.classList.remove(
-        'complete',
-        'partial',
-        'empty'
+    const testValue =
+        parseOptionalNumber(
+            testInput.value
+        );
+
+
+    const examValue =
+        parseOptionalNumber(
+            examInput.value
+        );
+
+
+    testInput.classList.remove(
+        'invalid'
+    );
+
+    examInput.classList.remove(
+        'invalid'
     );
 
 
+    let invalid =
+        false;
+
+
     if (
-        test === null &&
-        exam === null
+        testInput.value !== '' &&
+        (
+            testValue === null ||
+            testValue < 0 ||
+            testValue > 40
+        )
     ) {
 
-        totalCell.textContent = '-';
-
-        totalCell.classList.add(
-            'empty'
+        testInput.classList.add(
+            'invalid'
         );
 
-        return;
+        invalid = true;
+
     }
 
 
-    const total =
-        (test || 0) +
-        (exam || 0);
+    if (
+        examInput.value !== '' &&
+        (
+            examValue === null ||
+            examValue < 0 ||
+            examValue > 60
+        )
+    ) {
 
+        examInput.classList.add(
+            'invalid'
+        );
 
-    totalCell.textContent =
-        total;
+        invalid = true;
+
+    }
 
 
     if (
-        test !== null &&
-        exam !== null
+        testInput.value !== '' &&
+        examInput.value !== '' &&
+        !invalid
     ) {
+
+        const total =
+            testValue +
+            examValue;
+
+
+        totalCell.textContent =
+            formatNumber(total);
+
+
+        totalCell.classList.remove(
+            'missing'
+        );
+
 
         totalCell.classList.add(
             'complete'
         );
 
+
+        statusCell.innerHTML =
+            '<span class="row-status complete">Complete</span>';
+
     } else {
 
+        totalCell.textContent =
+            '—';
+
+
+        totalCell.classList.remove(
+            'complete'
+        );
+
+
         totalCell.classList.add(
-            'partial'
-        );
-    }
-}
-
-
-/* ============================================================
-   UPDATE ALL TOTALS
-============================================================ */
-
-function updateAllTotals() {
-
-    const rows =
-        scoreTableBody.querySelectorAll(
-            'tr[data-student-id]'
+            'missing'
         );
 
 
-    rows.forEach(
-        updateRowTotal
-    );
-}
+        if (invalid) {
 
+            statusCell.innerHTML =
+                '<span class="row-status missing">Invalid</span>';
 
-/* ============================================================
-   PARSE INPUT
-============================================================ */
+        } else {
 
-function parseScoreInput(input) {
+            statusCell.innerHTML =
+                '<span class="row-status missing">Missing</span>';
 
-    if (!input) {
-        return null;
+        }
+
     }
 
 
-    const value =
-        input.value.trim();
+    updateSummary();
+
+}
 
 
-    if (value === '') {
+/* =========================================================
+   INPUT NORMALIZATION
+========================================================= */
+
+function normalizeInputValue(
+    input,
+    maximum
+) {
+
+    if (input.value === '') {
+        return;
+    }
+
+
+    const number =
+        Number(input.value);
+
+
+    if (Number.isNaN(number)) {
+
+        input.value =
+            '';
+
+        return;
+
+    }
+
+
+    if (number < 0) {
+
+        input.value =
+            '0';
+
+        return;
+
+    }
+
+
+    if (number > maximum) {
+
+        input.value =
+            maximum;
+
+    }
+
+}
+
+
+/* =========================================================
+   PARSE OPTIONAL NUMBER
+========================================================= */
+
+function parseOptionalNumber(
+    value
+) {
+
+    if (
+        value === '' ||
+        value === null ||
+        value === undefined
+    ) {
+
         return null;
+
     }
 
 
@@ -1498,231 +1803,391 @@ function parseScoreInput(input) {
         Number(value);
 
 
-    if (
-        Number.isNaN(number)
-    ) {
-        return null;
-    }
+    return Number.isFinite(number)
+        ? number
+        : null;
 
-
-    return number;
 }
 
 
-/* ============================================================
-   SAVE SCORES
-============================================================ */
+/* =========================================================
+   UPDATE SUMMARY
+========================================================= */
 
-async function saveScores() {
+function updateSummary() {
 
     const rows =
-        scoreTableBody.querySelectorAll(
-            'tr[data-student-id]'
+        Array.from(
+            tableWrapper.querySelectorAll(
+                'tbody tr'
+            )
         );
 
 
     if (!rows.length) {
+
+        studentCount.textContent =
+            '0';
+
+        enteredCount.textContent =
+            '0';
+
+        missingCount.textContent =
+            '0';
+
+        summarySubject.textContent =
+            getSelectedSubjectName();
+
+        return;
+
+    }
+
+
+    let entered =
+        0;
+
+
+    let missing =
+        0;
+
+
+    rows.forEach(
+        function (row) {
+
+            const testInput =
+                row.querySelector(
+                    '.test-input'
+                );
+
+            const examInput =
+                row.querySelector(
+                    '.exam-input'
+                );
+
+
+            const test =
+                parseOptionalNumber(
+                    testInput?.value
+                );
+
+
+            const exam =
+                parseOptionalNumber(
+                    examInput?.value
+                );
+
+
+            const complete =
+                test !== null &&
+                exam !== null &&
+                test >= 0 &&
+                test <= 40 &&
+                exam >= 0 &&
+                exam <= 60;
+
+
+            if (complete) {
+
+                entered++;
+
+            } else {
+
+                missing++;
+
+            }
+
+        }
+    );
+
+
+    studentCount.textContent =
+        rows.length;
+
+
+    enteredCount.textContent =
+        entered;
+
+
+    missingCount.textContent =
+        missing;
+
+
+    summarySubject.textContent =
+        getSelectedSubjectName();
+
+}
+
+
+/* =========================================================
+   SELECTED SUBJECT NAME
+========================================================= */
+
+function getSelectedSubjectName() {
+
+    const option =
+        subjectSelect.options[
+            subjectSelect.selectedIndex
+        ];
+
+
+    if (
+        !option ||
+        !subjectSelect.value
+    ) {
+
+        return '—';
+
+    }
+
+
+    return option.textContent;
+
+}
+
+
+/* =========================================================
+   SAVE SCORES
+========================================================= */
+
+async function saveScores() {
+
+    if (isSaving) {
         return;
     }
 
 
-    const scores = [];
+    const rows =
+        Array.from(
+            tableWrapper.querySelectorAll(
+                'tbody tr'
+            )
+        );
 
 
-    for (const row of rows) {
+    if (!rows.length) {
 
-        const studentId =
-            row.dataset.studentId;
-
-
-        const testInput =
-            row.querySelector(
-                '.test-input'
-            );
-
-        const examInput =
-            row.querySelector(
-                '.exam-input'
-            );
-
-
-        const test =
-            parseScoreInput(
-                testInput
-            );
-
-        const exam =
-            parseScoreInput(
-                examInput
-            );
-
-
-        if (
-            test === null &&
-            exam === null
-        ) {
-
-            continue;
-        }
-
-
-        if (
-            test === null ||
-            exam === null
-        ) {
-
-            showTableMessage(
-                'Please enter both Test and Exam scores for every student whose result you want to save.',
-                'error'
-            );
-
-            return;
-        }
-
-
-        if (
-            test < 0 ||
-            test > 40
-        ) {
-
-            showTableMessage(
-                'A Test score must be between 0 and 40.',
-                'error'
-            );
-
-            testInput.focus();
-
-            return;
-        }
-
-
-        if (
-            exam < 0 ||
-            exam > 60
-        ) {
-
-            showTableMessage(
-                'An Exam score must be between 0 and 60.',
-                'error'
-            );
-
-            examInput.focus();
-
-            return;
-        }
-
-
-        scores.push({
-
-            studentId,
-
-            testScore: test,
-
-            examScore: exam
-
-        });
-    }
-
-
-    if (!scores.length) {
-
-        showTableMessage(
-            'There are no scores to save.',
-            'info'
+        showMessage(
+            'There are no students to save.',
+            'error'
         );
 
         return;
+
     }
 
 
-    saveScoresBtn.disabled = true;
+    const scorePayload =
+        [];
 
-    clearChangesBtn.disabled = true;
+
+    let hasInvalid =
+        false;
 
 
-    showLoading(
-        'Saving scores...'
+    let hasMissing =
+        false;
+
+
+    rows.forEach(
+        function (row) {
+
+            const studentId =
+                row.dataset.studentId;
+
+
+            const testInput =
+                row.querySelector(
+                    '.test-input'
+                );
+
+            const examInput =
+                row.querySelector(
+                    '.exam-input'
+                );
+
+
+            const test =
+                parseOptionalNumber(
+                    testInput.value
+                );
+
+
+            const exam =
+                parseOptionalNumber(
+                    examInput.value
+                );
+
+
+            const testProvided =
+                testInput.value !== '';
+
+
+            const examProvided =
+                examInput.value !== '';
+
+
+            if (
+                testProvided &&
+                (
+                    test === null ||
+                    test < 0 ||
+                    test > 40
+                )
+            ) {
+
+                hasInvalid =
+                    true;
+
+                return;
+
+            }
+
+
+            if (
+                examProvided &&
+                (
+                    exam === null ||
+                    exam < 0 ||
+                    exam > 60
+                )
+            ) {
+
+                hasInvalid =
+                    true;
+
+                return;
+
+            }
+
+
+            /*
+             * The backend accepts the score rows.
+             * Blank values are retained as blanks so the
+             * backend can enforce its own score rules.
+             */
+            if (
+                !testProvided ||
+                !examProvided
+            ) {
+
+                hasMissing =
+                    true;
+
+            }
+
+
+            scorePayload.push({
+
+                studentId,
+
+                testScore:
+                    testProvided
+                        ? test
+                        : '',
+
+                examScore:
+                    examProvided
+                        ? exam
+                        : ''
+
+            });
+
+        }
     );
+
+
+    if (hasInvalid) {
+
+        showMessage(
+            'Please correct the highlighted scores before saving.',
+            'error'
+        );
+
+        return;
+
+    }
+
+
+    if (hasMissing) {
+
+        const proceed =
+            window.confirm(
+                'Some students do not have both Test and Exam scores. Do you want to continue saving the entered scores?'
+            );
+
+
+        if (!proceed) {
+            return;
+        }
+
+    }
+
+
+    isSaving =
+        true;
+
+
+    saveScoresButton.disabled =
+        true;
+
+
+    saveScoresButton.textContent =
+        'Saving...';
 
 
     try {
 
         const result =
-            await api(
+            await callApi(
                 'saveBulkScores',
                 {
                     schoolId:
-                        state.schoolId,
+                        getSchoolId(),
 
                     sessionId:
-                        state.selectedSessionId,
+                        currentSelection.sessionId,
 
                     term:
-                        state.selectedTerm,
+                        currentSelection.term,
 
                     classId:
-                        state.selectedClassId,
+                        currentSelection.classId,
 
                     subjectId:
-                        state.selectedSubjectId,
+                        currentSelection.subjectId,
 
-                    scores
+                    scores:
+                        scorePayload,
+
+                    enteredBy:
+                        getCurrentUserId()
                 }
             );
 
 
-        const data =
-            unwrapData(result);
+        const message =
+            result?.message ||
+            result?.data?.message ||
+            'Scores saved successfully.';
 
 
-        const savedCount =
-            Number(
-                getValue(
-                    data,
-                    [
-                        'savedCount'
-                    ]
-                ) || 0
-            );
-
-
-        const failedCount =
-            Number(
-                getValue(
-                    data,
-                    [
-                        'failedCount'
-                    ]
-                ) || 0
-            );
-
-
-        if (
-            failedCount > 0
-        ) {
-
-            showTableMessage(
-                `${savedCount} score(s) saved. ${failedCount} score(s) could not be saved.`,
-                'error'
-            );
-
-        } else {
-
-            showTableMessage(
-                `${savedCount} score(s) saved successfully.`,
-                'success'
-            );
-        }
+        showMessage(
+            message,
+            'success'
+        );
 
 
         await loadScoreRecords();
 
-
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            'Save scores error:',
+            error
+        );
 
-        showTableMessage(
+
+        showMessage(
             error.message ||
             'Unable to save scores.',
             'error'
@@ -1730,22 +2195,295 @@ async function saveScores() {
 
     } finally {
 
-        hideLoading();
+        isSaving =
+            false;
 
-        updateSummary();
+
+        saveScoresButton.disabled =
+            false;
+
+
+        saveScoresButton.textContent =
+            'Save Scores';
+
     }
+
 }
 
 
-/* ============================================================
-   CLEAR CHANGES
-============================================================ */
+/* =========================================================
+   CURRENT USER ID
+========================================================= */
 
-function clearChanges() {
+function getCurrentUserId() {
+
+    const user =
+        currentSession?.user || {};
+
+
+    return (
+        user.userId ||
+        user['User ID'] ||
+        currentSession.userId ||
+        ''
+    );
+
+}
+
+
+/* =========================================================
+   LOADING STATE
+========================================================= */
+
+function renderLoadingState() {
+
+    tableWrapper.innerHTML = `
+
+        <div class="loading-state">
+
+            <div class="spinner"></div>
+
+            <span>
+                Loading students and scores...
+            </span>
+
+        </div>
+
+    `;
+
+
+    scoreSummary.classList.add(
+        'hidden'
+    );
+
+
+    saveScoresButton.disabled =
+        true;
+
+}
+
+
+/* =========================================================
+   ERROR STATE
+========================================================= */
+
+function renderErrorState(
+    message
+) {
+
+    tableWrapper.innerHTML = `
+
+        <div class="empty-state">
+
+            <strong>
+                Unable to load score entry
+            </strong>
+
+            <span>
+                ${escapeHtml(message)}
+            </span>
+
+        </div>
+
+    `;
+
+
+    scoreSummary.classList.add(
+        'hidden'
+    );
+
+
+    saveScoresButton.disabled =
+        true;
+
+}
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+function showMessage(
+    message,
+    type = ''
+) {
+
+    messageText.textContent =
+        message;
+
+
+    pageMessage.classList.remove(
+        'hidden',
+        'success',
+        'error'
+    );
+
+
+    if (type) {
+
+        pageMessage.classList.add(
+            type
+        );
+
+    }
+
+}
+
+
+function hideMessage() {
+
+    pageMessage.classList.add(
+        'hidden'
+    );
+
+}
+
+
+function clearPageMessage() {
+
+    pageMessage.classList.add(
+        'hidden'
+    );
+
+}
+
+
+/* =========================================================
+   FIELD HELPERS
+========================================================= */
+
+function getField(
+    object,
+    fields
+) {
+
+    if (!object) {
+        return '';
+    }
+
+
+    for (const field of fields) {
+
+        if (
+            object[field] !== undefined &&
+            object[field] !== null
+        ) {
+
+            return object[field];
+
+        }
+
+    }
+
+
+    return '';
+
+}
+
+
+function getClassDisplayName(
+    classRecord
+) {
+
+    const name =
+        getField(
+            classRecord,
+            [
+                'Class Name',
+                'className'
+            ]
+        );
+
+
+    const section =
+        getField(
+            classRecord,
+            [
+                'Section',
+                'section'
+            ]
+        );
+
+
+    if (
+        name &&
+        section
+    ) {
+
+        return `${name} - ${section}`;
+
+    }
+
+
+    return name || '';
+
+}
+
+
+function formatNumber(
+    number
+) {
+
+    if (
+        Number.isInteger(number)
+    ) {
+
+        return String(number);
+
+    }
+
+
+    return Number(number)
+        .toFixed(2)
+        .replace(/\.?0+$/, '');
+
+}
+
+
+/* =========================================================
+   HTML ESCAPING
+========================================================= */
+
+function escapeHtml(
+    value
+) {
+
+    return String(
+        value ?? ''
+    )
+    .replace(
+        /&/g,
+        '&amp;'
+    )
+    .replace(
+        /</g,
+        '&lt;'
+    )
+    .replace(
+        />/g,
+        '&gt;'
+    )
+    .replace(
+        /"/g,
+        '&quot;'
+    )
+    .replace(
+        /'/g,
+        '&#039;'
+    );
+
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+function handleLogout() {
 
     const confirmed =
         window.confirm(
-            'Clear all unsaved changes?'
+            'Are you sure you want to log out?'
         );
 
 
@@ -1754,554 +2492,23 @@ function clearChanges() {
     }
 
 
-    state.changedScores = {};
-
-
-    const rows =
-        scoreTableBody.querySelectorAll(
-            'tr[data-student-id]'
-        );
-
-
-    rows.forEach(row => {
-
-        const studentId =
-            row.dataset.studentId;
-
-
-        const original =
-            state.originalScores[
-                studentId
-            ] ||
-            {
-                test: '',
-                exam: ''
-            };
-
-
-        const testInput =
-            row.querySelector(
-                '.test-input'
-            );
-
-        const examInput =
-            row.querySelector(
-                '.exam-input'
-            );
-
-
-        testInput.value =
-            formatInputValue(
-                original.test
-            );
-
-        examInput.value =
-            formatInputValue(
-                original.exam
-            );
-
-
-        testInput.classList.remove(
-            'changed',
-            'invalid'
-        );
-
-        examInput.classList.remove(
-            'changed',
-            'invalid'
-        );
-
-
-        updateRowTotal(row);
-    });
-
-
-    updateSummary();
-
-    showTableMessage(
-        'Unsaved changes have been cleared.',
-        'info'
-    );
-}
-
-
-/* ============================================================
-   REFRESH CURRENT SELECTION
-============================================================ */
-
-async function refreshCurrentSelection() {
-
-    if (
-        hasRequiredSelection()
-    ) {
-
-        await loadScoreRecords();
-
-    } else {
-
-        await loadSetup();
-    }
-}
-
-
-/* ============================================================
-   SUMMARY
-============================================================ */
-
-function updateSummary() {
-
-    const rows =
-        scoreTableBody.querySelectorAll(
-            'tr[data-student-id]'
-        );
-
-
-    let completed = 0;
-
-    let missing = 0;
-
-
-    rows.forEach(row => {
-
-        const testInput =
-            row.querySelector(
-                '.test-input'
-            );
-
-        const examInput =
-            row.querySelector(
-                '.exam-input'
-            );
-
-
-        const test =
-            parseScoreInput(
-                testInput
-            );
-
-        const exam =
-            parseScoreInput(
-                examInput
-            );
-
-
-        if (
-            test !== null &&
-            exam !== null
-        ) {
-
-            completed++;
-
-        } else {
-
-            missing++;
-        }
-    });
-
-
-    const changed =
-        countChangedStudents();
-
-
-    studentCount.textContent =
-        rows.length;
-
-    completedCount.textContent =
-        completed;
-
-    missingCount.textContent =
-        missing;
-
-    changedCount.textContent =
-        changed;
-
-
-    saveScoresBtn.disabled =
-        changed === 0;
-
-    clearChangesBtn.disabled =
-        changed === 0;
-}
-
-
-/* ============================================================
-   COUNT CHANGED STUDENTS
-============================================================ */
-
-function countChangedStudents() {
-
-    let count = 0;
-
-
-    Object.keys(
-        state.changedScores
-    ).forEach(studentId => {
-
-        const changes =
-            state.changedScores[
-                studentId
-            ];
-
-
-        if (!changes) {
-            return;
-        }
-
-
-        const original =
-            state.originalScores[
-                studentId
-            ] ||
-            {
-                test: '',
-                exam: ''
-            };
-
-
-        const testChanged =
-            normalizeComparable(
-                changes.test
-            ) !==
-            normalizeComparable(
-                original.test
-            );
-
-
-        const examChanged =
-            normalizeComparable(
-                changes.exam
-            ) !==
-            normalizeComparable(
-                original.exam
-            );
-
-
-        if (
-            testChanged ||
-            examChanged
-        ) {
-
-            count++;
-        }
-    });
-
-
-    return count;
-}
-
-
-/* ============================================================
-   SHOW / HIDE TABLE
-============================================================ */
-
-function showScorePanel() {
-
-    scorePanel.classList.remove(
-        'hidden'
-    );
-
-    scoreSummary.classList.remove(
-        'hidden'
-    );
-
-    emptyState.classList.add(
-        'hidden'
+    localStorage.removeItem(
+        SESSION_KEY
     );
 
 
-    const subjectName =
-        subjectSelect.options[
-            subjectSelect.selectedIndex
-        ]?.textContent ||
-        'Subject';
+    currentSession =
+        null;
 
 
-    const className =
-        classSelect.options[
-            classSelect.selectedIndex
-        ]?.textContent ||
-        'Class';
+    redirectToLogin();
 
-
-    tableTitle.textContent =
-        `${subjectName} — ${className}`;
-
-
-    tableSubtitle.textContent =
-        `${state.selectedTerm} • Test / 40 • Exam / 60 • Total / 100`;
 }
 
 
-function hideTable() {
+function redirectToLogin() {
 
-    scorePanel.classList.add(
-        'hidden'
-    );
+    window.location.href =
+        'index.html';
 
-    scoreSummary.classList.add(
-        'hidden'
-    );
-
-    emptyState.classList.remove(
-        'hidden'
-    );
-}
-
-
-function resetScoreTable() {
-
-    state.currentRecords = [];
-
-    state.originalScores = {};
-
-    state.changedScores = {};
-
-    scoreTableBody.innerHTML = '';
-
-    hideTable();
-
-    clearTableMessage();
-
-    updateSummary();
-}
-
-
-/* ============================================================
-   MESSAGES
-============================================================ */
-
-function showSelectionMessage(
-    message,
-    type = 'info'
-) {
-
-    selectionMessage.textContent =
-        message;
-
-    selectionMessage.className =
-        `selection-message ${type}`;
-}
-
-
-function clearSelectionMessage() {
-
-    selectionMessage.textContent = '';
-
-    selectionMessage.className =
-        'selection-message hidden';
-}
-
-
-function showTableMessage(
-    message,
-    type = 'info'
-) {
-
-    tableMessage.textContent =
-        message;
-
-    tableMessage.className =
-        `table-message ${type}`;
-}
-
-
-function clearTableMessage() {
-
-    tableMessage.textContent = '';
-
-    tableMessage.className =
-        'table-message hidden';
-}
-
-
-/* ============================================================
-   LOADING
-============================================================ */
-
-function showLoading(message) {
-
-    loadingText.textContent =
-        message || 'Loading...';
-
-    loadingOverlay.classList.remove(
-        'hidden'
-    );
-}
-
-
-function hideLoading() {
-
-    loadingOverlay.classList.add(
-        'hidden'
-    );
-}
-
-
-/* ============================================================
-   DISABLE SELECTORS
-============================================================ */
-
-function disableSelectors() {
-
-    sessionSelect.disabled = true;
-
-    termSelect.disabled = true;
-
-    classSelect.disabled = true;
-
-    subjectSelect.disabled = true;
-}
-
-
-/* ============================================================
-   HELPERS
-============================================================ */
-
-function getArray(
-    object,
-    keys
-) {
-
-    if (!object) {
-        return [];
-    }
-
-
-    for (const key of keys) {
-
-        if (
-            Array.isArray(
-                object[key]
-            )
-        ) {
-
-            return object[key];
-        }
-    }
-
-
-    return [];
-}
-
-
-function getValue(
-    object,
-    keys
-) {
-
-    if (!object) {
-        return '';
-    }
-
-
-    for (const key of keys) {
-
-        if (
-            object[key] !== undefined &&
-            object[key] !== null
-        ) {
-
-            return object[key];
-        }
-    }
-
-
-    return '';
-}
-
-
-function getStudentId(record) {
-
-    return String(
-        getValue(
-            record,
-            [
-                'studentId',
-                'Student ID',
-                'id'
-            ]
-        ) || ''
-    ).trim();
-}
-
-
-function normalizeNumber(value) {
-
-    if (
-        value === '' ||
-        value === null ||
-        value === undefined
-    ) {
-        return '';
-    }
-
-
-    const number =
-        Number(value);
-
-
-    return Number.isNaN(
-        number
-    )
-        ? ''
-        : number;
-}
-
-
-function normalizeComparable(value) {
-
-    if (
-        value === '' ||
-        value === null ||
-        value === undefined
-    ) {
-        return '';
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        !Number.isNaN(number)
-    ) {
-        return number;
-    }
-
-
-    return String(value)
-        .trim();
-}
-
-
-function formatInputValue(value) {
-
-    if (
-        value === '' ||
-        value === null ||
-        value === undefined
-    ) {
-        return '';
-    }
-
-
-    return String(value);
-}
-
-
-function escapeHtml(value) {
-
-    return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-}
-
-
-function escapeAttribute(value) {
-
-    return escapeHtml(value);
 }
