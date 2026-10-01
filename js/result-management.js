@@ -1,14 +1,22 @@
 /* ============================================================
    SCHOOL RESULTS SYSTEM
    FILE: result-management.js
-   VERSION: 1.0.1
+   VERSION: 1.1.0
 
-   RESULT MANAGEMENT FRONTEND
+   PURPOSE:
+   - Result management
+   - Session / term / class selection
+   - Result overview
+   - Student result list
+   - Individual student result modal
+   - Result comments
+   - Position display
+   - Validation / readiness display
 ============================================================ */
 
 
 /* ============================================================
-   CONFIG
+   CONFIGURATION
 ============================================================ */
 
 const API_URL =
@@ -23,62 +31,46 @@ const SESSION_KEY =
 ============================================================ */
 
 let currentSession = null;
-
-let setupData = {
-    sessions: [],
-    classes: [],
-    terms: []
-};
-
-let currentOverview = null;
-
+let setupData = null;
 let currentStudents = [];
-
-let currentSelected = {
+let currentSelection = {
     sessionId: '',
     term: '',
     classId: ''
 };
+
+let currentStudentResult = null;
 
 
 /* ============================================================
    DOM READY
 ============================================================ */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
+document.addEventListener('DOMContentLoaded', function () {
 
-        initializePage();
+    initializePage();
 
-    }
-);
+});
 
 
 /* ============================================================
-   INITIALIZE
+   INITIALIZE PAGE
 ============================================================ */
 
-function initializePage() {
+async function initializePage() {
 
-    currentSession =
-        loadStoredSession();
-
+    restoreSession();
 
     if (!currentSession) {
-
         redirectToLogin();
-
         return;
-
     }
 
-
-    applySessionToHeader();
+    populateUserInformation();
 
     bindEvents();
 
-    loadSetup();
+    await loadSetup();
 
 }
 
@@ -87,185 +79,185 @@ function initializePage() {
    SESSION
 ============================================================ */
 
-function loadStoredSession() {
+function restoreSession() {
+
+    const raw = localStorage.getItem(SESSION_KEY);
+
+    if (!raw) {
+        currentSession = null;
+        return;
+    }
 
     try {
 
-        const raw =
-            localStorage.getItem(
-                SESSION_KEY
-            );
+        const parsed = JSON.parse(raw);
 
-
-        if (!raw) {
-
-            return null;
-
+        if (!parsed || typeof parsed !== 'object') {
+            currentSession = null;
+            return;
         }
 
-
-        const parsed =
-            JSON.parse(raw);
-
-
-        if (!parsed) {
-
-            return null;
-
-        }
-
-
-        const user =
-            parsed.user ||
-            parsed.User ||
-            parsed;
-
-
-        const school =
-            parsed.school ||
-            parsed.School ||
-            {};
-
-
-        const schoolId =
-            parsed.schoolId ||
-            user.schoolId ||
-            school.schoolId ||
-            school['School ID'] ||
-            '';
-
-
-        const userName =
-            parsed.fullName ||
-            user.fullName ||
-            user.name ||
-            'User';
-
-
-        const role =
-            parsed.role ||
-            user.role ||
-            'User';
-
-
-        const schoolName =
-            parsed.schoolName ||
-            school.schoolName ||
-            school['School Name'] ||
-            'School Results System';
-
-
-        if (!schoolId) {
-
-            return null;
-
-        }
-
-
-        return {
-
-            schoolId:
-                String(schoolId).trim(),
-
-            userId:
-                String(
-                    parsed.userId ||
-                    user.userId ||
-                    ''
-                ).trim(),
-
-            fullName:
-                String(userName).trim(),
-
-            role:
-                String(role).trim(),
-
-            schoolName:
-                String(schoolName).trim()
-
-        };
+        currentSession = normalizeSession(parsed);
 
     } catch (error) {
 
-        console.error(
-            'Could not load saved session:',
-            error
-        );
+        console.error('Session parsing failed:', error);
 
-        return null;
+        currentSession = null;
 
     }
 
 }
 
 
+function normalizeSession(parsed) {
+
+    const user = parsed.user || {};
+    const school = parsed.school || {};
+
+    return {
+
+        user: {
+            userId:
+                parsed.userId ||
+                user.userId ||
+                user['User ID'] ||
+                '',
+
+            schoolId:
+                parsed.schoolId ||
+                user.schoolId ||
+                user['School ID'] ||
+                school.schoolId ||
+                school['School ID'] ||
+                '',
+
+            fullName:
+                parsed.fullName ||
+                user.fullName ||
+                user['Full Name'] ||
+                '',
+
+            email:
+                parsed.email ||
+                user.email ||
+                user['Email'] ||
+                '',
+
+            role:
+                parsed.role ||
+                user.role ||
+                user['Role'] ||
+                ''
+        },
+
+        school: {
+            schoolId:
+                parsed.schoolId ||
+                school.schoolId ||
+                school['School ID'] ||
+                user.schoolId ||
+                '',
+
+            schoolName:
+                parsed.schoolName ||
+                school.schoolName ||
+                school['School Name'] ||
+                '',
+
+            schoolCode:
+                parsed.schoolCode ||
+                school.schoolCode ||
+                school['School Code'] ||
+                '',
+
+            plan:
+                parsed.plan ||
+                school.plan ||
+                school['Plan'] ||
+                '',
+
+            status:
+                parsed.status ||
+                school.status ||
+                school['Status'] ||
+                '',
+
+            expiryDate:
+                parsed.expiryDate ||
+                school.expiryDate ||
+                school['Expiry Date'] ||
+                ''
+        }
+
+    };
+
+}
+
+
+function getSchoolId() {
+
+    return (
+        currentSession &&
+        currentSession.user &&
+        currentSession.user.schoolId
+    ) || (
+        currentSession &&
+        currentSession.school &&
+        currentSession.school.schoolId
+    ) || '';
+
+}
+
+
 /* ============================================================
-   HEADER
+   USER / HEADER
 ============================================================ */
 
-function applySessionToHeader() {
+function populateUserInformation() {
 
-    if (!currentSession) {
-        return;
-    }
+    const schoolName = document.getElementById('schoolName');
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    const userInitials = document.getElementById('userInitials');
 
+    const school =
+        currentSession.school || {};
 
-    const schoolName =
-        document.getElementById(
-            'schoolName'
-        );
-
-
-    const userName =
-        document.getElementById(
-            'userName'
-        );
-
-
-    const userRole =
-        document.getElementById(
-            'userRole'
-        );
-
-
-    const initials =
-        document.getElementById(
-            'userInitials'
-        );
-
+    const user =
+        currentSession.user || {};
 
     if (schoolName) {
 
         schoolName.textContent =
-            currentSession.schoolName ||
+            school.schoolName ||
             'School Results System';
 
     }
 
-
     if (userName) {
 
         userName.textContent =
-            currentSession.fullName ||
+            user.fullName ||
             'User';
 
     }
-
 
     if (userRole) {
 
         userRole.textContent =
-            currentSession.role ||
-            'User';
+            user.role ||
+            'Administrator';
 
     }
 
+    if (userInitials) {
 
-    if (initials) {
-
-        initials.textContent =
+        userInitials.textContent =
             getInitials(
-                currentSession.fullName
+                user.fullName ||
+                school.schoolName ||
+                'SR'
             );
 
     }
@@ -273,45 +265,29 @@ function applySessionToHeader() {
 }
 
 
-/* ============================================================
-   INITIALS
-============================================================ */
-
 function getInitials(name) {
 
-    if (!name) {
-
-        return 'SR';
-
-    }
-
-
-    const parts =
-        String(name)
+    const words =
+        String(name || '')
             .trim()
             .split(/\s+/)
             .filter(Boolean);
 
-
-    if (!parts.length) {
-
+    if (!words.length) {
         return 'SR';
-
     }
 
+    if (words.length === 1) {
 
-    if (parts.length === 1) {
-
-        return parts[0]
+        return words[0]
             .substring(0, 2)
             .toUpperCase();
 
     }
 
-
     return (
-        parts[0].charAt(0) +
-        parts[parts.length - 1].charAt(0)
+        words[0].charAt(0) +
+        words[words.length - 1].charAt(0)
     ).toUpperCase();
 
 }
@@ -324,46 +300,27 @@ function getInitials(name) {
 function bindEvents() {
 
     const sessionSelect =
-        document.getElementById(
-            'sessionSelect'
-        );
-
+        document.getElementById('sessionSelect');
 
     const termSelect =
-        document.getElementById(
-            'termSelect'
-        );
-
+        document.getElementById('termSelect');
 
     const classSelect =
-        document.getElementById(
-            'classSelect'
-        );
-
+        document.getElementById('classSelect');
 
     const menuButton =
-        document.getElementById(
-            'menuButton'
-        );
-
+        document.getElementById('menuButton');
 
     const logoutButton =
-        document.getElementById(
-            'logoutButton'
-        );
-
+        document.getElementById('logoutButton');
 
     const closeMessage =
-        document.getElementById(
-            'closeMessage'
-        );
-
+        document.getElementById('closeMessage');
 
     const closeStudentResultButton =
         document.getElementById(
             'closeStudentResultButton'
         );
-
 
     const cancelResultButton =
         document.getElementById(
@@ -456,19 +413,14 @@ function bindEvents() {
             'studentResultModal'
         );
 
-
     if (modal) {
 
         modal.addEventListener(
             'click',
             function (event) {
 
-                if (
-                    event.target === modal
-                ) {
-
+                if (event.target === modal) {
                     closeStudentResultModal();
-
                 }
 
             }
@@ -481,13 +433,9 @@ function bindEvents() {
         'keydown',
         function (event) {
 
-            if (
-                event.key === 'Escape'
-            ) {
+            if (event.key === 'Escape') {
 
                 closeStudentResultModal();
-
-                closeSidebar();
 
             }
 
@@ -504,129 +452,97 @@ function bindEvents() {
 function toggleSidebar() {
 
     const sidebar =
-        document.getElementById(
-            'sidebar'
-        );
-
+        document.getElementById('sidebar');
 
     if (!sidebar) {
         return;
     }
 
-
-    sidebar.classList.toggle(
-        'open'
-    );
-
-}
-
-
-function closeSidebar() {
-
-    const sidebar =
-        document.getElementById(
-            'sidebar'
-        );
-
-
-    if (!sidebar) {
-        return;
-    }
-
-
-    sidebar.classList.remove(
-        'open'
-    );
+    sidebar.classList.toggle('open');
 
 }
 
 
 /* ============================================================
-   LOAD SETUP
+   SETUP
 ============================================================ */
 
 async function loadSetup() {
 
-    showSelectionLoading();
-
-    /*
-     * CORRECTED:
-     * The actual function in this file is hideMessage().
-     */
     hideMessage();
+    hideSelectionMessage();
+
+    const schoolId =
+        getSchoolId();
+
+    if (!schoolId) {
+
+        showMessage(
+            'Your school session could not be identified. Please log in again.'
+        );
+
+        return;
+
+    }
 
 
     try {
 
-        const result =
+        const response =
             await apiRequest(
                 'getResultManagementSetup',
                 {
-                    schoolId:
-                        currentSession.schoolId
+                    schoolId: schoolId
                 }
             );
 
 
-        if (!result.success) {
+        if (!response.success) {
 
             throw new Error(
-                result.error ||
-                result.message ||
-                'Could not load result management setup.'
+                response.message ||
+                'Unable to load result management setup.'
             );
 
         }
 
 
-        setupData = {
+        setupData = response;
 
-            sessions:
-                Array.isArray(
-                    result.sessions
-                )
-                    ? result.sessions
-                    : [],
+        populateSessions(
+            response.sessions || []
+        );
 
-            classes:
-                Array.isArray(
-                    result.classes
-                )
-                    ? result.classes
-                    : [],
+        populateTerms(
+            response.terms || []
+        );
 
-            terms:
-                Array.isArray(
-                    result.terms
-                )
-                    ? result.terms
-                    : []
-
-        };
+        populateClasses(
+            response.classes || []
+        );
 
 
-        populateSessions();
-
-        populateTerms();
-
-        populateClasses();
+        selectDefaultValues(
+            response
+        );
 
 
-        chooseDefaultSelection();
+        await loadResultManagement();
 
 
     } catch (error) {
 
         console.error(
-            'Result management setup error:',
+            'loadSetup error:',
             error
         );
 
-
         showMessage(
             error.message ||
-            'Could not load result management setup.'
+            'Unable to load result management.'
         );
+
+        hideResultSections();
 
     }
 
@@ -634,202 +550,150 @@ async function loadSetup() {
 
 
 /* ============================================================
-   POPULATE SESSION
+   POPULATE SESSIONS
 ============================================================ */
 
-function populateSessions() {
+function populateSessions(sessions) {
 
     const select =
         document.getElementById(
             'sessionSelect'
         );
 
-
     if (!select) {
         return;
     }
-
 
     select.innerHTML =
         '<option value="">Select session</option>';
 
 
-    setupData.sessions.forEach(
-        function (session) {
+    sessions.forEach(function (session) {
 
-            const option =
-                document.createElement(
-                    'option'
-                );
+        const option =
+            document.createElement('option');
 
+        option.value =
+            session.sessionId || '';
 
-            option.value =
-                session.sessionId || '';
+        option.textContent =
+            session.sessionName || '';
 
+        select.appendChild(option);
 
-            option.textContent =
-                session.sessionName ||
-                session.sessionId ||
-                'Unnamed Session';
-
-
-            select.appendChild(
-                option
-            );
-
-        }
-    );
+    });
 
 }
 
 
 /* ============================================================
-   POPULATE TERM
+   POPULATE TERMS
 ============================================================ */
 
-function populateTerms() {
+function populateTerms(terms) {
 
     const select =
         document.getElementById(
             'termSelect'
         );
 
-
     if (!select) {
         return;
     }
-
 
     select.innerHTML =
         '<option value="">Select term</option>';
 
 
-    setupData.terms.forEach(
-        function (term) {
+    terms.forEach(function (term) {
 
-            const option =
-                document.createElement(
-                    'option'
-                );
+        const option =
+            document.createElement('option');
 
+        option.value =
+            term;
 
-            option.value =
-                term;
+        option.textContent =
+            term;
 
+        select.appendChild(option);
 
-            option.textContent =
-                term;
-
-
-            select.appendChild(
-                option
-            );
-
-        }
-    );
+    });
 
 }
 
 
 /* ============================================================
-   POPULATE CLASS
+   POPULATE CLASSES
 ============================================================ */
 
-function populateClasses() {
+function populateClasses(classes) {
 
     const select =
         document.getElementById(
             'classSelect'
         );
 
-
     if (!select) {
         return;
     }
-
 
     select.innerHTML =
         '<option value="">Select class</option>';
 
 
-    setupData.classes.forEach(
-        function (classRecord) {
+    classes.forEach(function (item) {
 
-            const option =
-                document.createElement(
-                    'option'
-                );
+        const option =
+            document.createElement('option');
 
+        option.value =
+            item.classId || '';
 
-            option.value =
-                classRecord.classId || '';
+        option.textContent =
+            buildClassName(item);
 
+        select.appendChild(option);
 
-            option.textContent =
-                buildClassName(
-                    classRecord
-                );
-
-
-            select.appendChild(
-                option
-            );
-
-        }
-    );
+    });
 
 }
 
 
-/* ============================================================
-   CLASS LABEL
-============================================================ */
+function buildClassName(item) {
 
-function buildClassName(classRecord) {
-
-    const className =
-        classRecord.className ||
-        'Unnamed Class';
-
+    const name =
+        item.className || '';
 
     const section =
-        classRecord.section ||
-        '';
+        item.section || '';
 
+    if (section) {
 
-    if (!section) {
-
-        return className;
+        return name + ' - ' + section;
 
     }
 
-
-    return (
-        className +
-        ' — ' +
-        section
-    );
+    return name;
 
 }
 
 
 /* ============================================================
-   DEFAULT SELECTION
+   DEFAULT SELECTIONS
 ============================================================ */
 
-function chooseDefaultSelection() {
+function selectDefaultValues(response) {
 
     const sessionSelect =
         document.getElementById(
             'sessionSelect'
         );
 
-
     const termSelect =
         document.getElementById(
             'termSelect'
         );
-
 
     const classSelect =
         document.getElementById(
@@ -837,133 +701,102 @@ function chooseDefaultSelection() {
         );
 
 
-    let selectedSession =
-        setupData.sessions.find(
-            function (session) {
+    const sessions =
+        response.sessions || [];
 
-                return normalize(
-                    session.status
-                ) === 'active';
+    const terms =
+        response.terms || [];
 
-            }
-        );
+    const classes =
+        response.classes || [];
 
 
-    if (!selectedSession) {
+    let selectedSession = null;
+
+    selectedSession =
+        sessions.find(function (session) {
+
+            return normalizeStatus(
+                session.status
+            ) === 'active';
+
+        });
+
+
+    if (!selectedSession && sessions.length) {
 
         selectedSession =
-            setupData.sessions[0];
+            sessions[0];
 
     }
 
 
-    if (
-        selectedSession &&
-        sessionSelect
-    ) {
+    if (selectedSession && sessionSelect) {
 
         sessionSelect.value =
-            selectedSession.sessionId ||
-            '';
+            selectedSession.sessionId || '';
+
+        currentSelection.sessionId =
+            selectedSession.sessionId || '';
 
     }
 
 
     let selectedTerm =
-        setupData.terms.find(
-            function (term) {
+        terms.find(function (term) {
 
-                return normalize(term) ===
-                    'first term';
+            return String(term).trim() ===
+                'First Term';
 
-            }
-        );
+        });
 
 
-    if (!selectedTerm) {
+    if (!selectedTerm && terms.length) {
 
         selectedTerm =
-            setupData.terms[0];
+            terms[0];
 
     }
 
 
-    if (
-        selectedTerm &&
-        termSelect
-    ) {
+    if (selectedTerm && termSelect) {
 
         termSelect.value =
+            selectedTerm;
+
+        currentSelection.term =
             selectedTerm;
 
     }
 
 
-    let selectedClass =
-        setupData.classes.find(
-            function (classRecord) {
+    let selectedClass = null;
 
-                return normalize(
-                    classRecord.status
-                ) === 'active';
+    selectedClass =
+        classes.find(function (item) {
 
-            }
-        );
+            return normalizeStatus(
+                item.status
+            ) === 'active';
+
+        });
 
 
-    if (!selectedClass) {
+    if (!selectedClass && classes.length) {
 
         selectedClass =
-            setupData.classes[0];
+            classes[0];
 
     }
 
 
-    if (
-        selectedClass &&
-        classSelect
-    ) {
+    if (selectedClass && classSelect) {
 
         classSelect.value =
-            selectedClass.classId ||
-            '';
+            selectedClass.classId || '';
 
-    }
-
-
-    currentSelected = {
-
-        sessionId:
-            sessionSelect
-                ? sessionSelect.value
-                : '',
-
-        term:
-            termSelect
-                ? termSelect.value
-                : '',
-
-        classId:
-            classSelect
-                ? classSelect.value
-                : ''
-
-    };
-
-
-    if (
-        currentSelected.sessionId &&
-        currentSelected.term &&
-        currentSelected.classId
-    ) {
-
-        loadResultManagement();
-
-    } else {
-
-        showSelectionMessage(
-            'Select a session, term and class to view results.'
-        );
+        currentSelection.classId =
+            selectedClass.classId || '';
 
     }
 
@@ -974,19 +807,17 @@ function chooseDefaultSelection() {
    SELECTION CHANGE
 ============================================================ */
 
-function handleSelectionChange() {
+async function handleSelectionChange() {
 
     const sessionSelect =
         document.getElementById(
             'sessionSelect'
         );
 
-
     const termSelect =
         document.getElementById(
             'termSelect'
         );
-
 
     const classSelect =
         document.getElementById(
@@ -994,7 +825,7 @@ function handleSelectionChange() {
         );
 
 
-    currentSelected = {
+    currentSelection = {
 
         sessionId:
             sessionSelect
@@ -1014,16 +845,13 @@ function handleSelectionChange() {
     };
 
 
-    hideMessage();
-
-    hideResultSections();
-
-
     if (
-        !currentSelected.sessionId ||
-        !currentSelected.term ||
-        !currentSelected.classId
+        !currentSelection.sessionId ||
+        !currentSelection.term ||
+        !currentSelection.classId
     ) {
+
+        hideResultSections();
 
         showSelectionMessage(
             'Select a session, term and class to view results.'
@@ -1036,44 +864,58 @@ function handleSelectionChange() {
 
     hideSelectionMessage();
 
-    loadResultManagement();
+    await loadResultManagement();
 
 }
 
 
 /* ============================================================
-   LOAD RESULTS
+   LOAD RESULT MANAGEMENT
 ============================================================ */
 
 async function loadResultManagement() {
 
-    showSelectionLoading();
+    const schoolId =
+        getSchoolId();
 
-    hideMessage();
+    const sessionId =
+        currentSelection.sessionId;
 
-    setOverviewLoading();
+    const term =
+        currentSelection.term;
 
-    setTableLoading();
+    const classId =
+        currentSelection.classId;
+
+
+    if (
+        !schoolId ||
+        !sessionId ||
+        !term ||
+        !classId
+    ) {
+
+        hideResultSections();
+
+        return;
+
+    }
+
+
+    showLoadingState();
+
+
+    const payload = {
+
+        schoolId,
+        sessionId,
+        term,
+        classId
+
+    };
 
 
     try {
-
-        const payload = {
-
-            schoolId:
-                currentSession.schoolId,
-
-            sessionId:
-                currentSelected.sessionId,
-
-            term:
-                currentSelected.term,
-
-            classId:
-                currentSelected.classId
-
-        };
-
 
         const responses =
             await Promise.all([
@@ -1091,78 +933,54 @@ async function loadResultManagement() {
             ]);
 
 
-        const overview =
+        const overviewResponse =
             responses[0];
 
-
-        const students =
+        const studentsResponse =
             responses[1];
 
 
-        if (!overview.success) {
+        if (!overviewResponse.success) {
 
             throw new Error(
-                overview.error ||
-                overview.message ||
-                'Could not load result overview.'
+                overviewResponse.message ||
+                'Unable to load result overview.'
             );
 
         }
 
 
-        if (!students.success) {
+        if (!studentsResponse.success) {
 
             throw new Error(
-                students.error ||
-                students.message ||
-                'Could not load student results.'
+                studentsResponse.message ||
+                'Unable to load student results.'
             );
 
         }
-
-
-        currentOverview =
-            overview;
-
-
-        currentStudents =
-            Array.isArray(
-                students.students
-            )
-                ? students.students
-                : [];
 
 
         renderOverview(
-            overview
+            overviewResponse
         );
-
 
         renderStudents(
-            currentStudents
+            studentsResponse
         );
-
-
-        hideSelectionLoading();
-
-        hideSelectionMessage();
 
 
     } catch (error) {
 
         console.error(
-            'Result management error:',
+            'loadResultManagement error:',
             error
         );
-
-
-        hideSelectionLoading();
 
         hideResultSections();
 
         showMessage(
             error.message ||
-            'Could not load result management data.'
+            'Unable to load results.'
         );
 
     }
@@ -1171,85 +989,78 @@ async function loadResultManagement() {
 
 
 /* ============================================================
-   OVERVIEW LOADING
+   LOADING STATE
 ============================================================ */
 
-function setOverviewLoading() {
+function showLoadingState() {
 
-    const section =
+    const overview =
         document.getElementById(
             'overviewSection'
         );
 
-
-    if (!section) {
-        return;
-    }
-
-
-    section.classList.remove(
-        'hidden'
-    );
-
-
-    document.getElementById(
-        'overviewTitle'
-    ).textContent =
-        'Loading result overview...';
-
-
-    document.getElementById(
-        'overviewSubtitle'
-    ).textContent =
-        'Please wait while result information is loaded.';
-
-
-    document.getElementById(
-        'totalStudents'
-    ).textContent =
-        '—';
-
-
-    document.getElementById(
-        'completedStudents'
-    ).textContent =
-        '—';
-
-
-    document.getElementById(
-        'incompleteStudents'
-    ).textContent =
-        '—';
-
-
-    document.getElementById(
-        'notStartedStudents'
-    ).textContent =
-        '—';
-
-
-    document.getElementById(
-        'readinessBadge'
-    ).textContent =
-        'Checking...';
-
-
-    document.getElementById(
-        'readinessBadge'
-    ).className =
-        'readiness-badge';
-
-
-    const validationPanel =
+    const students =
         document.getElementById(
-            'validationPanel'
+            'studentsSection'
+        );
+
+    const loading =
+        document.getElementById(
+            'tableLoading'
+        );
+
+    const table =
+        document.getElementById(
+            'resultsTable'
+        );
+
+    const empty =
+        document.getElementById(
+            'tableEmpty'
         );
 
 
-    if (validationPanel) {
+    if (overview) {
 
-        validationPanel.className =
-            'validation-panel';
+        overview.classList.remove(
+            'hidden'
+        );
+
+    }
+
+
+    if (students) {
+
+        students.classList.remove(
+            'hidden'
+        );
+
+    }
+
+
+    if (loading) {
+
+        loading.classList.remove(
+            'hidden'
+        );
+
+    }
+
+
+    if (table) {
+
+        table.classList.add(
+            'hidden'
+        );
+
+    }
+
+
+    if (empty) {
+
+        empty.classList.add(
+            'hidden'
+        );
 
     }
 
@@ -1260,40 +1071,62 @@ function setOverviewLoading() {
    RENDER OVERVIEW
 ============================================================ */
 
-function renderOverview(data) {
-
-    const section =
-        document.getElementById(
-            'overviewSection'
-        );
-
-
-    if (section) {
-
-        section.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    const classData =
-        data.class || {};
-
+function renderOverview(response) {
 
     const students =
-        data.students || {};
-
+        response.students || {};
 
     const validation =
-        data.validation || {};
+        response.validation || {};
+
+    const school =
+        response.school || {};
+
+    const session =
+        response.session || {};
+
+    const classData =
+        response.class || {};
+
+
+    const total =
+        Number(students.total || 0);
+
+    const complete =
+        Number(students.complete || 0);
+
+    const incomplete =
+        Number(students.incomplete || 0);
+
+    const notStarted =
+        Number(students.notStarted || 0);
+
+
+    setText(
+        'totalStudents',
+        total
+    );
+
+    setText(
+        'completedStudents',
+        complete
+    );
+
+    setText(
+        'incompleteStudents',
+        incomplete
+    );
+
+    setText(
+        'notStartedStudents',
+        notStarted
+    );
 
 
     const overviewTitle =
         document.getElementById(
             'overviewTitle'
         );
-
 
     const overviewSubtitle =
         document.getElementById(
@@ -1304,74 +1137,30 @@ function renderOverview(data) {
     if (overviewTitle) {
 
         overviewTitle.textContent =
-            buildClassName({
-
-                className:
-                    classData.className,
-
-                section:
-                    classData.section
-
-            });
+            (classData.className || 'Class') +
+            ' Result Overview';
 
     }
 
 
     if (overviewSubtitle) {
 
+        const sessionName =
+            session.sessionName ||
+            currentSelection.sessionId;
+
         overviewSubtitle.textContent =
-            (
-                data.session &&
-                data.session.sessionName
-            )
-                ? (
-                    data.session.sessionName +
-                    ' • ' +
-                    currentSelected.term
-                )
-                : (
-                    currentSelected.sessionId +
-                    ' • ' +
-                    currentSelected.term
-                );
+            (school.schoolName || 'School') +
+            ' • ' +
+            sessionName +
+            ' • ' +
+            currentSelection.term;
 
     }
 
 
-    document.getElementById(
-        'totalStudents'
-    ).textContent =
-        safeNumber(
-            students.total
-        );
-
-
-    document.getElementById(
-        'completedStudents'
-    ).textContent =
-        safeNumber(
-            students.complete
-        );
-
-
-    document.getElementById(
-        'incompleteStudents'
-    ).textContent =
-        safeNumber(
-            students.incomplete
-        );
-
-
-    document.getElementById(
-        'notStartedStudents'
-    ).textContent =
-        safeNumber(
-            students.notStarted
-        );
-
-
     renderReadiness(
-        data.readyForPdf === true,
+        response.readyForPdf === true,
         validation
     );
 
@@ -1392,18 +1181,15 @@ function renderReadiness(
             'readinessBadge'
         );
 
-
     const panel =
         document.getElementById(
             'validationPanel'
         );
 
-
     const title =
         document.getElementById(
             'validationTitle'
         );
-
 
     const message =
         document.getElementById(
@@ -1411,87 +1197,43 @@ function renderReadiness(
         );
 
 
-    const icon =
-        panel
-            ? panel.querySelector(
-                '.validation-icon'
-            )
-            : null;
-
-
-    if (ready) {
-
-        if (badge) {
-
-            badge.textContent =
-                'Ready for PDF';
-
-            badge.className =
-                'readiness-badge ready';
-
-        }
-
-
-        if (panel) {
-
-            panel.className =
-                'validation-panel ready';
-
-        }
-
-
-        if (icon) {
-
-            icon.textContent =
-                '✓';
-
-        }
-
-
-        if (title) {
-
-            title.textContent =
-                'Results are ready';
-
-        }
-
-
-        if (message) {
-
-            message.textContent =
-                'The class has passed the current result validation checks and is ready for result generation.';
-
-        }
-
-
-        return;
-
-    }
-
-
     if (badge) {
 
         badge.textContent =
-            'Not Ready';
+            ready
+                ? 'Ready for PDF'
+                : 'Not Ready';
 
-        badge.className =
-            'readiness-badge not-ready';
+        badge.classList.remove(
+            'ready',
+            'not-ready',
+            'success',
+            'warning'
+        );
+
+        badge.classList.add(
+            ready
+                ? 'ready'
+                : 'not-ready'
+        );
 
     }
 
 
     if (panel) {
 
-        panel.className =
-            'validation-panel error';
+        panel.classList.remove(
+            'ready',
+            'not-ready',
+            'success',
+            'warning'
+        );
 
-    }
-
-
-    if (icon) {
-
-        icon.textContent =
-            '!';
+        panel.classList.add(
+            ready
+                ? 'ready'
+                : 'not-ready'
+        );
 
     }
 
@@ -1499,7 +1241,9 @@ function renderReadiness(
     if (title) {
 
         title.textContent =
-            'Results need attention';
+            ready
+                ? 'Results are ready'
+                : 'Results need attention';
 
     }
 
@@ -1507,7 +1251,8 @@ function renderReadiness(
     if (message) {
 
         message.textContent =
-            buildValidationMessage(
+            getValidationMessage(
+                ready,
                 validation
             );
 
@@ -1516,54 +1261,63 @@ function renderReadiness(
 }
 
 
-/* ============================================================
-   VALIDATION MESSAGE
-============================================================ */
-
-function buildValidationMessage(
+function getValidationMessage(
+    ready,
     validation
 ) {
 
-    if (!validation) {
+    if (ready) {
+
+        return 'All required scores have been completed and the class results are ready for result generation.';
+
+    }
+
+
+    if (
+        validation &&
+        validation.message
+    ) {
+
+        return validation.message;
+
+    }
+
+
+    const missing =
+        Number(
+            validation &&
+            validation.missingCount
+                ? validation.missingCount
+                : 0
+        );
+
+
+    const invalid =
+        Number(
+            validation &&
+            validation.invalidCount
+                ? validation.invalidCount
+                : 0
+        );
+
+
+    if (missing > 0 && invalid > 0) {
 
         return (
-            'The result validation could not confirm that this class is ready.'
+            missing +
+            ' missing score record(s) and ' +
+            invalid +
+            ' invalid score record(s) need attention.'
         );
 
     }
 
 
-    const parts = [];
-
-
-    const missing =
-        getValidationCount(
-            validation,
-            [
-                'missingScores',
-                'missing',
-                'missingCount'
-            ]
-        );
-
-
-    const invalid =
-        getValidationCount(
-            validation,
-            [
-                'invalidScores',
-                'invalid',
-                'invalidCount'
-            ]
-        );
-
-
     if (missing > 0) {
 
-        parts.push(
+        return (
             missing +
-            ' missing score' +
-            (missing === 1 ? '' : 's')
+            ' student result record(s) still have missing scores.'
         );
 
     }
@@ -1571,152 +1325,15 @@ function buildValidationMessage(
 
     if (invalid > 0) {
 
-        parts.push(
-            invalid +
-            ' invalid score' +
-            (invalid === 1 ? '' : 's')
-        );
-
-    }
-
-
-    if (parts.length) {
-
         return (
-            'Please resolve ' +
-            parts.join(' and ') +
-            ' before generating final results.'
+            invalid +
+            ' invalid score record(s) need attention.'
         );
 
     }
 
 
-    return (
-        'Some result requirements are not yet complete. Review the student statuses below.'
-    );
-
-}
-
-
-/* ============================================================
-   VALIDATION COUNT
-============================================================ */
-
-function getValidationCount(
-    validation,
-    keys
-) {
-
-    for (
-        let i = 0;
-        i < keys.length;
-        i++
-    ) {
-
-        const value =
-            validation[keys[i]];
-
-
-        if (
-            typeof value === 'number'
-        ) {
-
-            return value;
-
-        }
-
-
-        if (
-            Array.isArray(value)
-        ) {
-
-            return value.length;
-
-        }
-
-
-        if (
-            value &&
-            typeof value === 'object' &&
-            typeof value.count === 'number'
-        ) {
-
-            return value.count;
-
-        }
-
-    }
-
-
-    return 0;
-
-}
-
-
-/* ============================================================
-   TABLE LOADING
-============================================================ */
-
-function setTableLoading() {
-
-    const loading =
-        document.getElementById(
-            'tableLoading'
-        );
-
-
-    const empty =
-        document.getElementById(
-            'tableEmpty'
-        );
-
-
-    const table =
-        document.getElementById(
-            'resultsTable'
-        );
-
-
-    const section =
-        document.getElementById(
-            'studentsSection'
-        );
-
-
-    if (section) {
-
-        section.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (loading) {
-
-        loading.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (empty) {
-
-        empty.classList.add(
-            'hidden'
-        );
-
-    }
-
-
-    if (table) {
-
-        table.classList.add(
-            'hidden'
-        );
-
-    }
+    return 'Some result records still need attention before the class result can be finalized.';
 
 }
 
@@ -1725,14 +1342,13 @@ function setTableLoading() {
    RENDER STUDENTS
 ============================================================ */
 
-function renderStudents(
-    students
-) {
+function renderStudents(response) {
 
-    const section =
-        document.getElementById(
-            'studentsSection'
-        );
+    const students =
+        response.students || [];
+
+    currentStudents =
+        students;
 
 
     const loading =
@@ -1740,38 +1356,25 @@ function renderStudents(
             'tableLoading'
         );
 
-
     const empty =
         document.getElementById(
             'tableEmpty'
         );
-
 
     const table =
         document.getElementById(
             'resultsTable'
         );
 
-
     const tbody =
         document.getElementById(
             'resultsTableBody'
         );
 
-
-    const count =
+    const recordCount =
         document.getElementById(
             'recordCount'
         );
-
-
-    if (section) {
-
-        section.classList.remove(
-            'hidden'
-        );
-
-    }
 
 
     if (loading) {
@@ -1783,9 +1386,9 @@ function renderStudents(
     }
 
 
-    if (count) {
+    if (recordCount) {
 
-        count.textContent =
+        recordCount.textContent =
             students.length +
             (
                 students.length === 1
@@ -1806,7 +1409,6 @@ function renderStudents(
 
         }
 
-
         if (table) {
 
             table.classList.add(
@@ -1814,7 +1416,6 @@ function renderStudents(
             );
 
         }
-
 
         return;
 
@@ -1847,190 +1448,147 @@ function renderStudents(
     tbody.innerHTML = '';
 
 
-    students.forEach(
-        function (student) {
+    students.forEach(function (student) {
 
-            const row =
-                document.createElement(
-                    'tr'
-                );
+        tbody.appendChild(
+            createStudentRow(student)
+        );
 
+    });
 
-            const admissionCell =
-                document.createElement(
-                    'td'
-                );
+}
 
 
-            admissionCell.innerHTML =
-                '<span class="admission-number">' +
-                escapeHtml(
-                    student.admissionNo ||
-                    '—'
-                ) +
-                '</span>';
+/* ============================================================
+   CREATE STUDENT ROW
+============================================================ */
+
+function createStudentRow(student) {
+
+    const row =
+        document.createElement('tr');
 
 
-            const nameCell =
-                document.createElement(
-                    'td'
-                );
+    const admissionCell =
+        document.createElement('td');
+
+    admissionCell.textContent =
+        safeDisplay(
+            student.admissionNo
+        );
 
 
-            nameCell.innerHTML =
-                '<span class="student-name">' +
-                escapeHtml(
-                    student.fullName ||
-                    'Unnamed Student'
-                ) +
-                '</span>';
+    const nameCell =
+        document.createElement('td');
+
+    nameCell.className =
+        'student-name-cell';
+
+    nameCell.textContent =
+        safeDisplay(
+            student.fullName
+        );
 
 
-            const totalCell =
-                document.createElement(
-                    'td'
-                );
+    const totalCell =
+        document.createElement('td');
+
+    totalCell.textContent =
+        formatNumber(
+            student.total
+        );
 
 
-            totalCell.innerHTML =
-                '<span class="numeric-value">' +
-                formatNumber(
-                    student.total
-                ) +
-                '</span>';
+    const averageCell =
+        document.createElement('td');
+
+    averageCell.textContent =
+        formatAverage(
+            student.average
+        );
 
 
-            const averageCell =
-                document.createElement(
-                    'td'
-                );
+    const positionCell =
+        document.createElement('td');
+
+    positionCell.textContent =
+        formatPosition(
+            student.position
+        );
 
 
-            averageCell.innerHTML =
-                '<span class="numeric-value">' +
-                formatAverage(
-                    student.average
-                ) +
-                '</span>';
+    const statusCell =
+        document.createElement('td');
+
+    statusCell.appendChild(
+        createStatusBadge(
+            student.completionStatus
+        )
+    );
 
 
-            const positionCell =
-                document.createElement(
-                    'td'
-                );
+    const actionCell =
+        document.createElement('td');
 
+    const button =
+        document.createElement('button');
 
-            if (
-                student.position !== null &&
-                student.position !== undefined &&
-                student.position !== ''
-            ) {
+    button.type =
+        'button';
 
-                positionCell.innerHTML =
-                    '<span class="position-value">' +
-                    escapeHtml(
-                        String(
-                            student.position
-                        )
-                    ) +
-                    '</span>';
+    button.className =
+        'view-result-button';
 
-            } else {
+    button.textContent =
+        'View Result';
 
-                positionCell.innerHTML =
-                    '<span class="position-empty">—</span>';
+    button.addEventListener(
+        'click',
+        function () {
 
-            }
-
-
-            const statusCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            statusCell.innerHTML =
-                createStatusBadge(
-                    student.completionStatus
-                );
-
-
-            const actionCell =
-                document.createElement(
-                    'td'
-                );
-
-
-            const viewButton =
-                document.createElement(
-                    'button'
-                );
-
-
-            viewButton.type =
-                'button';
-
-
-            viewButton.className =
-                'view-button';
-
-
-            viewButton.textContent =
-                'View Result';
-
-
-            viewButton.addEventListener(
-                'click',
-                function () {
-
-                    openStudentResult(
-                        student.studentId
-                    );
-
-                }
-            );
-
-
-            actionCell.appendChild(
-                viewButton
-            );
-
-
-            row.appendChild(
-                admissionCell
-            );
-
-            row.appendChild(
-                nameCell
-            );
-
-            row.appendChild(
-                totalCell
-            );
-
-            row.appendChild(
-                averageCell
-            );
-
-            row.appendChild(
-                positionCell
-            );
-
-            row.appendChild(
-                statusCell
-            );
-
-            row.appendChild(
-                actionCell
-            );
-
-
-            tbody.appendChild(
-                row
+            openStudentResult(
+                student
             );
 
         }
     );
+
+
+    actionCell.appendChild(
+        button
+    );
+
+
+    row.appendChild(
+        admissionCell
+    );
+
+    row.appendChild(
+        nameCell
+    );
+
+    row.appendChild(
+        totalCell
+    );
+
+    row.appendChild(
+        averageCell
+    );
+
+    row.appendChild(
+        positionCell
+    );
+
+    row.appendChild(
+        statusCell
+    );
+
+    row.appendChild(
+        actionCell
+    );
+
+
+    return row;
 
 }
 
@@ -2039,63 +1597,60 @@ function renderStudents(
    STATUS BADGE
 ============================================================ */
 
-function createStatusBadge(
-    status
-) {
+function createStatusBadge(status) {
+
+    const badge =
+        document.createElement('span');
 
     const normalized =
-        normalize(
-            status
-        );
+        normalizeStatus(status);
 
 
-    let className =
-        'status-not-started';
-
-
-    let label =
-        status ||
-        'Not Started';
+    badge.className =
+        'result-status';
 
 
     if (
         normalized === 'complete'
     ) {
 
-        className =
-            'status-complete';
+        badge.classList.add(
+            'status-complete'
+        );
 
-        label =
+        badge.textContent =
             'Complete';
 
-    } else if (
-        normalized === 'incomplete'
-    ) {
-
-        className =
-            'status-incomplete';
-
-        label =
-            'Incomplete';
-
-    } else {
-
-        className =
-            'status-not-started';
-
-        label =
-            'Not Started';
+        return badge;
 
     }
 
 
-    return (
-        '<span class="status-badge ' +
-        className +
-        '">' +
-        escapeHtml(label) +
-        '</span>'
+    if (
+        normalized === 'incomplete'
+    ) {
+
+        badge.classList.add(
+            'status-incomplete'
+        );
+
+        badge.textContent =
+            'Incomplete';
+
+        return badge;
+
+    }
+
+
+    badge.classList.add(
+        'status-not-started'
     );
+
+    badge.textContent =
+        'Not Started';
+
+
+    return badge;
 
 }
 
@@ -2104,14 +1659,12 @@ function createStatusBadge(
    OPEN STUDENT RESULT
 ============================================================ */
 
-async function openStudentResult(
-    studentId
-) {
+async function openStudentResult(student) {
 
-    if (!studentId) {
+    if (!student || !student.studentId) {
 
         showMessage(
-            'Student ID is missing.'
+            'The selected student could not be identified.'
         );
 
         return;
@@ -2124,10 +1677,14 @@ async function openStudentResult(
             'studentResultModal'
         );
 
-
     const body =
         document.getElementById(
             'resultModalBody'
+        );
+
+    const title =
+        document.getElementById(
+            'studentResultTitle'
         );
 
 
@@ -2136,585 +1693,91 @@ async function openStudentResult(
     }
 
 
+    if (title) {
+
+        title.textContent =
+            student.fullName ||
+            'Student Result';
+
+    }
+
+
+    body.innerHTML =
+        getResultLoadingMarkup();
+
+
     modal.classList.remove(
         'hidden'
     );
 
 
-    body.innerHTML = `
-        <div class="result-loading">
-            <div class="loading-spinner"></div>
-            <span>Loading result...</span>
-        </div>
-    `;
+    document.body.classList.add(
+        'modal-open'
+    );
 
 
-    document.body.style.overflow =
-        'hidden';
+    const schoolId =
+        getSchoolId();
 
 
     try {
 
-        const result =
+        const response =
             await apiRequest(
                 'getResultManagementStudent',
                 {
-
-                    schoolId:
-                        currentSession.schoolId,
-
+                    schoolId,
                     sessionId:
-                        currentSelected.sessionId,
-
+                        currentSelection.sessionId,
                     term:
-                        currentSelected.term,
-
+                        currentSelection.term,
                     studentId:
-                        studentId
-
+                        student.studentId
                 }
             );
 
 
-        if (!result.success) {
+        if (!response.success) {
 
             throw new Error(
-                result.error ||
-                result.message ||
-                'Student result could not be loaded.'
+                response.message ||
+                'Unable to load this student result.'
             );
 
         }
 
 
+        currentStudentResult =
+            response.result || null;
+
+
         renderStudentResult(
-            result.result
+            response.result || {},
+            student
         );
 
 
     } catch (error) {
 
         console.error(
-            'Student result error:',
+            'openStudentResult error:',
             error
         );
 
 
-        body.innerHTML = `
-            <div class="table-empty">
-                <div class="empty-icon">!</div>
-                <strong>Could not load result</strong>
-                <span>${escapeHtml(
-                    error.message ||
-                    'An error occurred.'
-                )}</span>
-            </div>
-        `;
-
-    }
-
-}
-
-
-/* ============================================================
-   RENDER STUDENT RESULT
-============================================================ */
-
-function renderStudentResult(
-    result
-) {
-
-    const body =
-        document.getElementById(
-            'resultModalBody'
-        );
-
-
-    if (!body) {
-        return;
-    }
-
-
-    if (!result) {
-
-        body.innerHTML = `
-            <div class="table-empty">
-                <div class="empty-icon">!</div>
-                <strong>No result found</strong>
-                <span>This student does not have a result for the selected period.</span>
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    const student =
-        result.student ||
-        {};
-
-
-    const summary =
-        result.summary ||
-        {};
-
-
-    const subjects =
-        Array.isArray(
-            result.subjects
-        )
-            ? result.subjects
-            : (
-                Array.isArray(
-                    result.results
-                )
-                    ? result.results
-                    : []
+        body.innerHTML =
+            getResultErrorMarkup(
+                error.message ||
+                'Unable to load the student result.'
             );
 
-
-    const comments =
-        result.comments ||
-        {};
-
-
-    const fullName =
-        firstValue(
-            student.fullName,
-            student.name,
-            result.fullName,
-            'Student'
-        );
-
-
-    const admissionNo =
-        firstValue(
-            student.admissionNo,
-            student.admissionNumber,
-            result.admissionNo,
-            '—'
-        );
-
-
-    const total =
-        firstValue(
-            summary.overallTotal,
-            summary.total,
-            result.total,
-            null
-        );
-
-
-    const average =
-        firstValue(
-            summary.average,
-            result.average,
-            null
-        );
-
-
-    const position =
-        firstValue(
-            summary.position,
-            result.position,
-            null
-        );
-
-
-    const completionStatus =
-        firstValue(
-            summary.completionStatus,
-            result.completionStatus,
-            'Not Started'
-        );
-
-
-    const studentTitle =
-        document.getElementById(
-            'studentResultTitle'
-        );
-
-
-    if (studentTitle) {
-
-        studentTitle.textContent =
-            fullName;
-
     }
-
-
-    body.innerHTML = `
-
-        <div class="result-student-header">
-
-            <h3>
-                ${escapeHtml(fullName)}
-            </h3>
-
-            <div class="result-student-meta">
-
-                <span>
-                    Admission No.:
-                    <strong>
-                        ${escapeHtml(
-                            admissionNo
-                        )}
-                    </strong>
-                </span>
-
-                <span>
-                    ${escapeHtml(
-                        currentSelected.term
-                    )}
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="result-detail-summary">
-
-            <div class="result-detail-card">
-
-                <span>
-                    TOTAL
-                </span>
-
-                <strong>
-                    ${formatNumber(total)}
-                </strong>
-
-            </div>
-
-
-            <div class="result-detail-card">
-
-                <span>
-                    AVERAGE
-                </span>
-
-                <strong>
-                    ${formatAverage(average)}
-                </strong>
-
-            </div>
-
-
-            <div class="result-detail-card">
-
-                <span>
-                    POSITION
-                </span>
-
-                <strong>
-                    ${
-                        position !== null &&
-                        position !== undefined &&
-                        position !== ''
-                            ? escapeHtml(
-                                String(position)
-                            )
-                            : '—'
-                    }
-                </strong>
-
-            </div>
-
-        </div>
-
-
-        <div class="result-detail-section">
-
-            <h4>
-                Result Status
-            </h4>
-
-            ${createStatusBadge(
-                completionStatus
-            )}
-
-        </div>
-
-
-        ${
-            subjects.length
-                ? createSubjectResultsTable(
-                    subjects
-                )
-                : ''
-        }
-
-
-        ${createCommentsSection(
-            comments
-        )}
-
-    `;
 
 }
 
 
 /* ============================================================
-   SUBJECT TABLE
-============================================================ */
-
-function createSubjectResultsTable(
-    subjects
-) {
-
-    let rows = '';
-
-
-    subjects.forEach(
-        function (subject) {
-
-            const subjectName =
-                firstValue(
-                    subject.subjectName,
-                    subject.subject,
-                    subject.name,
-                    subject['Subject Name'],
-                    'Subject'
-                );
-
-
-            const test =
-                firstValue(
-                    subject.testScore,
-                    subject.test,
-                    subject.testMark,
-                    null
-                );
-
-
-            const exam =
-                firstValue(
-                    subject.examScore,
-                    subject.exam,
-                    subject.examMark,
-                    null
-                );
-
-
-            const total =
-                firstValue(
-                    subject.totalScore,
-                    subject.total,
-                    null
-                );
-
-
-            const grade =
-                firstValue(
-                    subject.grade,
-                    subject.Grade,
-                    '—'
-                );
-
-
-            const remark =
-                firstValue(
-                    subject.remark,
-                    subject.Remark,
-                    '—'
-                );
-
-
-            rows += `
-
-                <tr>
-
-                    <td>
-                        ${escapeHtml(
-                            subjectName
-                        )}
-                    </td>
-
-                    <td>
-                        ${formatNumber(test)}
-                    </td>
-
-                    <td>
-                        ${formatNumber(exam)}
-                    </td>
-
-                    <td>
-                        ${formatNumber(total)}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            String(grade)
-                        )}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            String(remark)
-                        )}
-                    </td>
-
-                </tr>
-
-            `;
-
-        }
-    );
-
-
-    return `
-
-        <div class="result-detail-section">
-
-            <h4>
-                Subject Results
-            </h4>
-
-            <div class="result-detail-table-wrapper">
-
-                <table class="result-detail-table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Subject
-                            </th>
-
-                            <th>
-                                Test
-                            </th>
-
-                            <th>
-                                Exam
-                            </th>
-
-                            <th>
-                                Total
-                            </th>
-
-                            <th>
-                                Grade
-                            </th>
-
-                            <th>
-                                Remark
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        ${rows}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   COMMENTS
-============================================================ */
-
-function createCommentsSection(
-    comments
-) {
-
-    if (!comments) {
-
-        return '';
-
-    }
-
-
-    const teacherComment =
-        firstValue(
-            comments.teacherComment,
-            comments['Teacher Comment'],
-            ''
-        );
-
-
-    const principalComment =
-        firstValue(
-            comments.principalComment,
-            comments['Principal Comment'],
-            ''
-        );
-
-
-    if (
-        !teacherComment &&
-        !principalComment
-    ) {
-
-        return '';
-
-    }
-
-
-    return `
-
-        <div class="result-detail-section">
-
-            <h4>
-                Comments
-            </h4>
-
-
-            ${
-                teacherComment
-                    ? `
-                        <p>
-                            <strong>
-                                Teacher:
-                            </strong>
-                            ${escapeHtml(
-                                teacherComment
-                            )}
-                        </p>
-                    `
-                    : ''
-            }
-
-
-            ${
-                principalComment
-                    ? `
-                        <p>
-                            <strong>
-                                Principal:
-                            </strong>
-                            ${escapeHtml(
-                                principalComment
-                            )}
-                        </p>
-                    `
-                    : ''
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   CLOSE RESULT MODAL
+   CLOSE STUDENT RESULT
 ============================================================ */
 
 function closeStudentResultModal() {
@@ -2724,18 +1787,1163 @@ function closeStudentResultModal() {
             'studentResultModal'
         );
 
+    if (!modal) {
+        return;
+    }
 
-    if (modal) {
 
-        modal.classList.add(
-            'hidden'
+    modal.classList.add(
+        'hidden'
+    );
+
+
+    document.body.classList.remove(
+        'modal-open'
+    );
+
+
+    currentStudentResult =
+        null;
+
+}
+
+
+/* ============================================================
+   RESULT LOADING MARKUP
+============================================================ */
+
+function getResultLoadingMarkup() {
+
+    return `
+        <div class="result-loading">
+
+            <div class="loading-spinner"></div>
+
+            <span>
+                Loading result...
+            </span>
+
+        </div>
+    `;
+
+}
+
+
+/* ============================================================
+   RESULT ERROR MARKUP
+============================================================ */
+
+function getResultErrorMarkup(message) {
+
+    return `
+        <div class="result-error">
+
+            <strong>
+                Unable to load result
+            </strong>
+
+            <span>
+                ${escapeHtml(message)}
+            </span>
+
+        </div>
+    `;
+
+}
+
+
+/* ============================================================
+   RENDER STUDENT RESULT
+============================================================ */
+
+function renderStudentResult(
+    result,
+    fallbackStudent
+) {
+
+    const body =
+        document.getElementById(
+            'resultModalBody'
+        );
+
+    if (!body) {
+        return;
+    }
+
+
+    const student =
+        result.student ||
+        fallbackStudent ||
+        {};
+
+
+    const summary =
+        result.summary ||
+        {};
+
+
+    const subjects =
+        Array.isArray(result.subjects)
+            ? result.subjects
+            : Array.isArray(result.results)
+                ? result.results
+                : [];
+
+
+    const comments =
+        result.comments ||
+        {};
+
+
+    body.innerHTML = '';
+
+
+    body.appendChild(
+        buildStudentInformation(
+            result,
+            student
+        )
+    );
+
+
+    body.appendChild(
+        buildPerformanceSummary(
+            summary,
+            result
+        )
+    );
+
+
+    body.appendChild(
+        buildSubjectResults(
+            subjects
+        )
+    );
+
+
+    body.appendChild(
+        buildCommentsSection(
+            comments
+        )
+    );
+
+}
+
+
+/* ============================================================
+   STUDENT INFORMATION
+============================================================ */
+
+function buildStudentInformation(
+    result,
+    student
+) {
+
+    const section =
+        document.createElement('section');
+
+    section.className =
+        'result-section student-result-information';
+
+
+    const title =
+        document.createElement('div');
+
+    title.className =
+        'result-section-title';
+
+    title.textContent =
+        'STUDENT INFORMATION';
+
+
+    section.appendChild(
+        title
+    );
+
+
+    const grid =
+        document.createElement('div');
+
+    grid.className =
+        'result-information-grid';
+
+
+    addInformationItem(
+        grid,
+        'Student Name',
+        student.fullName
+    );
+
+
+    addInformationItem(
+        grid,
+        'Admission No.',
+        student.admissionNo
+    );
+
+
+    addInformationItem(
+        grid,
+        'Gender',
+        student.gender
+    );
+
+
+    addInformationItem(
+        grid,
+        'Class',
+        getResultClassName(result)
+    );
+
+
+    addInformationItem(
+        grid,
+        'Session',
+        getResultSessionName(result)
+    );
+
+
+    addInformationItem(
+        grid,
+        'Term',
+        result.term ||
+        currentSelection.term
+    );
+
+
+    section.appendChild(
+        grid
+    );
+
+
+    return section;
+
+}
+
+
+function addInformationItem(
+    container,
+    label,
+    value
+) {
+
+    const item =
+        document.createElement('div');
+
+    item.className =
+        'result-information-item';
+
+
+    const labelElement =
+        document.createElement('span');
+
+    labelElement.className =
+        'result-information-label';
+
+    labelElement.textContent =
+        label;
+
+
+    const valueElement =
+        document.createElement('strong');
+
+    valueElement.className =
+        'result-information-value';
+
+    valueElement.textContent =
+        safeDisplay(value);
+
+
+    item.appendChild(
+        labelElement
+    );
+
+    item.appendChild(
+        valueElement
+    );
+
+
+    container.appendChild(
+        item
+    );
+
+}
+
+
+/* ============================================================
+   PERFORMANCE SUMMARY
+============================================================ */
+
+function buildPerformanceSummary(
+    summary,
+    result
+) {
+
+    const section =
+        document.createElement('section');
+
+    section.className =
+        'result-section';
+
+
+    const title =
+        document.createElement('div');
+
+    title.className =
+        'result-section-title';
+
+    title.textContent =
+        'PERFORMANCE SUMMARY';
+
+
+    section.appendChild(
+        title
+    );
+
+
+    const grid =
+        document.createElement('div');
+
+    grid.className =
+        'result-performance-grid';
+
+
+    addPerformanceItem(
+        grid,
+        'Total',
+        summary.overallTotal ??
+        summary.total ??
+        result.total ??
+        0
+    );
+
+
+    addPerformanceItem(
+        grid,
+        'Average',
+        formatAverage(
+            summary.average ??
+            result.average
+        )
+    );
+
+
+    addPerformanceItem(
+        grid,
+        'Position',
+        formatPosition(
+            summary.position ??
+            result.position
+        )
+    );
+
+
+    addPerformanceItem(
+        grid,
+        'Status',
+        formatCompletionStatus(
+            summary.completionStatus
+        )
+    );
+
+
+    section.appendChild(
+        grid
+    );
+
+
+    return section;
+
+}
+
+
+function addPerformanceItem(
+    container,
+    label,
+    value
+) {
+
+    const item =
+        document.createElement('div');
+
+    item.className =
+        'performance-item';
+
+
+    const labelElement =
+        document.createElement('span');
+
+    labelElement.className =
+        'performance-label';
+
+    labelElement.textContent =
+        label;
+
+
+    const valueElement =
+        document.createElement('strong');
+
+    valueElement.className =
+        'performance-value';
+
+    valueElement.textContent =
+        safeDisplay(value);
+
+
+    item.appendChild(
+        labelElement
+    );
+
+    item.appendChild(
+        valueElement
+    );
+
+
+    container.appendChild(
+        item
+    );
+
+}
+
+
+/* ============================================================
+   SUBJECT RESULTS
+============================================================ */
+
+function buildSubjectResults(
+    subjects
+) {
+
+    const section =
+        document.createElement('section');
+
+    section.className =
+        'result-section';
+
+
+    const title =
+        document.createElement('div');
+
+    title.className =
+        'result-section-title';
+
+    title.textContent =
+        'SUBJECT RESULTS';
+
+
+    section.appendChild(
+        title
+    );
+
+
+    if (!subjects.length) {
+
+        const empty =
+            document.createElement('div');
+
+        empty.className =
+            'result-empty';
+
+        empty.textContent =
+            'No subject results are available for this student.';
+
+        section.appendChild(
+            empty
+        );
+
+        return section;
+
+    }
+
+
+    const wrapper =
+        document.createElement('div');
+
+    wrapper.className =
+        'result-subject-table-wrapper';
+
+
+    const table =
+        document.createElement('table');
+
+    table.className =
+        'result-subject-table';
+
+
+    table.innerHTML = `
+        <thead>
+
+            <tr>
+                <th>Subject</th>
+                <th>Test</th>
+                <th>Exam</th>
+                <th>Total</th>
+                <th>Grade</th>
+                <th>Remark</th>
+            </tr>
+
+        </thead>
+
+        <tbody></tbody>
+    `;
+
+
+    const tbody =
+        table.querySelector('tbody');
+
+
+    subjects.forEach(function (subject) {
+
+        const row =
+            document.createElement('tr');
+
+
+        const subjectName =
+            getSubjectValue(
+                subject,
+                [
+                    'subjectName',
+                    'Subject Name',
+                    'subject'
+                ]
+            );
+
+
+        const test =
+            getSubjectValue(
+                subject,
+                [
+                    'testScore',
+                    'Test Score',
+                    'test'
+                ]
+            );
+
+
+        const exam =
+            getSubjectValue(
+                subject,
+                [
+                    'examScore',
+                    'Exam Score',
+                    'exam'
+                ]
+            );
+
+
+        const total =
+            getSubjectValue(
+                subject,
+                [
+                    'totalScore',
+                    'Total Score',
+                    'total'
+                ]
+            );
+
+
+        const grade =
+            getSubjectValue(
+                subject,
+                [
+                    'grade',
+                    'Grade'
+                ]
+            );
+
+
+        const remark =
+            getSubjectValue(
+                subject,
+                [
+                    'remark',
+                    'Remark'
+                ]
+            );
+
+
+        row.appendChild(
+            createTableCell(
+                subjectName
+            )
+        );
+
+        row.appendChild(
+            createTableCell(
+                formatScore(test)
+            )
+        );
+
+        row.appendChild(
+            createTableCell(
+                formatScore(exam)
+            )
+        );
+
+        row.appendChild(
+            createTableCell(
+                formatScore(total)
+            )
+        );
+
+        row.appendChild(
+            createTableCell(
+                grade
+            )
+        );
+
+        row.appendChild(
+            createTableCell(
+                remark
+            )
+        );
+
+
+        tbody.appendChild(
+            row
+        );
+
+    });
+
+
+    wrapper.appendChild(
+        table
+    );
+
+
+    section.appendChild(
+        wrapper
+    );
+
+
+    return section;
+
+}
+
+
+/* ============================================================
+   COMMENTS
+============================================================ */
+
+function buildCommentsSection(
+    comments
+) {
+
+    const section =
+        document.createElement('section');
+
+    section.className =
+        'result-section';
+
+
+    const title =
+        document.createElement('div');
+
+    title.className =
+        'result-section-title';
+
+    title.textContent =
+        'COMMENTS';
+
+
+    section.appendChild(
+        title
+    );
+
+
+    const teacherComment =
+        comments.teacherComment ||
+        comments['Teacher Comment'] ||
+        '';
+
+
+    const principalComment =
+        comments.principalComment ||
+        comments['Principal Comment'] ||
+        '';
+
+
+    const commentsGrid =
+        document.createElement('div');
+
+    commentsGrid.className =
+        'result-comments-grid';
+
+
+    commentsGrid.appendChild(
+        createCommentBox(
+            'Teacher Comment',
+            teacherComment
+        )
+    );
+
+
+    commentsGrid.appendChild(
+        createCommentBox(
+            'Principal Comment',
+            principalComment
+        )
+    );
+
+
+    section.appendChild(
+        commentsGrid
+    );
+
+
+    return section;
+
+}
+
+
+function createCommentBox(
+    label,
+    value
+) {
+
+    const box =
+        document.createElement('div');
+
+    box.className =
+        'result-comment-box';
+
+
+    const heading =
+        document.createElement('strong');
+
+    heading.textContent =
+        label;
+
+
+    const text =
+        document.createElement('p');
+
+    text.textContent =
+        safeDisplay(
+            value,
+            'No comment entered.'
+        );
+
+
+    box.appendChild(
+        heading
+    );
+
+    box.appendChild(
+        text
+    );
+
+
+    return box;
+
+}
+
+
+/* ============================================================
+   RESULT HELPERS
+============================================================ */
+
+function getResultClassName(result) {
+
+    if (result.class) {
+
+        if (typeof result.class === 'string') {
+            return result.class;
+        }
+
+        return buildClassName(
+            result.class
         );
 
     }
 
 
-    document.body.style.overflow =
-        '';
+    if (result.className) {
+        return result.className;
+    }
+
+
+    return '';
+
+}
+
+
+function getResultSessionName(result) {
+
+    if (result.session) {
+
+        if (
+            typeof result.session ===
+            'string'
+        ) {
+
+            return result.session;
+
+        }
+
+        return (
+            result.session.sessionName ||
+            result.session['Session Name'] ||
+            ''
+        );
+
+    }
+
+
+    return (
+        result.sessionName ||
+        ''
+    );
+
+}
+
+
+function getSubjectValue(
+    subject,
+    keys
+) {
+
+    for (
+        let index = 0;
+        index < keys.length;
+        index++
+    ) {
+
+        const key =
+            keys[index];
+
+        if (
+            subject[key] !== undefined &&
+            subject[key] !== null
+        ) {
+
+            return subject[key];
+
+        }
+
+    }
+
+    return '';
+
+}
+
+
+function createTableCell(value) {
+
+    const cell =
+        document.createElement('td');
+
+    cell.textContent =
+        safeDisplay(value);
+
+
+    return cell;
+
+}
+
+
+/* ============================================================
+   FORMATTING
+============================================================ */
+
+function formatNumber(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ''
+    ) {
+
+        return '0';
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (Number.isNaN(number)) {
+
+        return safeDisplay(
+            value,
+            '0'
+        );
+
+    }
+
+
+    return number.toString();
+
+}
+
+
+function formatScore(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ''
+    ) {
+
+        return '—';
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (Number.isNaN(number)) {
+
+        return safeDisplay(
+            value,
+            '—'
+        );
+
+    }
+
+
+    return number.toString();
+
+}
+
+
+function formatAverage(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ''
+    ) {
+
+        return '—';
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (Number.isNaN(number)) {
+
+        return safeDisplay(
+            value,
+            '—'
+        );
+
+    }
+
+
+    return number.toFixed(2);
+
+}
+
+
+function formatPosition(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === '' ||
+        String(value).toLowerCase() ===
+            'null'
+    ) {
+
+        return '—';
+
+    }
+
+
+    return String(value);
+
+}
+
+
+function formatCompletionStatus(
+    value
+) {
+
+    const normalized =
+        normalizeStatus(value);
+
+
+    if (normalized === 'complete') {
+
+        return 'Complete';
+
+    }
+
+
+    if (
+        normalized ===
+        'incomplete'
+    ) {
+
+        return 'Incomplete';
+
+    }
+
+
+    return 'Not Started';
+
+}
+
+
+function normalizeStatus(value) {
+
+    return String(
+        value || ''
+    )
+        .trim()
+        .toLowerCase()
+        .replace(/_/g, ' ');
+
+}
+
+
+function safeDisplay(
+    value,
+    fallback
+) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ''
+    ) {
+
+        return fallback !== undefined
+            ? fallback
+            : '—';
+
+    }
+
+    return String(value);
+
+}
+
+
+/* ============================================================
+   HTML ESCAPING
+============================================================ */
+
+function escapeHtml(value) {
+
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+}
+
+
+/* ============================================================
+   PAGE MESSAGE
+============================================================ */
+
+function showMessage(message) {
+
+    const container =
+        document.getElementById(
+            'pageMessage'
+        );
+
+    const text =
+        document.getElementById(
+            'messageText'
+        );
+
+
+    if (!container || !text) {
+        return;
+    }
+
+
+    text.textContent =
+        message || '';
+
+
+    container.classList.remove(
+        'hidden'
+    );
+
+}
+
+
+function hideMessage() {
+
+    const container =
+        document.getElementById(
+            'pageMessage'
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    container.classList.add(
+        'hidden'
+    );
+
+}
+
+
+/* ============================================================
+   SELECTION MESSAGE
+============================================================ */
+
+function showSelectionMessage(
+    message
+) {
+
+    const container =
+        document.getElementById(
+            'selectionMessage'
+        );
+
+    const text =
+        document.getElementById(
+            'selectionMessageText'
+        );
+
+
+    if (!container || !text) {
+        return;
+    }
+
+
+    text.textContent =
+        message || '';
+
+
+    container.classList.remove(
+        'hidden'
+    );
+
+}
+
+
+function hideSelectionMessage() {
+
+    const container =
+        document.getElementById(
+            'selectionMessage'
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    container.classList.add(
+        'hidden'
+    );
 
 }
 
@@ -2750,7 +2958,6 @@ function hideResultSections() {
         document.getElementById(
             'overviewSection'
         );
-
 
     const students =
         document.getElementById(
@@ -2779,122 +2986,19 @@ function hideResultSections() {
 
 
 /* ============================================================
-   SELECTION LOADING
-============================================================ */
-
-function showSelectionLoading() {
-
-    const message =
-        document.getElementById(
-            'selectionMessage'
-        );
-
-
-    const text =
-        document.getElementById(
-            'selectionMessageText'
-        );
-
-
-    if (message) {
-
-        message.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (text) {
-
-        text.textContent =
-            'Loading result management data...';
-
-    }
-
-}
-
-
-function hideSelectionLoading() {
-
-    hideSelectionMessage();
-
-}
-
-
-/* ============================================================
-   SELECTION MESSAGE
-============================================================ */
-
-function showSelectionMessage(
-    messageText
-) {
-
-    const message =
-        document.getElementById(
-            'selectionMessage'
-        );
-
-
-    const text =
-        document.getElementById(
-            'selectionMessageText'
-        );
-
-
-    if (message) {
-
-        message.classList.remove(
-            'hidden'
-        );
-
-    }
-
-
-    if (text) {
-
-        text.textContent =
-            messageText;
-
-    }
-
-}
-
-
-function hideSelectionMessage() {
-
-    const message =
-        document.getElementById(
-            'selectionMessage'
-        );
-
-
-    if (message) {
-
-        message.classList.add(
-            'hidden'
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   API REQUEST
+   API
 ============================================================ */
 
 async function apiRequest(
     action,
-    payload
+    data
 ) {
 
-    const requestBody = {
+    const payload = {
 
-        action:
-            action,
+        action: action,
 
-        ...payload
+        ...data
 
     };
 
@@ -2903,57 +3007,39 @@ async function apiRequest(
         await fetch(
             API_URL,
             {
-
                 method: 'POST',
 
                 headers: {
-
                     'Content-Type':
                         'text/plain;charset=utf-8'
-
                 },
 
                 body:
                     JSON.stringify(
-                        requestBody
+                        payload
                     )
-
             }
         );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            'Server request failed with status ' +
-            response.status +
-            '.'
-        );
-
-    }
 
 
     const text =
         await response.text();
 
 
-    let data;
+    let parsed;
 
 
     try {
 
-        data =
-            JSON.parse(
-                text
-            );
+        parsed =
+            JSON.parse(text);
 
     } catch (error) {
 
         console.error(
-            'Invalid server response:',
+            'Invalid API response:',
             text
         );
-
 
         throw new Error(
             'The server returned an invalid response.'
@@ -2962,83 +3048,7 @@ async function apiRequest(
     }
 
 
-    return data;
-
-}
-
-
-/* ============================================================
-   PAGE MESSAGE
-============================================================ */
-
-function showMessage(
-    message
-) {
-
-    const pageMessage =
-        document.getElementById(
-            'pageMessage'
-        );
-
-
-    const messageText =
-        document.getElementById(
-            'messageText'
-        );
-
-
-    if (!pageMessage) {
-        return;
-    }
-
-
-    if (messageText) {
-
-        messageText.textContent =
-            message ||
-            'Something went wrong.';
-
-    }
-
-
-    pageMessage.classList.remove(
-        'hidden'
-    );
-
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: 'smooth'
-
-    });
-
-}
-
-
-/*
- * This is the function that was missing.
- *
- * All previous calls to hidePageMessage()
- * have been standardized to this function.
- */
-
-function hideMessage() {
-
-    const pageMessage =
-        document.getElementById(
-            'pageMessage'
-        );
-
-
-    if (pageMessage) {
-
-        pageMessage.classList.add(
-            'hidden'
-        );
-
-    }
+    return parsed;
 
 }
 
@@ -3053,10 +3063,8 @@ function logout() {
         SESSION_KEY
     );
 
-
     currentSession =
         null;
-
 
     window.location.href =
         'index.html';
@@ -3072,204 +3080,5 @@ function redirectToLogin() {
 
     window.location.href =
         'index.html';
-
-}
-
-
-/* ============================================================
-   HELPERS
-============================================================ */
-
-function normalize(value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return '';
-
-    }
-
-
-    return String(value)
-        .trim()
-        .toLowerCase();
-
-}
-
-
-function safeNumber(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ''
-    ) {
-
-        return '0';
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return '0';
-
-    }
-
-
-    return String(number);
-
-}
-
-
-function formatNumber(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ''
-    ) {
-
-        return '—';
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return escapeHtml(
-            String(value)
-        );
-
-    }
-
-
-    return Number.isInteger(number)
-        ? String(number)
-        : number.toFixed(2);
-
-}
-
-
-function formatAverage(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ''
-    ) {
-
-        return '—';
-
-    }
-
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return escapeHtml(
-            String(value)
-        );
-
-    }
-
-
-    return number.toFixed(2);
-
-}
-
-
-function firstValue() {
-
-    const values =
-        Array.from(
-            arguments
-        );
-
-
-    for (
-        let i = 0;
-        i < values.length;
-        i++
-    ) {
-
-        const value =
-            values[i];
-
-
-        if (
-            value !== null &&
-            value !== undefined &&
-            value !== ''
-        ) {
-
-            return value;
-
-        }
-
-    }
-
-
-    return null;
-
-}
-
-
-/* ============================================================
-   ESCAPE HTML
-============================================================ */
-
-function escapeHtml(value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return '';
-
-    }
-
-
-    return String(value)
-        .replace(
-            /&/g,
-            '&amp;'
-        )
-        .replace(
-            /</g,
-            '&lt;'
-        )
-        .replace(
-            />/g,
-            '&gt;'
-        )
-        .replace(
-            /"/g,
-            '&quot;'
-        )
-        .replace(
-            /'/g,
-            '&#039;'
-        );
 
 }
