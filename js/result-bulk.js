@@ -214,7 +214,91 @@
         addPresetDropdown('teacherCommentInput', TEACHER_PRESETS);
         addPresetDropdown('principalCommentInput', PRINCIPAL_PRESETS);
 
+        loadSavedComments();
+
     };
+
+    function showSavedComment(inputId, displayId, presets, value, emptyText) {
+
+        var ta = document.getElementById(inputId);
+        var display = document.getElementById(displayId);
+
+        if (ta && !String(ta.value || '').trim()) {
+
+            ta.value = value;
+
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+
+            var select = ta.parentNode.querySelector('.comment-preset-select');
+
+            if (select) {
+                select.innerHTML = presetOptions(presets, value);
+            }
+
+        }
+
+        if (display && value) {
+            display.textContent = value;
+        }
+
+    }
+
+    /*
+     * Reads the saved comments straight from the Comments sheet
+     * (getResultComments) every time a result is opened, so the
+     * page no longer depends on the final-result call returning them.
+     */
+
+    async function loadSavedComments() {
+
+        var studentId = currentViewedStudentId;
+
+        if (!studentId) { return; }
+
+        try {
+
+            var response = await apiRequest('getResultComments', {
+                schoolId: currentSession.schoolId,
+                sessionId: currentSelected.sessionId,
+                term: currentSelected.term,
+                studentId: studentId
+            });
+
+            if (studentId !== currentViewedStudentId) { return; }
+
+            if (
+                !response ||
+                !response.success ||
+                !response.exists ||
+                !response.comment
+            ) {
+                return;
+            }
+
+            var teacher = response.comment['Teacher Comment'] || '';
+            var principal = response.comment['Principal Comment'] || '';
+
+            showSavedComment(
+                'teacherCommentInput', 'displayTeacherComment',
+                TEACHER_PRESETS, teacher
+            );
+
+            showSavedComment(
+                'principalCommentInput', 'displayPrincipalComment',
+                PRINCIPAL_PRESETS, principal
+            );
+
+            if (currentViewedResult) {
+                currentViewedResult.comments = response.comment;
+            }
+
+        } catch (error) {
+
+            console.warn('Unable to load saved comments:', error);
+
+        }
+
+    }
 
 
     /* ========================================================
@@ -731,17 +815,32 @@
                 );
             }
 
+            // Single merged file, or a Drive folder of per-student PDFs
             var url =
-                response.file &&
-                (response.file.url || response.file.downloadUrl);
+                (response.file &&
+                    (response.file.url || response.file.downloadUrl)) ||
+                (response.folder && response.folder.url);
 
             if (!url) {
                 throw new Error('The PDF was generated, but no link was returned.');
             }
 
-            showPageMessage(
-                response.message || 'Class results PDF generated successfully.'
-            );
+            var note =
+                response.message || 'Class results PDF generated successfully.';
+
+            if (response.generatedCount !== undefined) {
+
+                note =
+                    response.generatedCount + ' result PDF' +
+                    (Number(response.generatedCount) === 1 ? '' : 's') +
+                    ' generated' +
+                    (Number(response.failedCount) > 0
+                        ? ', ' + response.failedCount + ' failed.'
+                        : '.');
+
+            }
+
+            showPageMessage(note);
 
             window.open(url, '_blank');
 
@@ -766,5 +865,7 @@
 
 
     injectStyles();
+
+    console.log('result-bulk.js loaded');
 
 })();
