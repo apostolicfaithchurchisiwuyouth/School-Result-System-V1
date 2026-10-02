@@ -197,7 +197,9 @@
     <main class="main-area">
 
 
-        <!-- TOPBAR -->
+        <!-- =================================================
+             TOPBAR
+        ================================================== -->
 
         <header class="topbar">
 
@@ -248,7 +250,9 @@
         </header>
 
 
-        <!-- PAGE -->
+        <!-- =================================================
+             PAGE
+        ================================================== -->
 
         <section class="page-content">
 
@@ -324,7 +328,7 @@
 
             <!-- =================================================
                  BILLING CONTENT
-            ================================================== -->
+            ================================================= -->
 
             <div
                 id="billingContent"
@@ -336,7 +340,9 @@
                      CURRENT SUBSCRIPTION
                 ============================================== -->
 
-                <section class="content-panel current-plan-panel">
+                <section
+                    class="content-panel current-plan-panel"
+                >
 
                     <div class="panel-header">
 
@@ -363,6 +369,7 @@
                             <div class="summary-icon">
                                 ₦
                             </div>
+
 
                             <div class="current-plan-info">
 
@@ -478,6 +485,7 @@
                         ✓
                     </span>
 
+
                     <div>
 
                         <strong
@@ -485,6 +493,7 @@
                         >
                             Payment
                         </strong>
+
 
                         <span
                             id="paymentMessageText"
@@ -494,14 +503,259 @@
 
                     </div>
 
+
+                    <button
+                        type="button"
+                        class="payment-message-close"
+                        id="paymentMessageClose"
+                        aria-label="Close payment message"
+                    >
+                        ×
+                    </button>
+
                 </div>
+
+
+                <!-- =============================================
+                     ASPFIY PAYMENT ACCOUNT
+                ============================================== -->
+
+                <section
+                    class="content-panel payment-account-panel hidden"
+                    id="paymentAccount"
+                >
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                PAYMENT DETAILS
+                            </span>
+
+                            <h2>
+                                Transfer to This Account
+                            </h2>
+
+                            <p>
+                                Make your subscription payment
+                                by bank transfer using the account
+                                details below.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- PAYMENT STATUS -->
+
+                    <div class="payment-account-status-wrap">
+
+                        <span
+                            id="paymentAccountStatus"
+                            class="payment-account-status pending"
+                        >
+                            Awaiting payment
+                        </span>
+
+                    </div>
+
+
+                    <!-- PAYMENT SUMMARY -->
+
+                    <div class="payment-summary">
+
+                        <div class="payment-summary-item">
+
+                            <span>
+                                Plan
+                            </span>
+
+                            <strong
+                                id="paymentPlan"
+                            >
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div class="payment-summary-item amount">
+
+                            <span>
+                                Amount to Pay
+                            </span>
+
+                            <strong
+                                id="paymentAmount"
+                            >
+                                —
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- BANK ACCOUNT -->
+
+                    <div class="payment-account-details">
+
+
+                        <div class="account-detail">
+
+                            <span>
+                                Bank
+                            </span>
+
+                            <strong
+                                id="paymentBankName"
+                            >
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div class="account-detail account-number-detail">
+
+                            <span>
+                                Account Number
+                            </span>
+
+
+                            <div class="account-number-row">
+
+                                <strong
+                                    id="paymentAccountNumber"
+                                >
+                                    —
+                                </strong>
+
+
+                                <button
+                                    type="button"
+                                    class="copy-account-button"
+                                    data-copy-target="paymentAccountNumber"
+                                >
+                                    Copy
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="account-detail">
+
+                            <span>
+                                Account Name
+                            </span>
+
+                            <strong
+                                id="paymentAccountName"
+                            >
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div class="account-detail">
+
+                            <span>
+                                Payment Reference
+                            </span>
+
+
+                            <div class="account-reference-row">
+
+                                <strong
+                                    id="paymentReference"
+                                >
+                                    —
+                                </strong>
+
+
+                                <button
+                                    type="button"
+                                    class="copy-account-button"
+                                    data-copy-target="paymentReference"
+                                >
+                                    Copy
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- TRANSFER INSTRUCTIONS -->
+
+                    <div class="payment-instructions">
+
+                        <div class="payment-instructions-icon">
+                            i
+                        </div>
+
+
+                        <div>
+
+                            <strong>
+                                Important payment instructions
+                            </strong>
+
+                            <p>
+                                Transfer the exact amount shown
+                                above. Your payment will be matched
+                                automatically after ASPFIY confirms
+                                the transaction.
+                            </p>
+
+                            <p>
+                                Do not transfer a different amount
+                                or use an unrelated account for this
+                                subscription payment.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- PAYMENT STATUS ACTION -->
+
+                    <div class="payment-account-actions">
+
+                        <button
+                            type="button"
+                            class="payment-status-button"
+                            id="checkPaymentStatusButton"
+                        >
+                            Check Payment Status
+                        </button>
+
+                        <span>
+                            Payment confirmation may take a short
+                            while after your bank transfer.
+                        </span>
+
+                    </div>
+
+                </section>
 
 
                 <!-- =============================================
                      PLANS
                 ============================================== -->
 
-                <section class="content-panel plans-panel">
+                <section
+                    class="content-panel plans-panel"
+                >
 
                     <div class="panel-header">
 
@@ -534,7 +788,7 @@
 
 
                 <!-- =============================================
-                     SECURITY NOTICE
+                     SECURITY / PAYMENT NOTICE
                 ============================================== -->
 
                 <section class="security-notice">
@@ -543,20 +797,46 @@
                         ✓
                     </div>
 
+
                     <div>
 
                         <strong>
-                            Secure payment through Paystack
+                            Secure bank transfer payment
                         </strong>
 
+
                         <p>
-                            Your payment is processed securely
-                            by Paystack. Your card details are
-                            not stored by the School Results
-                            System.
+                            Payments are securely collected
+                            through ASPFIY. Your school receives
+                            payment account details for the
+                            selected subscription plan. The
+                            School Results System does not store
+                            your bank login details, card details,
+                            PIN or online banking credentials.
                         </p>
 
                     </div>
+
+                </section>
+
+
+                <!-- =============================================
+                     PAYMENT HELP
+                ============================================== -->
+
+                <section class="payment-help">
+
+                    <strong>
+                        Payment confirmation
+                    </strong>
+
+                    <p>
+                        After completing your transfer, you do
+                        not need to send a receipt manually.
+                        The system checks for the confirmed
+                        payment and updates your subscription
+                        automatically.
+                    </p>
 
                 </section>
 
@@ -580,6 +860,10 @@
     id="sidebarOverlay"
 ></div>
 
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
 
 <script
     src="../js/billing.js"
