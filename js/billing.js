@@ -2,7 +2,7 @@
  * ============================================================
  * SCHOOL RESULTS SYSTEM
  * FILE: billing.js
- * VERSION: 1.0.0
+ * VERSION: 1.1.0
  *
  * PURPOSE:
  * Subscription and Paystack payment frontend.
@@ -145,13 +145,14 @@ function getStoredSession() {
 
 
         const session =
-            JSON.parse(raw);
+            JSON.parse(
+                raw
+            );
 
 
         if (
             !session ||
-            typeof session !==
-            'object'
+            typeof session !== 'object'
         ) {
 
             return null;
@@ -188,7 +189,7 @@ function redirectToLogin() {
 
 
 /* ============================================================
-   API
+   API REQUEST
 ============================================================ */
 
 async function apiRequest(
@@ -233,7 +234,9 @@ async function apiRequest(
     if (!response.ok) {
 
         throw new Error(
-            'Server request failed.'
+            'Server request failed with status ' +
+            response.status +
+            '.'
         );
 
     }
@@ -250,6 +253,7 @@ async function apiRequest(
 
         throw new Error(
             result.message ||
+            result.error ||
             'The request could not be completed.'
         );
 
@@ -321,7 +325,7 @@ async function loadBilling() {
         if (!subscription) {
 
             throw new Error(
-                'Subscription information was not returned.'
+                'The server did not return subscription information.'
             );
 
         }
@@ -350,7 +354,7 @@ async function loadBilling() {
 
         showBillingError(
             error.message ||
-            'Unable to load subscription.'
+            'Unable to load subscription information.'
         );
 
     }
@@ -440,6 +444,7 @@ function populateUserHeader(
 
     const fullName =
         session.fullName ||
+        session.name ||
         'User';
 
     const role =
@@ -504,7 +509,9 @@ function renderSubscription(
             subscription.subscriptionStatus ||
             subscription.status ||
             ''
-        ).toLowerCase();
+        )
+        .trim()
+        .toLowerCase();
 
 
     const statusElement =
@@ -514,6 +521,12 @@ function renderSubscription(
 
 
     if (statusElement) {
+
+        statusElement.classList.remove(
+            'expired',
+            'suspended'
+        );
+
 
         if (
             status === 'expired'
@@ -534,17 +547,13 @@ function renderSubscription(
                 'Suspended';
 
             statusElement.classList.add(
-                'expired'
+                'suspended'
             );
 
         } else {
 
             statusElement.textContent =
                 'Active';
-
-            statusElement.classList.remove(
-                'expired'
-            );
 
         }
 
@@ -565,101 +574,168 @@ function renderSubscription(
     );
 
 
-    /*
-     * Free trial notice.
-     */
+    renderTrialNotice(
+        subscription
+    );
+
+
+    renderExpiredNotice(
+        status
+    );
+
+}
+
+
+/* ============================================================
+   TRIAL NOTICE
+============================================================ */
+
+function renderTrialNotice(
+    subscription
+) {
+
     const trialNotice =
         document.getElementById(
             'trialNotice'
         );
 
 
-    if (
-        trialNotice &&
+    const trialNoticeText =
+        document.getElementById(
+            'trialNoticeText'
+        );
+
+
+    if (!trialNotice) {
+        return;
+    }
+
+
+    const isFree =
         String(
-            subscription.plan
-        ).toLowerCase() ===
-        'free'
-    ) {
-
-        trialNotice.classList.remove(
-            'hidden'
-        );
+            subscription.plan ||
+            ''
+        )
+        .toLowerCase() ===
+        'free';
 
 
-        const expiryDate =
-            expiry
-                ? new Date(
-                    expiry
-                  )
-                : null;
-
-
-        let message =
-            'Your free trial is active.';
-
-
-        if (
-            expiryDate &&
-            !isNaN(
-                expiryDate.getTime()
-            )
-        ) {
-
-            const remaining =
-                expiryDate.getTime() -
-                Date.now();
-
-
-            if (
-                remaining > 0
-            ) {
-
-                const minutes =
-                    Math.ceil(
-                        remaining /
-                        60000
-                    );
-
-
-                message =
-                    `Your free trial is active. Approximately ${minutes} minute${minutes === 1 ? '' : 's'} remaining.`;
-
-            } else {
-
-                message =
-                    'Your free trial has expired.';
-
-            }
-
-        }
-
-
-        setText(
-            'trialNoticeText',
-            message
-        );
-
-    } else if (trialNotice) {
+    if (!isFree) {
 
         trialNotice.classList.add(
             'hidden'
         );
 
+        return;
+
     }
 
 
-    /*
-     * Expired notice.
-     */
+    trialNotice.classList.remove(
+        'hidden'
+    );
+
+
+    const expiry =
+        subscription.expiryDate;
+
+
+    if (!expiry) {
+
+        if (trialNoticeText) {
+
+            trialNoticeText.textContent =
+                'Your free trial is active.';
+
+        }
+
+        return;
+
+    }
+
+
+    const expiryDate =
+        new Date(
+            expiry
+        );
+
+
+    if (
+        isNaN(
+            expiryDate.getTime()
+        )
+    ) {
+
+        if (trialNoticeText) {
+
+            trialNoticeText.textContent =
+                'Your free trial is active.';
+
+        }
+
+        return;
+
+    }
+
+
+    const remaining =
+        expiryDate.getTime() -
+        Date.now();
+
+
+    if (
+        remaining <= 0
+    ) {
+
+        if (trialNoticeText) {
+
+            trialNoticeText.textContent =
+                'Your free trial has expired. Choose a paid plan below to continue.';
+
+        }
+
+        return;
+
+    }
+
+
+    const minutes =
+        Math.ceil(
+            remaining /
+            60000
+        );
+
+
+    if (trialNoticeText) {
+
+        trialNoticeText.textContent =
+            `Your free trial is active. Approximately ${minutes} minute${minutes === 1 ? '' : 's'} remaining.`;
+
+    }
+
+}
+
+
+/* ============================================================
+   EXPIRED NOTICE
+============================================================ */
+
+function renderExpiredNotice(
+    status
+) {
+
     const expiredNotice =
         document.getElementById(
             'expiredNotice'
         );
 
 
+    if (!expiredNotice) {
+        return;
+    }
+
+
     if (
-        expiredNotice &&
         status === 'expired'
     ) {
 
@@ -667,13 +743,122 @@ function renderSubscription(
             'hidden'
         );
 
-    } else if (expiredNotice) {
+    } else {
 
         expiredNotice.classList.add(
             'hidden'
         );
 
     }
+
+}
+
+
+/* ============================================================
+   PLAN BENEFITS
+============================================================ */
+
+function getPlanBenefits(
+    planName
+) {
+
+    const name =
+        String(
+            planName ||
+            ''
+        )
+        .toLowerCase();
+
+
+    if (
+        name === 'free'
+    ) {
+
+        return [
+
+            'Explore the result management system',
+
+            'Create your initial school setup',
+
+            'Access available system features during the trial'
+
+        ];
+
+    }
+
+
+    if (
+        name === 'basic'
+    ) {
+
+        return [
+
+            'Full result management access',
+
+            'One academic term of access',
+
+            'Manage classes, subjects and teachers',
+
+            'Enter and manage student scores',
+
+            'Generate student and class results'
+
+        ];
+
+    }
+
+
+    if (
+        name === 'standard'
+    ) {
+
+        return [
+
+            'Everything in Basic',
+
+            'One full year of access',
+
+            'Manage multiple academic sessions',
+
+            'Complete result processing workflow',
+
+            'Result history and previous-term records',
+
+            'PDF result generation'
+
+        ];
+
+    }
+
+
+    if (
+        name === 'premium'
+    ) {
+
+        return [
+
+            'Everything in Standard',
+
+            'One full year of access',
+
+            'Full school result management tools',
+
+            'Bulk result and score processing',
+
+            'Advanced result management features',
+
+            'Priority-ready subscription tier'
+
+        ];
+
+    }
+
+
+    return [
+
+        'School Results System access'
+
+    ];
 
 }
 
@@ -698,16 +883,23 @@ function renderPlans(
     ) {
 
         plansGrid.innerHTML = `
-            <div class="payment-message">
-                <div>
-                    <strong>
-                        No plans available
-                    </strong>
-                    <p>
-                        Subscription plans could not be loaded.
-                    </p>
+
+            <div class="state-panel">
+
+                <div class="state-icon error">
+                    !
                 </div>
+
+                <strong>
+                    No subscription plans available
+                </strong>
+
+                <span>
+                    The server did not return any subscription plans.
+                </span>
+
             </div>
+
         `;
 
         return;
@@ -719,14 +911,10 @@ function renderPlans(
         String(
             subscription.plan ||
             ''
-        ).toLowerCase();
+        )
+        .toLowerCase();
 
 
-    /*
-     * Free is displayed separately as the
-     * trial plan. Paid plans are the actual
-     * upgrade options.
-     */
     plansGrid.innerHTML =
         plans
             .map(
@@ -767,21 +955,57 @@ function renderPlans(
                         );
 
 
+                    const benefits =
+                        getPlanBenefits(
+                            name
+                        );
+
+
+                    const isPopular =
+                        lowerName ===
+                        'standard';
+
+
+                    const benefitsHtml =
+                        benefits
+                            .map(
+                                function(benefit) {
+
+                                    return `
+
+                                        <li>
+                                            ${escapeHtml(
+                                                benefit
+                                            )}
+                                        </li>
+
+                                    `;
+
+                                }
+                            )
+                            .join('');
+
+
                     if (
                         lowerName ===
                         'free'
                     ) {
 
                         return `
+
                             <article
-                                class="plan-card plan-free ${isCurrent ? 'current' : ''}"
+                                class="plan-card plan-free ${
+                                    isCurrent
+                                        ? 'current'
+                                        : ''
+                                }"
                             >
 
                                 ${
                                     isCurrent
                                         ? `
                                             <span class="plan-card-badge">
-                                                Current
+                                                CURRENT
                                             </span>
                                           `
                                         : ''
@@ -805,6 +1029,10 @@ function renderPlans(
                                     )}
                                 </p>
 
+                                <ul class="plan-benefits">
+                                    ${benefitsHtml}
+                                </ul>
+
                                 <button
                                     type="button"
                                     class="plan-button secondary"
@@ -818,25 +1046,42 @@ function renderPlans(
                                 </button>
 
                             </article>
+
                         `;
 
                     }
 
 
                     return `
+
                         <article
-                            class="plan-card ${isCurrent ? 'current' : ''}"
+                            class="plan-card ${
+                                isCurrent
+                                    ? 'current'
+                                    : ''
+                            } ${
+                                isPopular
+                                    ? 'popular'
+                                    : ''
+                            }"
                         >
 
                             ${
                                 isCurrent
                                     ? `
                                         <span class="plan-card-badge">
-                                            Current
+                                            CURRENT
                                         </span>
                                       `
-                                    : ''
+                                    : isPopular
+                                        ? `
+                                            <span class="plan-card-badge popular">
+                                                POPULAR
+                                            </span>
+                                          `
+                                        : ''
                             }
+
 
                             <div class="plan-name">
                                 ${escapeHtml(
@@ -844,11 +1089,13 @@ function renderPlans(
                                 )}
                             </div>
 
+
                             <div class="plan-price">
                                 ${formatNaira(
                                     amount
                                 )}
                             </div>
+
 
                             <div class="plan-duration">
                                 ${escapeHtml(
@@ -856,11 +1103,18 @@ function renderPlans(
                                 )}
                             </div>
 
+
                             <p class="plan-description">
                                 ${escapeHtml(
                                     description
                                 )}
                             </p>
+
+
+                            <ul class="plan-benefits">
+                                ${benefitsHtml}
+                            </ul>
+
 
                             <button
                                 type="button"
@@ -868,8 +1122,13 @@ function renderPlans(
                                 data-plan="${escapeHtml(
                                     name
                                 )}"
-                                ${isCurrent ? 'disabled' : ''}
+                                ${
+                                    isCurrent
+                                        ? 'disabled'
+                                        : ''
+                                }
                             >
+
                                 ${
                                     isCurrent
                                         ? 'Current Plan'
@@ -878,9 +1137,11 @@ function renderPlans(
                                               name
                                           )
                                 }
+
                             </button>
 
                         </article>
+
                     `;
 
                 }
@@ -904,6 +1165,7 @@ function renderPlans(
                     const plan =
                         button.dataset.plan;
 
+
                     startPayment(
                         plan,
                         button
@@ -914,6 +1176,63 @@ function renderPlans(
 
         }
     );
+
+}
+
+
+/* ============================================================
+   PLAN DESCRIPTION
+============================================================ */
+
+function getPlanDescription(
+    planName
+) {
+
+    const name =
+        String(
+            planName ||
+            ''
+        )
+        .toLowerCase();
+
+
+    if (
+        name === 'free'
+    ) {
+
+        return 'Try the system before choosing a paid subscription.';
+
+    }
+
+
+    if (
+        name === 'basic'
+    ) {
+
+        return 'Essential school result management for one academic term.';
+
+    }
+
+
+    if (
+        name === 'standard'
+    ) {
+
+        return 'Complete school result management for one full year.';
+
+    }
+
+
+    if (
+        name === 'premium'
+    ) {
+
+        return 'Extended school result management access for one full year.';
+
+    }
+
+
+    return 'School Results System subscription plan.';
 
 }
 
@@ -943,15 +1262,15 @@ async function startPayment(
     }
 
 
-    if (
-        !window.PaystackPop
-    ) {
+    const normalizedPlan =
+        String(
+            plan ||
+            ''
+        )
+        .trim();
 
-        showPaymentMessage(
-            'error',
-            'Payment unavailable',
-            'The Paystack payment system could not be loaded. Please refresh the page and try again.'
-        );
+
+    if (!normalizedPlan) {
 
         return;
 
@@ -960,7 +1279,7 @@ async function startPayment(
 
     const confirmed =
         window.confirm(
-            `Continue with the ${plan} plan?`
+            `Continue with the ${normalizedPlan} plan?`
         );
 
 
@@ -985,10 +1304,6 @@ async function startPayment(
 
     try {
 
-        /*
-         * The backend determines the actual
-         * amount. We only send the plan name.
-         */
         const result =
             await apiRequest(
                 'initializePaystackPayment',
@@ -998,7 +1313,7 @@ async function startPayment(
                         session.schoolId,
 
                     plan:
-                        plan
+                        normalizedPlan
 
                 }
             );
@@ -1012,60 +1327,59 @@ async function startPayment(
             );
 
 
-        if (
-            !payment ||
-            !payment.accessCode ||
-            !payment.reference
-        ) {
+        if (!payment) {
 
             throw new Error(
-                'Paystack did not return a valid payment session.'
+                'The payment server did not return a payment session.'
             );
 
         }
 
 
-        button.textContent =
-            'Opening payment...';
+        /*
+         * Preferred method:
+         * Paystack access code.
+         */
+        if (
+            payment.accessCode
+        ) {
+
+            button.textContent =
+                'Opening payment...';
 
 
-        const popup =
-            new PaystackPop();
+            openPaystackPopup(
+                payment.accessCode,
+                payment.reference,
+                normalizedPlan,
+                button,
+                originalText
+            );
+
+            return;
+
+        }
 
 
-        popup.resumeTransaction(
-            payment.accessCode,
-            {
+        /*
+         * Fallback:
+         * If the backend returns only an
+         * authorization URL, open it.
+         */
+        if (
+            payment.authorizationUrl
+        ) {
 
-                onSuccess:
-                    function(transaction) {
+            window.location.href =
+                payment.authorizationUrl;
 
-                        handlePaymentSuccess(
-                            transaction,
-                            button
-                        );
+            return;
 
-                    },
-
-                onCancel:
-                    function() {
-
-                        button.disabled =
-                            false;
-
-                        button.textContent =
-                            originalText;
+        }
 
 
-                        showPaymentMessage(
-                            'error',
-                            'Payment cancelled',
-                            'The payment was cancelled. Your subscription has not been changed.'
-                        );
-
-                    }
-
-            }
+        throw new Error(
+            'Paystack did not return a valid payment session.'
         );
 
 
@@ -1097,29 +1411,144 @@ async function startPayment(
 
 
 /* ============================================================
+   OPEN PAYSTACK POPUP
+============================================================ */
+
+function openPaystackPopup(
+    accessCode,
+    reference,
+    plan,
+    button,
+    originalText
+) {
+
+    if (
+        !window.PaystackPop
+    ) {
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            originalText;
+
+
+        showPaymentMessage(
+            'error',
+            'Payment unavailable',
+            'Paystack could not be loaded. Please refresh the page and try again.'
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const popup =
+            new PaystackPop();
+
+
+        popup.resumeTransaction(
+            accessCode,
+            {
+
+                onSuccess:
+                    function(transaction) {
+
+                        handlePaymentSuccess(
+                            transaction,
+                            reference,
+                            plan,
+                            button
+                        );
+
+                    },
+
+
+                onCancel:
+                    function() {
+
+                        button.disabled =
+                            false;
+
+                        button.textContent =
+                            originalText;
+
+
+                        showPaymentMessage(
+                            'error',
+                            'Payment cancelled',
+                            'The payment was cancelled. Your subscription has not been changed.'
+                        );
+
+                    }
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            'Paystack popup error:',
+            error
+        );
+
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            originalText;
+
+
+        showPaymentMessage(
+            'error',
+            'Payment could not open',
+            error.message ||
+            'Unable to open Paystack checkout.'
+        );
+
+    }
+
+}
+
+
+/* ============================================================
    PAYMENT SUCCESS
 ============================================================ */
 
 async function handlePaymentSuccess(
     transaction,
+    fallbackReference,
+    plan,
     button
 ) {
 
     const reference =
-        transaction &&
-        transaction.reference;
+        (
+            transaction &&
+            transaction.reference
+        ) ||
+        fallbackReference;
 
 
     if (!reference) {
 
+        button.disabled =
+            false;
+
+        button.textContent =
+            'Try Again';
+
+
         showPaymentMessage(
             'error',
             'Verification required',
-            'Paystack completed the checkout, but no transaction reference was returned. Please contact the system administrator.'
+            'Paystack completed the checkout, but no transaction reference was returned.'
         );
-
-        button.disabled =
-            false;
 
         return;
 
@@ -1130,7 +1559,7 @@ async function handlePaymentSuccess(
         true;
 
     button.textContent =
-        'Verifying payment...';
+        'Verifying...';
 
 
     showPaymentMessage(
@@ -1161,16 +1590,13 @@ async function handlePaymentSuccess(
 
             throw new Error(
                 result.message ||
+                result.error ||
                 'The payment could not be verified.'
             );
 
         }
 
 
-        /*
-         * Refresh the local subscription
-         * information from the server.
-         */
         const session =
             getStoredSession();
 
@@ -1202,15 +1628,40 @@ async function handlePaymentSuccess(
         }
 
 
+        const activatedPlan =
+            result.subscription &&
+            result.subscription.plan
+                ? result.subscription.plan
+                : plan;
+
+
         showPaymentMessage(
             'success',
             'Subscription activated',
-            `Your ${result.subscription?.plan || 'paid'} plan has been activated successfully.`
+            `Your ${activatedPlan} plan has been activated successfully.`
         );
 
 
         button.textContent =
             'Activated';
+
+
+        /*
+         * Re-render the plans so the newly
+         * activated plan becomes Current Plan.
+         */
+        const plansResult =
+            await apiRequest(
+                'getSubscriptionPlans'
+            );
+
+
+        renderPlans(
+            extractPlans(
+                plansResult
+            ),
+            subscription || {}
+        );
 
 
     } catch (error) {
@@ -1232,7 +1683,7 @@ async function handlePaymentSuccess(
             'error',
             'Verification failed',
             error.message ||
-            'The payment was received but could not be verified yet. Please do not pay again until the transaction has been checked.'
+            'The payment could not be verified yet. Please do not pay again until the transaction has been checked.'
         );
 
     }
@@ -1255,15 +1706,18 @@ function showPaymentMessage(
             'paymentMessage'
         );
 
+
     const icon =
         document.getElementById(
             'paymentMessageIcon'
         );
 
+
     const titleElement =
         document.getElementById(
             'paymentMessageTitle'
         );
+
 
     const textElement =
         document.getElementById(
@@ -1316,6 +1770,10 @@ function showPaymentMessage(
 }
 
 
+/* ============================================================
+   HIDE PAYMENT MESSAGE
+============================================================ */
+
 function hidePaymentMessage() {
 
     const container =
@@ -1354,6 +1812,7 @@ function setupNavigation() {
                     );
 
                 }
+
 
                 if (sidebarOverlay) {
 
@@ -1636,60 +2095,8 @@ function getDurationText(
 }
 
 
-function getPlanDescription(
-    planName
-) {
-
-    const name =
-        String(
-            planName ||
-            ''
-        ).toLowerCase();
-
-
-    if (
-        name === 'free'
-    ) {
-
-        return 'A short trial period for exploring the system before choosing a paid plan.';
-
-    }
-
-
-    if (
-        name === 'basic'
-    ) {
-
-        return 'Essential school result management for one academic term.';
-
-    }
-
-
-    if (
-        name === 'standard'
-    ) {
-
-        return 'Full school result management access for one year.';
-
-    }
-
-
-    if (
-        name === 'premium'
-    ) {
-
-        return 'Extended school result management access for one year.';
-
-    }
-
-
-    return 'School Results System subscription plan.';
-
-}
-
-
 /* ============================================================
-   FORMATTING
+   FORMAT PLAN
 ============================================================ */
 
 function formatPlan(
@@ -1704,7 +2111,9 @@ function formatPlan(
 
 
     if (!value) {
+
         return 'No plan';
+
     }
 
 
@@ -1712,6 +2121,10 @@ function formatPlan(
 
 }
 
+
+/* ============================================================
+   FORMAT NAIRA
+============================================================ */
 
 function formatNaira(
     amount
@@ -1733,12 +2146,17 @@ function formatNaira(
         }
     ).format(
         Number(
-            amount || 0
+            amount ||
+            0
         )
     );
 
 }
 
+
+/* ============================================================
+   FORMAT DATE
+============================================================ */
 
 function formatDate(
     value
@@ -1782,13 +2200,14 @@ function formatDate(
                 'numeric'
 
         }
+
     );
 
 }
 
 
 /* ============================================================
-   TEXT
+   SET TEXT
 ============================================================ */
 
 function setText(
@@ -1835,7 +2254,9 @@ function getInitials(
 
 
     if (!value) {
+
         return '--';
+
     }
 
 
