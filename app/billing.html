@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Manage your School Results System subscription."
+    >
+
+    <title>Subscription | School Results System</title>
+
+    <link
+        rel="stylesheet"
+        href="../css/global.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="../css/billing.css"
+    >
+
+</head>
+
+<body>
+
+    <!-- =====================================================
+         PAGE LOADING
+    ====================================================== -->
+
+    <div
+        id="pageLoading"
+        class="page-loading"
+    >
+
+        <div class="loading-spinner"></div>
+
+        <p>
+            Loading subscription...
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
+
+        <div class="sidebar-brand">
+
+            <div class="brand-mark">
+                SR
+            </div>
+
+            <div class="brand-text">
+
+                <strong>
+                    School Results
+                </strong>
+
+                <span>
+                    Management System
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <nav class="sidebar-nav">
+
+            <a
+                href="dashboard.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">⌂</span>
+                <span>Dashboard</span>
+            </a>
+
+            <a
+                href="sessions.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">▣</span>
+                <span>Sessions</span>
+            </a>
+
+            <a
+                href="classes.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">▦</span>
+                <span>Classes</span>
+            </a>
+
+            <a
+                href="subjects.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">◈</span>
+                <span>Subjects</span>
+            </a>
+
+            <a
+                href="teachers.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">♙</span>
+                <span>Teachers</span>
+            </a>
+
+            <a
+                href="assignments.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">✓</span>
+                <span>Assignments</span>
+            </a>
+
+            <a
+                href="students.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">♟</span>
+                <span>Students</span>
+            </a>
+
+            <a
+                href="grading.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">%</span>
+                <span>Grading</span>
+            </a>
+
+            <a
+                href="score-entry.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">✎</span>
+                <span>Score Entry</span>
+            </a>
+
+            <a
+                href="results.html"
+                class="nav-link"
+            >
+                <span class="nav-icon">▤</span>
+                <span>Results</span>
+            </a>
+
+            <a
+                href="billing.html"
+                class="nav-link active"
+            >
+                <span class="nav-icon">₦</span>
+                <span>Subscription</span>
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <button
+                type="button"
+                id="sidebarLogoutButton"
+                class="logout-button"
+            >
+                <span>↪</span>
+                <span>Log out</span>
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <div
+        class="sidebar-overlay"
+        id="sidebarOverlay"
+    ></div>
+
+
+    <!-- =====================================================
+         MAIN APPLICATION
+    ====================================================== -->
+
+    <main class="main-area">
+
+
+        <!-- =================================================
+             TOPBAR
+        ================================================== -->
+
+        <header class="topbar">
+
+            <div class="topbar-left">
+
+                <button
+                    type="button"
+                    id="menuButton"
+                    class="menu-button"
+                    aria-label="Open menu"
+                >
+                    ☰
+                </button>
+
+                <div>
+
+                    <div
+                        class="topbar-school"
+                        id="topbarSchoolName"
+                    >
+                        School Results System
+                    </div>
+
+                    <div class="topbar-page">
+                        Subscription
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="topbar-user">
+
+                <div
+                    class="user-avatar"
+                    id="userInitials"
+                >
+                    --
+                </div>
+
+                <div class="user-details">
+
+                    <strong
+                        id="topbarUserName"
+                    >
+                        User
+                    </strong>
+
+                    <span
+                        id="topbarUserRole"
+                    >
+                        User
+                    </span>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             CONTENT
+        ================================================== -->
+
+        <section
+            class="billing-content"
+            id="billingContent"
+        >
+
+
+            <!-- =============================================
+                 PAGE INTRO
+            ============================================== -->
+
+            <div class="page-heading">
+
+                <div>
+
+                    <span class="eyebrow">
+                        ACCOUNT
+                    </span>
+
+                    <h1>
+                        Subscription
+                    </h1>
+
+                    <p>
+                        Manage your school's plan and
+                        subscription period.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 CURRENT SUBSCRIPTION
+            ============================================== -->
+
+            <section class="current-plan">
+
+                <div class="current-plan-main">
+
+                    <div class="current-plan-label">
+                        Current plan
+                    </div>
+
+                    <div
+                        class="current-plan-name"
+                        id="currentPlanName"
+                    >
+                        —
+                    </div>
+
+                    <div
+                        class="current-plan-status"
+                        id="currentPlanStatus"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="current-plan-details">
+
+                    <div class="subscription-detail">
+
+                        <span>
+                            School
+                        </span>
+
+                        <strong
+                            id="currentSchoolName"
+                        >
+                            —
+                        </strong>
+
+                    </div>
+
+
+                    <div class="subscription-detail">
+
+                        <span>
+                            Expires
+                        </span>
+
+                        <strong
+                            id="currentExpiryDate"
+                        >
+                            —
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 TRIAL NOTICE
+            ============================================== -->
+
+            <div
+                class="trial-notice hidden"
+                id="trialNotice"
+            >
+
+                <div class="notice-icon">
+                    !
+                </div>
+
+                <div>
+
+                    <strong>
+                        Free trial
+                    </strong>
+
+                    <p id="trialNoticeText">
+                        Your free access is active.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 EXPIRED NOTICE
+            ============================================== -->
+
+            <div
+                class="expired-notice hidden"
+                id="expiredNotice"
+            >
+
+                <div class="notice-icon">
+                    !
+                </div>
+
+                <div>
+
+                    <strong>
+                        Subscription expired
+                    </strong>
+
+                    <p>
+                        Choose a paid plan below to
+                        continue using the system.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 PLAN SELECTION
+            ============================================== -->
+
+            <div class="plans-heading">
+
+                <div>
+
+                    <span class="eyebrow">
+                        PLANS
+                    </span>
+
+                    <h2>
+                        Choose a subscription
+                    </h2>
+
+                    <p>
+                        Select the plan that suits your
+                        school's needs.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="plans-grid"
+                id="plansGrid"
+            >
+
+                <!-- Plans inserted by JavaScript -->
+
+            </div>
+
+
+            <!-- =============================================
+                 PAYMENT MESSAGE
+            ============================================== -->
+
+            <div
+                class="payment-message hidden"
+                id="paymentMessage"
+            >
+
+                <div
+                    class="payment-message-icon"
+                    id="paymentMessageIcon"
+                >
+                    ✓
+                </div>
+
+                <div>
+
+                    <strong
+                        id="paymentMessageTitle"
+                    >
+                        Payment
+                    </strong>
+
+                    <p
+                        id="paymentMessageText"
+                    >
+                        —
+                    </p>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- =================================================
+             ERROR
+        ================================================== -->
+
+        <section
+            class="billing-error hidden"
+            id="billingError"
+        >
+
+            <div class="error-icon">
+                !
+            </div>
+
+            <h2>
+                Unable to load subscription
+            </h2>
+
+            <p id="billingErrorMessage">
+                Something went wrong.
+            </p>
+
+            <button
+                type="button"
+                id="retryButton"
+                class="primary-button"
+            >
+                Try Again
+            </button>
+
+        </section>
+
+    </main>
+
+
+    <!-- =====================================================
+         PAYSTACK POPUP V2
+    ====================================================== -->
+
+    <script src="https://js.paystack.co/v2/inline.js"></script>
+
+    <script
+        src="../js/billing.js"
+        defer
+    ></script>
+
+</body>
+
+</html>
