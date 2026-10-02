@@ -11,16 +11,13 @@
     >
 
     <meta
-        name="description"
-        content="Manage your School Results System subscription."
+        name="theme-color"
+        content="#4f46e5"
     >
 
-    <title>Subscription | School Results System</title>
-
-    <link
-        rel="stylesheet"
-        href="../css/index.css"
-    >
+    <title>
+        Billing | School Results System
+    </title>
 
     <link
         rel="stylesheet"
@@ -29,24 +26,10 @@
 
 </head>
 
+
 <body>
 
-    <!-- =====================================================
-         PAGE LOADING
-    ====================================================== -->
-
-    <div
-        id="pageLoading"
-        class="page-loading"
-    >
-
-        <div class="loading-spinner"></div>
-
-        <p>
-            Loading subscription...
-        </p>
-
-    </div>
+<div class="app-shell">
 
 
     <!-- =====================================================
@@ -79,7 +62,11 @@
         </div>
 
 
-        <nav class="sidebar-nav">
+        <nav class="main-navigation">
+
+            <div class="nav-section-label">
+                MAIN
+            </div>
 
             <a
                 href="dashboard.html"
@@ -89,11 +76,16 @@
                 <span>Dashboard</span>
             </a>
 
+
+            <div class="nav-section-label">
+                ACADEMIC
+            </div>
+
             <a
                 href="sessions.html"
                 class="nav-link"
             >
-                <span class="nav-icon">▣</span>
+                <span class="nav-icon">◷</span>
                 <span>Sessions</span>
             </a>
 
@@ -109,7 +101,7 @@
                 href="subjects.html"
                 class="nav-link"
             >
-                <span class="nav-icon">◈</span>
+                <span class="nav-icon">◇</span>
                 <span>Subjects</span>
             </a>
 
@@ -125,7 +117,7 @@
                 href="assignments.html"
                 class="nav-link"
             >
-                <span class="nav-icon">✓</span>
+                <span class="nav-icon">≡</span>
                 <span>Assignments</span>
             </a>
 
@@ -133,7 +125,7 @@
                 href="students.html"
                 class="nav-link"
             >
-                <span class="nav-icon">♟</span>
+                <span class="nav-icon">♧</span>
                 <span>Students</span>
             </a>
 
@@ -145,6 +137,11 @@
                 <span>Grading</span>
             </a>
 
+
+            <div class="nav-section-label">
+                RESULTS
+            </div>
+
             <a
                 href="score-entry.html"
                 class="nav-link"
@@ -154,33 +151,38 @@
             </a>
 
             <a
-                href="results.html"
+                href="result-management.html"
                 class="nav-link"
             >
                 <span class="nav-icon">▤</span>
                 <span>Results</span>
             </a>
 
+
+            <div class="nav-section-label">
+                ACCOUNT
+            </div>
+
             <a
                 href="billing.html"
                 class="nav-link active"
             >
                 <span class="nav-icon">₦</span>
-                <span>Subscription</span>
+                <span>Billing</span>
             </a>
 
         </nav>
 
 
-        <div class="sidebar-bottom">
+        <div class="sidebar-footer">
 
             <button
                 type="button"
-                id="sidebarLogoutButton"
                 class="logout-button"
+                id="logoutButton"
             >
-                <span>↪</span>
-                <span>Log out</span>
+                <span>⇥</span>
+                Logout
             </button>
 
         </div>
@@ -188,75 +190,54 @@
     </aside>
 
 
-    <div
-        class="sidebar-overlay"
-        id="sidebarOverlay"
-    ></div>
-
-
     <!-- =====================================================
-         MAIN APPLICATION
+         MAIN
     ====================================================== -->
 
     <main class="main-area">
 
 
-        <!-- =================================================
-             TOPBAR
-        ================================================== -->
+        <!-- TOPBAR -->
 
         <header class="topbar">
 
-            <div class="topbar-left">
+            <button
+                type="button"
+                class="menu-button"
+                id="menuButton"
+                aria-label="Open menu"
+            >
+                ☰
+            </button>
 
-                <button
-                    type="button"
-                    id="menuButton"
-                    class="menu-button"
-                    aria-label="Open menu"
-                >
-                    ☰
-                </button>
 
-                <div>
+            <div class="topbar-title">
 
-                    <div
-                        class="topbar-school"
-                        id="topbarSchoolName"
-                    >
-                        School Results System
-                    </div>
-
-                    <div class="topbar-page">
-                        Subscription
-                    </div>
-
-                </div>
+                <span id="schoolName">
+                    School Results System
+                </span>
 
             </div>
 
 
             <div class="topbar-user">
 
-                <div
-                    class="user-avatar"
-                    id="userInitials"
-                >
-                    --
+                <div class="user-avatar">
+
+                    <span id="userInitials">
+                        --
+                    </span>
+
                 </div>
 
-                <div class="user-details">
+                <div class="user-info">
 
-                    <strong
-                        id="topbarUserName"
-                    >
+                    <strong id="userName">
                         User
                     </strong>
 
-                    <span
-                        id="topbarUserRole"
-                    >
-                        User
+                    <span id="userRole">
+                        --
                     </span>
 
                 </div>
@@ -267,20 +248,15 @@
 
 
         <!-- =================================================
-             CONTENT
+             PAGE
         ================================================== -->
 
-        <section
-            class="billing-content"
-            id="billingContent"
-        >
+        <section class="page-content">
 
 
-            <!-- =============================================
-                 PAGE INTRO
-            ============================================== -->
+            <!-- PAGE HEADER -->
 
-            <div class="page-heading">
+            <div class="page-header">
 
                 <div>
 
@@ -289,12 +265,12 @@
                     </span>
 
                     <h1>
-                        Subscription
+                        Billing
                     </h1>
 
                     <p>
-                        Manage your school's plan and
-                        subscription period.
+                        Manage your school's subscription
+                        and access period.
                     </p>
 
                 </div>
@@ -302,61 +278,58 @@
             </div>
 
 
-            <!-- =============================================
-                 CURRENT SUBSCRIPTION
-            ============================================== -->
+            <!-- =================================================
+                 CURRENT PLAN
+            ================================================== -->
 
             <section class="current-plan">
 
                 <div class="current-plan-main">
 
-                    <div class="current-plan-label">
-                        Current plan
+                    <div class="plan-icon">
+                        ₦
                     </div>
 
-                    <div
-                        class="current-plan-name"
-                        id="currentPlanName"
-                    >
-                        —
-                    </div>
+                    <div class="current-plan-info">
 
-                    <div
-                        class="current-plan-status"
-                        id="currentPlanStatus"
-                    >
-                        —
+                        <span class="card-label">
+                            CURRENT PLAN
+                        </span>
+
+                        <strong id="currentPlan">
+                            Loading...
+                        </strong>
+
+                        <span id="currentPlanStatus">
+                            Checking subscription status...
+                        </span>
+
                     </div>
 
                 </div>
 
 
-                <div class="current-plan-details">
+                <div class="current-plan-meta">
 
-                    <div class="subscription-detail">
+                    <div>
 
                         <span>
-                            School
+                            Status
                         </span>
 
-                        <strong
-                            id="currentSchoolName"
-                        >
+                        <strong id="subscriptionStatus">
                             —
                         </strong>
 
                     </div>
 
-
-                    <div class="subscription-detail">
+                    <div>
 
                         <span>
-                            Expires
+                            Expiry
                         </span>
 
-                        <strong
-                            id="currentExpiryDate"
-                        >
+                        <strong id="subscriptionExpiry">
                             —
                         </strong>
 
@@ -367,181 +340,422 @@
             </section>
 
 
-            <!-- =============================================
-                 TRIAL NOTICE
-            ============================================== -->
+            <!-- =================================================
+                 MESSAGE
+            ================================================== -->
 
             <div
-                class="trial-notice hidden"
-                id="trialNotice"
+                class="page-message hidden"
+                id="pageMessage"
             >
 
-                <div class="notice-icon">
-                    !
-                </div>
+                <span id="messageText"></span>
 
-                <div>
-
-                    <strong>
-                        Free trial
-                    </strong>
-
-                    <p id="trialNoticeText">
-                        Your free access is active.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <!-- =============================================
-                 EXPIRED NOTICE
-            ============================================== -->
-
-            <div
-                class="expired-notice hidden"
-                id="expiredNotice"
-            >
-
-                <div class="notice-icon">
-                    !
-                </div>
-
-                <div>
-
-                    <strong>
-                        Subscription expired
-                    </strong>
-
-                    <p>
-                        Choose a paid plan below to
-                        continue using the system.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <!-- =============================================
-                 PLAN SELECTION
-            ============================================== -->
-
-            <div class="plans-heading">
-
-                <div>
-
-                    <span class="eyebrow">
-                        PLANS
-                    </span>
-
-                    <h2>
-                        Choose a subscription
-                    </h2>
-
-                    <p>
-                        Select the plan that suits your
-                        school's needs.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div
-                class="plans-grid"
-                id="plansGrid"
-            >
-
-                <!-- Plans inserted by JavaScript -->
-
-            </div>
-
-
-            <!-- =============================================
-                 PAYMENT MESSAGE
-            ============================================== -->
-
-            <div
-                class="payment-message hidden"
-                id="paymentMessage"
-            >
-
-                <div
-                    class="payment-message-icon"
-                    id="paymentMessageIcon"
+                <button
+                    type="button"
+                    id="closeMessage"
+                    aria-label="Close"
                 >
+                    ×
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 PLANS
+            ================================================== -->
+
+            <section class="plans-section">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            SUBSCRIPTION PLANS
+                        </span>
+
+                        <h2>
+                            Choose a plan
+                        </h2>
+
+                        <p>
+                            Select the plan that matches
+                            your school's needs.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="plans-grid">
+
+
+                    <!-- FREE -->
+
+                    <article
+                        class="plan-card"
+                        data-plan="Free"
+                    >
+
+                        <div class="plan-card-header">
+
+                            <span class="plan-name">
+                                Free
+                            </span>
+
+                            <span class="plan-badge">
+                                40 MINUTES
+                            </span>
+
+                        </div>
+
+                        <div class="plan-price">
+
+                            <span class="currency">
+                                ₦
+                            </span>
+
+                            <strong>
+                                0
+                            </strong>
+
+                        </div>
+
+                        <p class="plan-duration">
+                            Access for 40 minutes
+                        </p>
+
+                        <div class="plan-divider"></div>
+
+                        <button
+                            type="button"
+                            class="plan-button secondary-button"
+                            data-plan-button="Free"
+                        >
+                            Current / Free
+                        </button>
+
+                    </article>
+
+
+                    <!-- BASIC -->
+
+                    <article
+                        class="plan-card"
+                        data-plan="Basic"
+                    >
+
+                        <div class="plan-card-header">
+
+                            <span class="plan-name">
+                                Basic
+                            </span>
+
+                            <span class="plan-badge">
+                                1 TERM
+                            </span>
+
+                        </div>
+
+                        <div class="plan-price">
+
+                            <span class="currency">
+                                ₦
+                            </span>
+
+                            <strong>
+                                5,000
+                            </strong>
+
+                        </div>
+
+                        <p class="plan-duration">
+                            Access for one academic term
+                        </p>
+
+                        <div class="plan-divider"></div>
+
+                        <button
+                            type="button"
+                            class="plan-button primary-button"
+                            data-plan-button="Basic"
+                        >
+                            Choose Basic
+                        </button>
+
+                    </article>
+
+
+                    <!-- STANDARD -->
+
+                    <article
+                        class="plan-card featured"
+                        data-plan="Standard"
+                    >
+
+                        <div class="featured-label">
+                            POPULAR
+                        </div>
+
+                        <div class="plan-card-header">
+
+                            <span class="plan-name">
+                                Standard
+                            </span>
+
+                            <span class="plan-badge">
+                                1 YEAR
+                            </span>
+
+                        </div>
+
+                        <div class="plan-price">
+
+                            <span class="currency">
+                                ₦
+                            </span>
+
+                            <strong>
+                                10,000
+                            </strong>
+
+                        </div>
+
+                        <p class="plan-duration">
+                            Full access for one year
+                        </p>
+
+                        <div class="plan-divider"></div>
+
+                        <button
+                            type="button"
+                            class="plan-button primary-button"
+                            data-plan-button="Standard"
+                        >
+                            Choose Standard
+                        </button>
+
+                    </article>
+
+
+                    <!-- PREMIUM -->
+
+                    <article
+                        class="plan-card"
+                        data-plan="Premium"
+                    >
+
+                        <div class="plan-card-header">
+
+                            <span class="plan-name">
+                                Premium
+                            </span>
+
+                            <span class="plan-badge">
+                                1 YEAR
+                            </span>
+
+                        </div>
+
+                        <div class="plan-price">
+
+                            <span class="currency">
+                                ₦
+                            </span>
+
+                            <strong>
+                                20,000
+                            </strong>
+
+                        </div>
+
+                        <p class="plan-duration">
+                            Full access for one year
+                        </p>
+
+                        <div class="plan-divider"></div>
+
+                        <button
+                            type="button"
+                            class="plan-button primary-button"
+                            data-plan-button="Premium"
+                        >
+                            Choose Premium
+                        </button>
+
+                    </article>
+
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 PAYMENT INFORMATION
+            ================================================== -->
+
+            <section class="payment-information">
+
+                <div class="information-icon">
                     ✓
                 </div>
 
                 <div>
 
-                    <strong
-                        id="paymentMessageTitle"
-                    >
-                        Payment
+                    <strong>
+                        Secure payment
                     </strong>
 
-                    <p
-                        id="paymentMessageText"
-                    >
-                        —
+                    <p>
+                        Payments are processed securely
+                        through Paystack. Your school
+                        account will only be upgraded
+                        after the payment has been verified.
                     </p>
 
                 </div>
 
-            </div>
+            </section>
 
-
-        </section>
-
-
-        <!-- =================================================
-             ERROR
-        ================================================== -->
-
-        <section
-            class="billing-error hidden"
-            id="billingError"
-        >
-
-            <div class="error-icon">
-                !
-            </div>
-
-            <h2>
-                Unable to load subscription
-            </h2>
-
-            <p id="billingErrorMessage">
-                Something went wrong.
-            </p>
-
-            <button
-                type="button"
-                id="retryButton"
-                class="primary-button"
-            >
-                Try Again
-            </button>
 
         </section>
 
     </main>
 
+</div>
 
-    <!-- =====================================================
-         PAYSTACK POPUP V2
-    ====================================================== -->
 
-    <script src="https://js.paystack.co/v2/inline.js"></script>
+<!-- =========================================================
+     MOBILE OVERLAY
+========================================================= -->
 
-    <script
-        src="../js/billing.js"
-        defer
-    ></script>
+<div
+    class="sidebar-overlay"
+    id="sidebarOverlay"
+></div>
+
+
+<!-- =========================================================
+     PAYMENT MODAL
+========================================================= -->
+
+<div
+    class="modal-backdrop hidden"
+    id="paymentModal"
+>
+
+    <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="paymentModalTitle"
+    >
+
+        <div class="modal-header">
+
+            <div>
+
+                <span class="eyebrow">
+                    SUBSCRIPTION
+                </span>
+
+                <h2 id="paymentModalTitle">
+                    Confirm Plan
+                </h2>
+
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                id="closePaymentModal"
+                aria-label="Close"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="payment-summary">
+
+            <div class="payment-summary-row">
+
+                <span>
+                    Plan
+                </span>
+
+                <strong id="selectedPlan">
+                    —
+                </strong>
+
+            </div>
+
+
+            <div class="payment-summary-row">
+
+                <span>
+                    Amount
+                </span>
+
+                <strong id="selectedAmount">
+                    —
+                </strong>
+
+            </div>
+
+
+            <div class="payment-summary-row">
+
+                <span>
+                    Duration
+                </span>
+
+                <strong id="selectedDuration">
+                    —
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div
+            class="form-error hidden"
+            id="paymentError"
+        ></div>
+
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="secondary-button"
+                id="cancelPayment"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="primary-button"
+                id="continuePayment"
+            >
+                Continue to Payment
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="../js/billing.js"></script>
 
 </body>
 
