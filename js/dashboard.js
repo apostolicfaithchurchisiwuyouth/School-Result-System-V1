@@ -897,7 +897,7 @@ function setupLogout() {
 
 
             window.location.href =
-                'index.html';
+                '/';
 
         }
     );
