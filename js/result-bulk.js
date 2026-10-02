@@ -538,11 +538,11 @@
 
         try {
 
-            var response = await apiRequest('getBulkResultComments', {
+            var response = await apiRequest('getClassResultComments', {
                 schoolId: currentSession.schoolId,
                 sessionId: currentSelected.sessionId,
                 term: currentSelected.term,
-                studentIds: lastStudents.map(function (s) { return s.studentId; })
+                classId: currentSelected.classId
             });
 
             if (!response || !response.success) {
@@ -553,13 +553,13 @@
                 );
             }
 
-            (response.comments || []).forEach(function (c) {
+            (response.students || []).forEach(function (s) {
 
-                var id = String(c.studentId);
+                var id = String(s.studentId);
 
-                if (bulkState[id]) {
-                    bulkState[id].teacher = c.teacherComment || '';
-                    bulkState[id].principal = c.principalComment || '';
+                if (bulkState[id] && s.comment) {
+                    bulkState[id].teacher = s.comment['Teacher Comment'] || '';
+                    bulkState[id].principal = s.comment['Principal Comment'] || '';
                 }
 
             });
