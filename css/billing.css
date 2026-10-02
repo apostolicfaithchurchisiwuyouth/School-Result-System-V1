@@ -1,0 +1,1039 @@
+/* ============================================================
+   SCHOOL RESULTS SYSTEM
+   FILE: billing.css
+   VERSION: 1.0.0
+============================================================ */
+
+
+/* ============================================================
+   VARIABLES
+============================================================ */
+
+:root {
+
+    --billing-primary: #4f46e5;
+    --billing-primary-dark: #3730a3;
+    --billing-primary-light: #eef2ff;
+
+    --billing-background: #f7f7fb;
+    --billing-surface: #ffffff;
+
+    --billing-text: #171725;
+    --billing-muted: #6b7280;
+    --billing-border: #e6e7ef;
+
+    --billing-success: #15803d;
+    --billing-success-bg: #f0fdf4;
+
+    --billing-warning: #b45309;
+    --billing-warning-bg: #fffbeb;
+
+    --billing-danger: #b91c1c;
+    --billing-danger-bg: #fef2f2;
+
+}
+
+
+/* ============================================================
+   PAGE
+============================================================ */
+
+body {
+    background:
+        var(--billing-background);
+    color:
+        var(--billing-text);
+}
+
+
+/* ============================================================
+   LOADING
+============================================================ */
+
+.page-loading {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1000;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        var(--billing-background);
+
+    color:
+        var(--billing-muted);
+
+}
+
+.page-loading.hidden {
+    display: none;
+}
+
+.loading-spinner {
+
+    width: 34px;
+
+    height: 34px;
+
+    border: 3px solid
+        var(--billing-border);
+
+    border-top-color:
+        var(--billing-primary);
+
+    border-radius: 50%;
+
+    animation:
+        billingSpin
+        0.8s linear infinite;
+
+    margin-bottom: 14px;
+
+}
+
+.page-loading p {
+    margin: 0;
+    font-size: 0.88rem;
+}
+
+@keyframes billingSpin {
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
+
+/* ============================================================
+   HIDDEN
+============================================================ */
+
+.hidden {
+    display: none !important;
+}
+
+
+/* ============================================================
+   MAIN AREA
+============================================================ */
+
+.main-area {
+    min-height: 100vh;
+}
+
+
+/* ============================================================
+   TOPBAR
+============================================================ */
+
+.topbar {
+
+    min-height: 72px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding:
+        0 30px;
+
+    border-bottom:
+        1px solid var(--billing-border);
+
+    background:
+        var(--billing-surface);
+
+}
+
+.topbar-left {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+}
+
+.menu-button {
+
+    display: none;
+
+    border: 0;
+
+    background: transparent;
+
+    font-size: 1.3rem;
+
+    cursor: pointer;
+
+}
+
+.topbar-school {
+
+    font-size: 0.9rem;
+
+    font-weight: 700;
+
+}
+
+.topbar-page {
+
+    margin-top: 3px;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.76rem;
+
+}
+
+.topbar-user {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+.user-avatar {
+
+    width: 36px;
+
+    height: 36px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        var(--billing-primary-light);
+
+    color:
+        var(--billing-primary-dark);
+
+    font-size: 0.72rem;
+
+    font-weight: 800;
+
+}
+
+.user-details {
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+.user-details strong {
+
+    font-size: 0.78rem;
+
+}
+
+.user-details span {
+
+    margin-top: 2px;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.68rem;
+
+}
+
+
+/* ============================================================
+   CONTENT
+============================================================ */
+
+.billing-content {
+
+    width: min(
+        1100px,
+        calc(100% - 48px)
+    );
+
+    margin:
+        0 auto;
+
+    padding:
+        38px 0 60px;
+
+}
+
+
+/* ============================================================
+   PAGE HEADING
+============================================================ */
+
+.page-heading {
+
+    margin-bottom: 28px;
+
+}
+
+.eyebrow {
+
+    display: block;
+
+    margin-bottom: 7px;
+
+    color:
+        var(--billing-primary);
+
+    font-size: 0.68rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+}
+
+.page-heading h1 {
+
+    margin: 0;
+
+    font-size: 1.55rem;
+
+    line-height: 1.2;
+
+}
+
+.page-heading p {
+
+    margin:
+        7px 0 0;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.86rem;
+
+}
+
+
+/* ============================================================
+   CURRENT PLAN
+============================================================ */
+
+.current-plan {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 30px;
+
+    padding: 24px;
+
+    border:
+        1px solid var(--billing-border);
+
+    background:
+        var(--billing-surface);
+
+    border-radius: 14px;
+
+    margin-bottom: 20px;
+
+}
+
+.current-plan-main {
+
+    min-width: 190px;
+
+}
+
+.current-plan-label {
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.72rem;
+
+    margin-bottom: 7px;
+
+}
+
+.current-plan-name {
+
+    font-size: 1.35rem;
+
+    font-weight: 800;
+
+}
+
+.current-plan-status {
+
+    display: inline-flex;
+
+    margin-top: 8px;
+
+    padding:
+        4px 9px;
+
+    border-radius: 20px;
+
+    background:
+        var(--billing-success-bg);
+
+    color:
+        var(--billing-success);
+
+    font-size: 0.68rem;
+
+    font-weight: 700;
+
+}
+
+.current-plan-status.expired {
+
+    background:
+        var(--billing-danger-bg);
+
+    color:
+        var(--billing-danger);
+
+}
+
+.current-plan-details {
+
+    display: flex;
+
+    gap: 45px;
+
+}
+
+.subscription-detail {
+
+    min-width: 150px;
+
+}
+
+.subscription-detail span {
+
+    display: block;
+
+    margin-bottom: 6px;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.68rem;
+
+}
+
+.subscription-detail strong {
+
+    font-size: 0.8rem;
+
+}
+
+
+/* ============================================================
+   NOTICES
+============================================================ */
+
+.trial-notice,
+.expired-notice {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 12px;
+
+    padding: 15px 17px;
+
+    margin-bottom: 26px;
+
+    border-radius: 10px;
+
+}
+
+.trial-notice {
+
+    background:
+        var(--billing-warning-bg);
+
+    border:
+        1px solid #fde68a;
+
+}
+
+.expired-notice {
+
+    background:
+        var(--billing-danger-bg);
+
+    border:
+        1px solid #fecaca;
+
+}
+
+.notice-icon {
+
+    width: 28px;
+
+    height: 28px;
+
+    flex: 0 0 28px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255,255,255,0.75);
+
+    font-weight: 800;
+
+}
+
+.trial-notice strong,
+.expired-notice strong {
+
+    font-size: 0.78rem;
+
+}
+
+.trial-notice p,
+.expired-notice p {
+
+    margin:
+        4px 0 0;
+
+    font-size: 0.76rem;
+
+    line-height: 1.5;
+
+}
+
+
+/* ============================================================
+   PLANS HEADING
+============================================================ */
+
+.plans-heading {
+
+    margin:
+        32px 0 18px;
+
+}
+
+.plans-heading h2 {
+
+    margin: 0;
+
+    font-size: 1.1rem;
+
+}
+
+.plans-heading p {
+
+    margin:
+        6px 0 0;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.78rem;
+
+}
+
+
+/* ============================================================
+   PLANS GRID
+============================================================ */
+
+.plans-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 16px;
+
+}
+
+.plan-card {
+
+    position: relative;
+
+    display: flex;
+
+    flex-direction: column;
+
+    min-height: 280px;
+
+    padding: 22px;
+
+    border:
+        1px solid var(--billing-border);
+
+    border-radius: 14px;
+
+    background:
+        var(--billing-surface);
+
+}
+
+.plan-card.current {
+
+    border-color:
+        var(--billing-primary);
+
+}
+
+.plan-card-badge {
+
+    position: absolute;
+
+    top: 16px;
+
+    right: 16px;
+
+    padding:
+        4px 8px;
+
+    border-radius: 20px;
+
+    background:
+        var(--billing-primary-light);
+
+    color:
+        var(--billing-primary-dark);
+
+    font-size: 0.61rem;
+
+    font-weight: 800;
+
+}
+
+.plan-name {
+
+    font-size: 0.88rem;
+
+    font-weight: 800;
+
+}
+
+.plan-price {
+
+    margin-top: 18px;
+
+    font-size: 1.55rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.03em;
+
+}
+
+.plan-price span {
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.72rem;
+
+    font-weight: 500;
+
+}
+
+.plan-duration {
+
+    margin-top: 5px;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.73rem;
+
+}
+
+.plan-description {
+
+    margin:
+        18px 0;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.75rem;
+
+    line-height: 1.55;
+
+}
+
+.plan-button {
+
+    width: 100%;
+
+    margin-top: auto;
+
+    min-height: 40px;
+
+    border:
+        1px solid var(--billing-primary);
+
+    border-radius: 8px;
+
+    background:
+        var(--billing-primary);
+
+    color:
+        white;
+
+    font-size: 0.75rem;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+
+}
+
+.plan-button:hover {
+
+    background:
+        var(--billing-primary-dark);
+
+    border-color:
+        var(--billing-primary-dark);
+
+}
+
+.plan-button:disabled {
+
+    opacity: 0.6;
+
+    cursor: not-allowed;
+
+}
+
+.plan-button.secondary {
+
+    background:
+        transparent;
+
+    color:
+        var(--billing-primary);
+
+}
+
+.plan-button.secondary:hover {
+
+    background:
+        var(--billing-primary-light);
+
+}
+
+.plan-free {
+
+    opacity: 0.82;
+
+}
+
+
+/* ============================================================
+   PAYMENT MESSAGE
+============================================================ */
+
+.payment-message {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 12px;
+
+    margin-top: 24px;
+
+    padding: 15px 17px;
+
+    border:
+        1px solid var(--billing-border);
+
+    border-radius: 10px;
+
+    background:
+        var(--billing-surface);
+
+}
+
+.payment-message.success {
+
+    border-color:
+        #bbf7d0;
+
+    background:
+        var(--billing-success-bg);
+
+}
+
+.payment-message.error {
+
+    border-color:
+        #fecaca;
+
+    background:
+        var(--billing-danger-bg);
+
+}
+
+.payment-message-icon {
+
+    width: 28px;
+
+    height: 28px;
+
+    flex: 0 0 28px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        white;
+
+    font-size: 0.75rem;
+
+    font-weight: 800;
+
+}
+
+.payment-message strong {
+
+    font-size: 0.78rem;
+
+}
+
+.payment-message p {
+
+    margin:
+        4px 0 0;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.74rem;
+
+    line-height: 1.5;
+
+}
+
+
+/* ============================================================
+   ERROR
+============================================================ */
+
+.billing-error {
+
+    width: min(
+        500px,
+        calc(100% - 40px)
+    );
+
+    margin:
+        100px auto;
+
+    text-align: center;
+
+}
+
+.billing-error .error-icon {
+
+    width: 42px;
+
+    height: 42px;
+
+    margin:
+        0 auto 15px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        var(--billing-danger-bg);
+
+    color:
+        var(--billing-danger);
+
+    font-weight: 800;
+
+}
+
+.billing-error h2 {
+
+    margin: 0;
+
+    font-size: 1rem;
+
+}
+
+.billing-error p {
+
+    margin:
+        8px 0 18px;
+
+    color:
+        var(--billing-muted);
+
+    font-size: 0.8rem;
+
+}
+
+
+/* ============================================================
+   PRIMARY BUTTON
+============================================================ */
+
+.primary-button {
+
+    min-height: 40px;
+
+    padding:
+        0 18px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background:
+        var(--billing-primary);
+
+    color: white;
+
+    font-size: 0.76rem;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (
+    max-width: 850px
+) {
+
+    .menu-button {
+        display: block;
+    }
+
+    .topbar {
+        padding:
+            0 18px;
+    }
+
+    .plans-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .current-plan {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+    }
+
+    .current-plan-details {
+
+        width: 100%;
+
+        gap: 25px;
+
+    }
+
+}
+
+
+@media (
+    max-width: 600px
+) {
+
+    .billing-content {
+
+        width:
+            calc(100% - 30px);
+
+        padding-top: 26px;
+
+    }
+
+    .user-details {
+        display: none;
+    }
+
+    .current-plan {
+
+        padding: 19px;
+
+    }
+
+    .current-plan-details {
+
+        flex-direction: column;
+
+        gap: 14px;
+
+    }
+
+    .plan-card {
+
+        min-height: 250px;
+
+    }
+
+}
