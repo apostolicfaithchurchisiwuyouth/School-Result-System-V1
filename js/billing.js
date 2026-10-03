@@ -43,7 +43,7 @@
 ========================================================= */
 
 const API_URL =
-    '/api/school-results';
+    '/api/school-results.js';
 
 const SESSION_KEY =
     'school_results_system_session_v1';
