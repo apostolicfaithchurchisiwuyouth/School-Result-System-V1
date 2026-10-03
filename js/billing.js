@@ -85,6 +85,8 @@ async function initializeBilling() {
 
     setupPaymentMessageClose();
 
+   setupCheckStatusButton();
+
     currentSession =
         getSession();
 
@@ -3084,3 +3086,54 @@ window.addEventListener(
 
     }
 );
+
+
+
+function setupCheckStatusButton() {
+
+    const button = document.getElementById('checkPaymentStatusButton');
+
+    if (!button || button.dataset.ready === 'true') {
+        return;
+    }
+
+    button.dataset.ready = 'true';
+
+    button.addEventListener('click', async function () {
+
+        const original = button.textContent;
+
+        button.disabled = true;
+        button.textContent = 'Checking...';
+
+        try {
+
+            if (!paymentStatusTimer) {
+                beginPaymentStatusPolling();   // restarts polling and checks immediately
+            } else {
+                paymentStatusAttempts = 0;
+                await checkPaymentStatus();
+            }
+
+            await new Promise(function (resolve) {
+                setTimeout(resolve, 1500);
+            });
+
+            if (currentPayment && isPaymentPending(currentPayment)) {
+                showPaymentMessage(
+                    'info',
+                    'Still waiting',
+                    'No payment confirmation has been received yet. If you have already transferred, please wait a few minutes and check again.'
+                );
+            }
+
+        } finally {
+
+            button.disabled = false;
+            button.textContent = original;
+
+        }
+
+    });
+
+}
