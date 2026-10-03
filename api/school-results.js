@@ -1,29 +1,3 @@
-/**
- * ============================================================
- * SCHOOL RESULTS SYSTEM
- * FILE: /api/school-results.js
- * VERSION: 1.0.0
- *
- * PURPOSE:
- * Server-side proxy between the Vercel frontend and
- * Google Apps Script.
- *
- * FLOW:
- *
- * Browser
- *    ↓
- * /api/school-results
- *    ↓
- * Google Apps Script /exec
- *    ↓
- * Google Sheets
- *
- * This prevents the browser from making a direct request
- * to Google Apps Script and therefore avoids the Apps Script
- * CORS problem.
- * ============================================================
- */
-
 const APPS_SCRIPT_URL = process.env.SCHOOL_RESULTS_API_URL;
 
 export default async function handler(req, res) {
@@ -68,13 +42,9 @@ export default async function handler(req, res) {
   }
 
   /*
-   * ENVIRONMENT CHECK
+   * ENVIRONMENT
    */
   if (!APPS_SCRIPT_URL) {
-    console.error(
-      'SCHOOL_RESULTS_API_URL is missing.'
-    );
-
     return res.status(500).json({
       success: false,
       message: 'SCHOOL_RESULTS_API_URL is not configured.'
@@ -82,7 +52,7 @@ export default async function handler(req, res) {
   }
 
   /*
-   * READ REQUEST
+   * READ BODY
    */
   let requestBody = req.body;
 
@@ -90,12 +60,6 @@ export default async function handler(req, res) {
     try {
       requestBody = JSON.parse(requestBody);
     } catch (error) {
-
-      console.error(
-        'Request body JSON parse failed:',
-        error
-      );
-
       return res.status(400).json({
         success: false,
         message: 'Invalid request JSON.'
@@ -125,13 +89,8 @@ export default async function handler(req, res) {
     });
   }
 
-  console.log(
-    'Forwarding Apps Script action:',
-    action
-  );
-
   /*
-   * CALL GOOGLE APPS SCRIPT
+   * CALL APPS SCRIPT
    */
   let appsScriptResponse;
 
@@ -154,20 +113,17 @@ export default async function handler(req, res) {
 
   } catch (error) {
 
-    console.error(
-      'Apps Script fetch failed:',
-      error
-    );
-
     return res.status(502).json({
       success: false,
       message: 'Unable to connect to Google Apps Script.',
-      diagnostic: String(error.message || error)
+      diagnostic: String(
+        error.message || error
+      )
     });
   }
 
   /*
-   * GET RAW RESPONSE
+   * READ RESPONSE
    */
   let responseText = '';
 
@@ -178,51 +134,35 @@ export default async function handler(req, res) {
 
   } catch (error) {
 
-    console.error(
-      'Could not read Apps Script response:',
-      error
-    );
-
     return res.status(502).json({
       success: false,
-      message: 'Could not read the Google Apps Script response.',
-      diagnostic: String(error.message || error)
+      message:
+        'Could not read the Google Apps Script response.',
+      diagnostic: String(
+        error.message || error
+      )
     });
   }
 
-  console.log(
-    'Apps Script HTTP status:',
-    appsScriptResponse.status
-  );
-
-  console.log(
-    'Apps Script content type:',
-    appsScriptResponse.headers.get('content-type')
-  );
-
-  console.log(
-    'Apps Script response:',
-    responseText.substring(0, 3000)
-  );
-
   /*
-   * EMPTY RESPONSE
+   * IF EMPTY
    */
   if (!responseText.trim()) {
 
     return res.status(502).json({
       success: false,
-      message: 'Google Apps Script returned an empty response.',
-      diagnostic: {
-        httpStatus: appsScriptResponse.status,
-        contentType:
-          appsScriptResponse.headers.get('content-type')
-      }
+
+      message:
+        'Google Apps Script returned an empty response.',
+
+      diagnostic:
+        'HTTP status: ' +
+        appsScriptResponse.status
     });
   }
 
   /*
-   * PARSE JSON
+   * TRY JSON
    */
   let result;
 
@@ -233,32 +173,31 @@ export default async function handler(req, res) {
   } catch (error) {
 
     /*
-     * IMPORTANT:
-     * Return the actual response for diagnosis.
-     *
-     * Do not expose secrets here.
+     * RETURN THE ACTUAL RESPONSE DIRECTLY
+     * SO WE CAN SEE WHAT APPS SCRIPT SENT.
      */
     return res.status(502).json({
+
       success: false,
+
       message:
         'Google Apps Script returned an invalid response.',
 
-      diagnostic: {
-        httpStatus: appsScriptResponse.status,
+      httpStatus:
+        appsScriptResponse.status,
 
-        contentType:
-          appsScriptResponse.headers.get(
-            'content-type'
-          ),
+      contentType:
+        appsScriptResponse.headers.get(
+          'content-type'
+        ),
 
-        responsePreview:
-          responseText.substring(0, 3000)
-      }
+      responsePreview:
+        responseText.substring(0, 5000)
     });
   }
 
   /*
-   * FORWARD JSON RESPONSE
+   * FORWARD VALID JSON
    */
   return res
     .status(
