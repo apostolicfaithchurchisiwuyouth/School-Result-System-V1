@@ -43,7 +43,7 @@
 ========================================================= */
 
 const API_URL =
-    'https://script.google.com/macros/s/AKfycbwJOUmxayihKhry6HSZQl-tsnzbQYM8jDkHaQ4O_CdOqpnGTOJ8bi_80EjD6lLcxqCI/exec';
+    '/api/school-results';
 
 const SESSION_KEY =
     'school_results_system_session_v1';
