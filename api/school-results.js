@@ -28,16 +28,6 @@ const APPS_SCRIPT_URL = process.env.SCHOOL_RESULTS_API_URL;
 
 export default async function handler(req, res) {
 
-  /*
-   * ----------------------------------------------------------
-   * CORS
-   * ----------------------------------------------------------
-   * The production frontend is same-origin with this endpoint,
-   * but these headers make the endpoint behave correctly if
-   * the browser sends an OPTIONS request.
-   * ----------------------------------------------------------
-   */
-
   const origin = req.headers.origin || '';
 
   if (origin === 'https://myschoolresultsystem.vercel.app') {
@@ -61,21 +51,15 @@ export default async function handler(req, res) {
   );
 
   /*
-   * ----------------------------------------------------------
    * OPTIONS
-   * ----------------------------------------------------------
    */
-
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
   /*
-   * ----------------------------------------------------------
-   * ONLY POST IS ALLOWED
-   * ----------------------------------------------------------
+   * POST ONLY
    */
-
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
@@ -84,39 +68,37 @@ export default async function handler(req, res) {
   }
 
   /*
-   * ----------------------------------------------------------
-   * CHECK ENVIRONMENT VARIABLE
-   * ----------------------------------------------------------
+   * ENVIRONMENT CHECK
    */
-
   if (!APPS_SCRIPT_URL) {
     console.error(
-      'SCHOOL_RESULTS_API_URL environment variable is missing.'
+      'SCHOOL_RESULTS_API_URL is missing.'
     );
 
     return res.status(500).json({
       success: false,
-      message: 'School results server configuration is incomplete.'
+      message: 'SCHOOL_RESULTS_API_URL is not configured.'
     });
   }
 
   /*
-   * ----------------------------------------------------------
-   * READ REQUEST BODY
-   * ----------------------------------------------------------
+   * READ REQUEST
    */
-
   let requestBody = req.body;
 
   if (typeof requestBody === 'string') {
     try {
       requestBody = JSON.parse(requestBody);
     } catch (error) {
-      console.error('Could not parse request body:', error);
+
+      console.error(
+        'Request body JSON parse failed:',
+        error
+      );
 
       return res.status(400).json({
         success: false,
-        message: 'Invalid request data.'
+        message: 'Invalid request JSON.'
       });
     }
   }
@@ -128,17 +110,13 @@ export default async function handler(req, res) {
   ) {
     return res.status(400).json({
       success: false,
-      message: 'A valid request body is required.'
+      message: 'Invalid request body.'
     });
   }
 
-  /*
-   * ----------------------------------------------------------
-   * REQUIRE ACTION
-   * ----------------------------------------------------------
-   */
-
-  const action = String(requestBody.action || '').trim();
+  const action = String(
+    requestBody.action || ''
+  ).trim();
 
   if (!action) {
     return res.status(400).json({
@@ -147,110 +125,147 @@ export default async function handler(req, res) {
     });
   }
 
-  /*
-   * ----------------------------------------------------------
-   * FORWARD REQUEST TO GOOGLE APPS SCRIPT
-   * ----------------------------------------------------------
-   *
-   * We deliberately use text/plain here.
-   *
-   * This matches the existing frontend request style and
-   * avoids unnecessary browser preflight behaviour.
-   * ----------------------------------------------------------
-   */
+  console.log(
+    'Forwarding Apps Script action:',
+    action
+  );
 
+  /*
+   * CALL GOOGLE APPS SCRIPT
+   */
   let appsScriptResponse;
 
   try {
 
-    appsScriptResponse = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
+    appsScriptResponse = await fetch(
+      APPS_SCRIPT_URL,
+      {
+        method: 'POST',
 
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
 
-      body: JSON.stringify(requestBody)
-    });
+        body: JSON.stringify(requestBody),
+
+        redirect: 'follow'
+      }
+    );
 
   } catch (error) {
 
     console.error(
-      'Unable to reach Google Apps Script:',
+      'Apps Script fetch failed:',
       error
     );
 
     return res.status(502).json({
       success: false,
-      message: 'Unable to connect to the school results server.'
+      message: 'Unable to connect to Google Apps Script.',
+      diagnostic: String(error.message || error)
     });
   }
 
   /*
-   * ----------------------------------------------------------
-   * READ APPS SCRIPT RESPONSE
-   * ----------------------------------------------------------
-   *
-   * Read as text first because Apps Script responses can
-   * occasionally be returned through redirects or with an
-   * unexpected content type.
-   * ----------------------------------------------------------
+   * GET RAW RESPONSE
    */
-
   let responseText = '';
 
   try {
-    responseText = await appsScriptResponse.text();
+
+    responseText =
+      await appsScriptResponse.text();
+
   } catch (error) {
 
     console.error(
-      'Unable to read Apps Script response:',
+      'Could not read Apps Script response:',
       error
     );
 
     return res.status(502).json({
       success: false,
-      message: 'The school results server returned an unreadable response.'
+      message: 'Could not read the Google Apps Script response.',
+      diagnostic: String(error.message || error)
     });
   }
 
+  console.log(
+    'Apps Script HTTP status:',
+    appsScriptResponse.status
+  );
+
+  console.log(
+    'Apps Script content type:',
+    appsScriptResponse.headers.get('content-type')
+  );
+
+  console.log(
+    'Apps Script response:',
+    responseText.substring(0, 3000)
+  );
+
   /*
-   * ----------------------------------------------------------
-   * PARSE JSON
-   * ----------------------------------------------------------
+   * EMPTY RESPONSE
    */
-
-  let result;
-
-  try {
-    result = JSON.parse(responseText);
-  } catch (error) {
-
-    console.error(
-      'Apps Script returned non-JSON response:',
-      responseText.substring(0, 1000)
-    );
+  if (!responseText.trim()) {
 
     return res.status(502).json({
       success: false,
-      message: 'The school results server returned an invalid response.'
+      message: 'Google Apps Script returned an empty response.',
+      diagnostic: {
+        httpStatus: appsScriptResponse.status,
+        contentType:
+          appsScriptResponse.headers.get('content-type')
+      }
     });
   }
 
   /*
-   * ----------------------------------------------------------
-   * FORWARD RESPONSE
-   * ----------------------------------------------------------
-   *
-   * Preserve the Apps Script HTTP status when possible.
-   * ----------------------------------------------------------
+   * PARSE JSON
    */
+  let result;
 
-  const statusCode =
-    appsScriptResponse.status >= 200 &&
-    appsScriptResponse.status <= 599
-      ? appsScriptResponse.status
-      : 502;
+  try {
 
-  return res.status(statusCode).json(result);
+    result = JSON.parse(responseText);
+
+  } catch (error) {
+
+    /*
+     * IMPORTANT:
+     * Return the actual response for diagnosis.
+     *
+     * Do not expose secrets here.
+     */
+    return res.status(502).json({
+      success: false,
+      message:
+        'Google Apps Script returned an invalid response.',
+
+      diagnostic: {
+        httpStatus: appsScriptResponse.status,
+
+        contentType:
+          appsScriptResponse.headers.get(
+            'content-type'
+          ),
+
+        responsePreview:
+          responseText.substring(0, 3000)
+      }
+    });
+  }
+
+  /*
+   * FORWARD JSON RESPONSE
+   */
+  return res
+    .status(
+      appsScriptResponse.status >= 200 &&
+      appsScriptResponse.status <= 599
+        ? appsScriptResponse.status
+        : 502
+    )
+    .json(result);
 }
