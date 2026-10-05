@@ -209,7 +209,3 @@ export default async function handler(req, res) {
     .json(result);
 }
 
-
-
-const text = await upstream.text();
-console.error('Apps Script status:', upstream.status, '| body:', text.substring(0, 500));
