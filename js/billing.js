@@ -58,13 +58,13 @@ let currentPayment = null;
 
 let paymentInProgress = false;
 
-let paymentStatusRequestActive = false;
-
 let paymentStatusTimer = null;
 
 let paymentStatusAttempts = 0;
 
-const MAX_PAYMENT_STATUS_ATTEMPTS = 60;
+let paymentStatusRequestActive = false;
+
+const MAX_PAYMENT_STATUS_ATTEMPTS = 40;
 
 
 /* =========================================================
