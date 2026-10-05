@@ -1,6 +1,20 @@
 const APPS_SCRIPT_URL = process.env.SCHOOL_RESULTS_API_URL;
 
+export const config = { maxDuration: 30 };
+
 export default async function handler(req, res) {
+  try {
+    return await mainHandler(req, res);
+  } catch (error) {
+    console.error('Unhandled proxy error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Proxy error: ' + String(error.message || error)
+    });
+  }
+}
+
+async function mainHandler(req, res) {
 
   const origin = req.headers.origin || '';
 
@@ -9,31 +23,16 @@ export default async function handler(req, res) {
     res.setHeader('Vary', 'Origin');
   }
 
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'POST, OPTIONS'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Content-Type'
-  );
-
-  res.setHeader(
-    'Cache-Control',
-    'no-store, no-cache, must-revalidate'
-  );
-
-  /*
-   * OPTIONS
-   */
+  /* OPTIONS */
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  /*
-   * POST ONLY
-   */
+  /* POST ONLY */
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
@@ -41,9 +40,7 @@ export default async function handler(req, res) {
     });
   }
 
-  /*
-   * ENVIRONMENT
-   */
+  /* ENVIRONMENT */
   if (!APPS_SCRIPT_URL) {
     return res.status(500).json({
       success: false,
@@ -51,9 +48,7 @@ export default async function handler(req, res) {
     });
   }
 
-  /*
-   * READ BODY
-   */
+  /* READ BODY */
   let requestBody = req.body;
 
   if (typeof requestBody === 'string') {
@@ -78,9 +73,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const action = String(
-    requestBody.action || ''
-  ).trim();
+  const action = String(requestBody.action || '').trim();
 
   if (!action) {
     return res.status(400).json({
@@ -89,81 +82,51 @@ export default async function handler(req, res) {
     });
   }
 
-  /*
-   * CALL APPS SCRIPT
-   */
+  /* CALL APPS SCRIPT (with timeout) */
   let appsScriptResponse;
-
-  try {
-
-    appsScriptResponse = await fetch(
-      APPS_SCRIPT_URL,
-      {
-        method: 'POST',
-
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-
-        body: JSON.stringify(requestBody),
-
-        redirect: 'follow'
-      }
-    );
-
-  } catch (error) {
-
-    return res.status(502).json({
-      success: false,
-      message: 'Unable to connect to Google Apps Script.',
-      diagnostic: String(
-        error.message || error
-      )
-    });
-  }
-
-  /*
-   * READ RESPONSE
-   */
   let responseText = '';
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+
   try {
 
-    responseText =
-      await appsScriptResponse.text();
+    appsScriptResponse = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(requestBody),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+
+    responseText = await appsScriptResponse.text();
 
   } catch (error) {
 
-    return res.status(502).json({
+    const timedOut = error.name === 'AbortError';
+
+    return res.status(timedOut ? 504 : 502).json({
       success: false,
-      message:
-        'Could not read the Google Apps Script response.',
-      diagnostic: String(
-        error.message || error
-      )
+      message: timedOut
+        ? 'Google Apps Script took too long to respond.'
+        : 'Unable to connect to Google Apps Script.',
+      diagnostic: String(error.message || error)
     });
+
+  } finally {
+    clearTimeout(timer);
   }
 
-  /*
-   * IF EMPTY
-   */
+  /* EMPTY RESPONSE */
   if (!responseText.trim()) {
-
     return res.status(502).json({
       success: false,
-
-      message:
-        'Google Apps Script returned an empty response.',
-
-      diagnostic:
-        'HTTP status: ' +
-        appsScriptResponse.status
+      message: 'Google Apps Script returned an empty response.',
+      diagnostic: 'HTTP status: ' + appsScriptResponse.status
     });
   }
 
-  /*
-   * TRY JSON
-   */
+  /* PARSE JSON */
   let result;
 
   try {
@@ -172,40 +135,21 @@ export default async function handler(req, res) {
 
   } catch (error) {
 
-    /*
-     * RETURN THE ACTUAL RESPONSE DIRECTLY
-     * SO WE CAN SEE WHAT APPS SCRIPT SENT.
-     */
+    console.error(
+      'Apps Script non-JSON:',
+      appsScriptResponse.status,
+      responseText.substring(0, 500)
+    );
+
     return res.status(502).json({
-
       success: false,
-
-      message:
-        'Google Apps Script returned an invalid response.',
-
-      httpStatus:
-        appsScriptResponse.status,
-
-      contentType:
-        appsScriptResponse.headers.get(
-          'content-type'
-        ),
-
-      responsePreview:
-        responseText.substring(0, 5000)
+      message: 'Google Apps Script returned an invalid response.',
+      httpStatus: appsScriptResponse.status,
+      contentType: appsScriptResponse.headers.get('content-type'),
+      responsePreview: responseText.substring(0, 5000)
     });
   }
 
-  /*
-   * FORWARD VALID JSON
-   */
-  return res
-    .status(
-      appsScriptResponse.status >= 200 &&
-      appsScriptResponse.status <= 599
-        ? appsScriptResponse.status
-        : 502
-    )
-    .json(result);
+  /* FORWARD VALID JSON */
+  return res.status(200).json(result);
 }
-
