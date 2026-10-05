@@ -58,6 +58,8 @@ let currentPayment = null;
 
 let paymentInProgress = false;
 
+let paymentStatusRequestActive = false;
+
 let paymentStatusTimer = null;
 
 let paymentStatusAttempts = 0;
@@ -402,6 +404,36 @@ function setupRetry() {
 
 }
 
+async function checkPaymentStatus() {
+
+    if (paymentStatusRequestActive) {
+        return;
+    }
+
+    const schoolId = getSessionSchoolId();
+
+    if (!schoolId) {
+        stopPaymentStatusPolling();
+        return;
+    }
+
+    paymentStatusAttempts++;
+
+    if (paymentStatusAttempts > MAX_PAYMENT_STATUS_ATTEMPTS) {
+        stopPaymentStatusPolling();
+        return;
+    }
+
+    paymentStatusRequestActive = true;
+
+    try {
+        // ...existing try body unchanged
+    } catch (error) {
+        // ...existing catch body unchanged
+    } finally {
+        paymentStatusRequestActive = false;
+    }
+}
 
 /* =========================================================
    PAYMENT MESSAGE CLOSE
@@ -2459,12 +2491,7 @@ function beginPaymentStatusPolling() {
     checkPaymentStatus();
 
 
-    paymentStatusTimer =
-        window.setInterval(
-            checkPaymentStatus,
-            5000
-        );
-
+paymentStatusTimer = window.setInterval(checkPaymentStatus, 15000);
 }
 
 
