@@ -2,7 +2,7 @@
  * ============================================================
  * SCHOOL RESULTS SYSTEM
  * FILE: /js/sessions.js
- * VERSION: 2.1.0
+ * VERSION: 2.2.0
  *
  * PURPOSE:
  * Academic session management.
@@ -14,62 +14,30 @@
 (function () {
     'use strict';
 
-    const SESSION_KEY =
-        'school_results_system_session_v1';
-
-    const LOGIN_PAGE =
-        '/index.html';
+    const SESSION_KEY = 'school_results_system_session_v1';
+    const LOGIN_PAGE = '/';
 
     let sessions = [];
 
     /* --------------------------------------------------------
-       DOM
+       DOM HELPERS
     -------------------------------------------------------- */
 
-    const sidebar =
-        document.getElementById('sidebar');
-
-    const menuButton =
-        document.getElementById('menuButton');
-
-    const overlay =
-        document.getElementById('sidebarOverlay');
-
-    const logoutButton =
-        document.getElementById('logoutButton');
-
-    const sessionModal =
-        document.getElementById('sessionModal');
-
-    const sessionForm =
-        document.getElementById('sessionForm');
-
-    const sessionsTableBody =
-        document.getElementById('sessionsTableBody');
-
-    const messageElement =
-        document.getElementById('sessionMessage');
-
-    const activeSessionElement =
-        document.getElementById('activeSession');
-
-    const createSessionButton =
-        document.getElementById('createSessionButton');
-
+    function $(id) {
+        return document.getElementById(id);
+    }
 
     /* --------------------------------------------------------
        INITIALIZE
     -------------------------------------------------------- */
 
     async function initialize() {
+        console.log('[Sessions] Initializing...');
 
-        const session =
-            getStoredSession();
+        const session = getStoredSession();
 
-        if (
-            !session ||
-            !session.schoolId
-        ) {
+        if (!session || !session.schoolId) {
+            console.warn('[Sessions] No valid login session.');
             redirectToLogin();
             return;
         }
@@ -83,174 +51,133 @@
         await loadSessions(session);
     }
 
-
     /* --------------------------------------------------------
-       SESSION
+       STORED LOGIN SESSION
     -------------------------------------------------------- */
 
     function getStoredSession() {
-
         try {
-
-            const raw =
-                localStorage.getItem(
-                    SESSION_KEY
-                );
+            const raw = localStorage.getItem(SESSION_KEY);
 
             if (!raw) {
                 return null;
             }
 
-            const session =
-                JSON.parse(raw);
+            const session = JSON.parse(raw);
 
-            if (
-                !session ||
-                typeof session !== 'object'
-            ) {
+            if (!session || typeof session !== 'object') {
                 return null;
             }
 
             return session;
 
         } catch (error) {
+            console.error('[Sessions] Session read error:', error);
 
-            console.error(
-                'Session read error:',
-                error
-            );
-
-            localStorage.removeItem(
-                SESSION_KEY
-            );
+            localStorage.removeItem(SESSION_KEY);
 
             return null;
         }
     }
 
-
     function redirectToLogin() {
-
-        window.location.replace(
-            LOGIN_PAGE
-        );
+        window.location.replace(LOGIN_PAGE);
     }
 
-
     /* --------------------------------------------------------
-       USER
+       USER DISPLAY
     -------------------------------------------------------- */
 
     function populateUser(session) {
-
-        const name =
-            session.fullName ||
-            'Administrator';
-
-        const role =
-            session.role ||
-            'Administrator';
-
-        const schoolName =
-            session.schoolName ||
-            '';
-
-        const userNameElements =
-            document.querySelectorAll(
-                '[data-user-name], .user-name'
-            );
-
-        userNameElements.forEach(
-            function (element) {
-                element.textContent = name;
-            }
-        );
-
-        const roleElements =
-            document.querySelectorAll(
-                '[data-user-role], .user-role'
-            );
-
-        roleElements.forEach(
-            function (element) {
-                element.textContent = role;
-            }
-        );
-
-        const schoolElements =
-            document.querySelectorAll(
-                '[data-school-name], .school-name'
-            );
-
-        schoolElements.forEach(
-            function (element) {
-                element.textContent =
-                    schoolName;
-            }
-        );
-
-        const initials =
-            getInitials(name);
+        const name = session.fullName || 'Administrator';
+        const role = session.role || 'Administrator';
+        const schoolName = session.schoolName || '';
 
         document
-            .querySelectorAll(
-                '[data-user-initials], .user-initials'
-            )
-            .forEach(
-                function (element) {
-                    element.textContent =
-                        initials;
-                }
-            );
+            .querySelectorAll('[data-user-name], .user-name')
+            .forEach(function (element) {
+                element.textContent = name;
+            });
+
+        document
+            .querySelectorAll('[data-user-role], .user-role')
+            .forEach(function (element) {
+                element.textContent = role;
+            });
+
+        document
+            .querySelectorAll('[data-school-name], .school-name')
+            .forEach(function (element) {
+                element.textContent = schoolName;
+            });
+
+        const initials = getInitials(name);
+
+        document
+            .querySelectorAll('[data-user-initials], .user-initials')
+            .forEach(function (element) {
+                element.textContent = initials;
+            });
     }
 
-
     function getInitials(name) {
-
         return String(name)
             .trim()
             .split(/\s+/)
             .filter(Boolean)
             .slice(0, 2)
             .map(function (part) {
-                return part.charAt(0)
-                    .toUpperCase();
+                return part.charAt(0).toUpperCase();
             })
             .join('');
     }
-
 
     /* --------------------------------------------------------
        LOAD SESSIONS
     -------------------------------------------------------- */
 
     async function loadSessions(session) {
-
         setPageLoading(true);
         clearMessage();
 
         try {
+            if (
+                !window.schoolResultsAPI ||
+                typeof window.schoolResultsAPI.request !== 'function'
+            ) {
+                throw new Error(
+                    'The central API client is not available. Please refresh the page.'
+                );
+            }
+
+            console.log(
+                '[Sessions] Loading sessions for:',
+                session.schoolId
+            );
 
             const result =
                 await window.schoolResultsAPI.request(
                     'getSessions',
                     {
-                        schoolId:
-                            session.schoolId
+                        schoolId: session.schoolId
                     }
                 );
 
-            sessions =
-                extractSessions(result);
+            console.log('[Sessions] API response:', result);
+
+            sessions = extractSessions(result);
+
+            console.log(
+                '[Sessions] Sessions extracted:',
+                sessions
+            );
 
             renderSessions();
-
             updateActiveSession();
 
         } catch (error) {
-
             console.error(
-                'Load sessions error:',
+                '[Sessions] Load sessions error:',
                 error
             );
 
@@ -260,35 +187,28 @@
             );
 
         } finally {
-
+            /*
+             * IMPORTANT:
+             * Always remove the page-loading state, regardless
+             * of whether rendering succeeds or fails.
+             */
             setPageLoading(false);
+
+            console.log('[Sessions] Loading finished.');
         }
     }
 
-
     function extractSessions(result) {
-
         if (!result) {
             return [];
         }
 
-        if (
-            Array.isArray(result)
-        ) {
+        if (Array.isArray(result)) {
             return result;
         }
 
-        if (
-            Array.isArray(result.sessions)
-        ) {
+        if (Array.isArray(result.sessions)) {
             return result.sessions;
-        }
-
-        if (
-            result.data &&
-            Array.isArray(result.data)
-        ) {
-            return result.data;
         }
 
         if (
@@ -298,80 +218,76 @@
             return result.data.sessions;
         }
 
+        if (
+            result.data &&
+            Array.isArray(result.data)
+        ) {
+            return result.data;
+        }
+
         return [];
     }
 
-
     /* --------------------------------------------------------
-       RENDER
+       RENDER SESSIONS
     -------------------------------------------------------- */
 
     function renderSessions() {
+        const tableBody = $('sessionsTableBody');
 
-        if (!sessionsTableBody) {
+        if (!tableBody) {
+            console.error(
+                '[Sessions] sessionsTableBody was not found in the HTML.'
+            );
+
             return;
         }
 
-        const sorted =
-            [...sessions].sort(
-                function (a, b) {
+        const sorted = [...sessions].sort(function (a, b) {
+            const dateA =
+                new Date(
+                    getSessionStartDate(a)
+                ).getTime() || 0;
 
-                    const dateA =
-                        new Date(
-                            getSessionStartDate(a)
-                        ).getTime() || 0;
+            const dateB =
+                new Date(
+                    getSessionStartDate(b)
+                ).getTime() || 0;
 
-                    const dateB =
-                        new Date(
-                            getSessionStartDate(b)
-                        ).getTime() || 0;
-
-                    return dateB - dateA;
-                }
-            );
+            return dateB - dateA;
+        });
 
         if (!sorted.length) {
-
-            sessionsTableBody.innerHTML =
-                `
+            tableBody.innerHTML = `
                 <tr>
                     <td colspan="6">
                         No academic sessions found.
                     </td>
                 </tr>
-                `;
+            `;
+
+            updateRecordCount(0);
 
             return;
         }
 
-        sessionsTableBody.innerHTML =
+        tableBody.innerHTML =
             sorted
                 .map(renderSessionRow)
                 .join('');
 
+        updateRecordCount(sorted.length);
+
         bindActivationButtons();
     }
 
-
     function renderSessionRow(session) {
-
-        const id =
-            getSessionId(session);
-
-        const name =
-            getSessionName(session);
-
-        const start =
-            getSessionStartDate(session);
-
-        const end =
-            getSessionEndDate(session);
-
-        const status =
-            getSessionStatus(session);
-
-        const active =
-            isActiveSession(session);
+        const id = getSessionId(session);
+        const name = getSessionName(session);
+        const start = getSessionStartDate(session);
+        const end = getSessionEndDate(session);
+        const status = getSessionStatus(session);
+        const active = isActiveSession(session);
 
         return `
             <tr>
@@ -389,7 +305,7 @@
 
                 <td>
                     <span class="session-status ${active ? 'active' : ''}">
-                        ${escapeHtml(status)}
+                        ${escapeHtml(status || 'Inactive')}
                     </span>
                 </td>
 
@@ -405,48 +321,45 @@
                                 >
                                     Activate
                                 </button>
-                              `
+                            `
                     }
                 </td>
             </tr>
         `;
     }
 
+    function updateRecordCount(count) {
+        const element = $('recordCount');
 
-    function bindActivationButtons() {
+        if (!element) {
+            return;
+        }
 
-        document
-            .querySelectorAll(
-                '.activate-button'
-            )
-            .forEach(
-                function (button) {
-
-                    button.addEventListener(
-                        'click',
-                        function () {
-
-                            const sessionId =
-                                button.dataset.sessionId;
-
-                            activateSession(
-                                sessionId
-                            );
-                        }
-                    );
-                }
-            );
+        element.textContent =
+            `${count} session${count === 1 ? '' : 's'}`;
     }
 
+    function bindActivationButtons() {
+        document
+            .querySelectorAll('.activate-button')
+            .forEach(function (button) {
+                button.addEventListener(
+                    'click',
+                    function () {
+                        activateSession(
+                            button.dataset.sessionId
+                        );
+                    }
+                );
+            });
+    }
 
     /* --------------------------------------------------------
-       CREATE
+       CREATE SESSION
     -------------------------------------------------------- */
 
     async function createSession() {
-
-        const storedSession =
-            getStoredSession();
+        const storedSession = getStoredSession();
 
         if (
             !storedSession ||
@@ -457,60 +370,43 @@
         }
 
         const sessionName =
-            getInputValue(
-                'sessionName'
-            );
+            getInputValue('sessionName');
 
         const startDate =
-            getInputValue(
-                'startDate'
-            );
+            getInputValue('startDate');
 
         const endDate =
-            getInputValue(
-                'endDate'
-            );
+            getInputValue('endDate');
 
         if (!sessionName) {
-
             showMessage(
                 'Please enter the academic session name.',
                 'error'
             );
-
             return;
         }
 
         if (!startDate) {
-
             showMessage(
                 'Please select a start date.',
                 'error'
             );
-
             return;
         }
 
         if (!endDate) {
-
             showMessage(
                 'Please select an end date.',
                 'error'
             );
-
             return;
         }
 
-        if (
-            new Date(startDate) >
-            new Date(endDate)
-        ) {
-
+        if (new Date(startDate) > new Date(endDate)) {
             showMessage(
                 'The start date cannot be after the end date.',
                 'error'
             );
-
             return;
         }
 
@@ -518,7 +414,6 @@
         clearMessage();
 
         try {
-
             await window.schoolResultsAPI.request(
                 'createSession',
                 {
@@ -549,9 +444,8 @@
             );
 
         } catch (error) {
-
             console.error(
-                'Create session error:',
+                '[Sessions] Create session error:',
                 error
             );
 
@@ -561,18 +455,15 @@
             );
 
         } finally {
-
             setFormLoading(false);
         }
     }
 
-
     /* --------------------------------------------------------
-       ACTIVATE
+       ACTIVATE SESSION
     -------------------------------------------------------- */
 
     async function activateSession(sessionId) {
-
         if (!sessionId) {
             return;
         }
@@ -589,13 +480,11 @@
         }
 
         const selectedSession =
-            sessions.find(
-                function (session) {
-                    return String(
-                        getSessionId(session)
-                    ) === String(sessionId);
-                }
-            );
+            sessions.find(function (session) {
+                return String(
+                    getSessionId(session)
+                ) === String(sessionId);
+            });
 
         const sessionName =
             selectedSession
@@ -615,7 +504,6 @@
         clearMessage();
 
         try {
-
             await window.schoolResultsAPI.request(
                 'setActiveSession',
                 {
@@ -637,9 +525,8 @@
             );
 
         } catch (error) {
-
             console.error(
-                'Activate session error:',
+                '[Sessions] Activate session error:',
                 error
             );
 
@@ -649,43 +536,67 @@
             );
 
         } finally {
-
             setPageLoading(false);
         }
     }
 
-
     /* --------------------------------------------------------
-       ACTIVE SESSION
+       ACTIVE SESSION DISPLAY
     -------------------------------------------------------- */
 
     function updateActiveSession() {
-
         const active =
-            sessions.find(
-                isActiveSession
-            );
+            sessions.find(isActiveSession);
+
+        const activeName =
+            $('activeSessionName');
+
+        const activeDates =
+            $('activeSessionDates');
+
+        const activeBadge =
+            $('activeBadge');
 
         if (!active) {
-
-            if (activeSessionElement) {
-                activeSessionElement.textContent =
+            if (activeName) {
+                activeName.textContent =
                     'No active session';
+            }
+
+            if (activeDates) {
+                activeDates.textContent =
+                    '';
+            }
+
+            if (activeBadge) {
+                activeBadge.textContent =
+                    'No Active Session';
             }
 
             return;
         }
 
-        if (activeSessionElement) {
-
-            activeSessionElement.textContent =
+        if (activeName) {
+            activeName.textContent =
                 getSessionName(active);
+        }
+
+        if (activeDates) {
+            activeDates.textContent =
+                `${formatDate(
+                    getSessionStartDate(active)
+                )} – ${formatDate(
+                    getSessionEndDate(active)
+                )}`;
+        }
+
+        if (activeBadge) {
+            activeBadge.textContent =
+                'Active';
         }
     }
 
-
     function isActiveSession(session) {
-
         const status =
             String(
                 getSessionStatus(session)
@@ -699,16 +610,17 @@
         );
     }
 
-
     /* --------------------------------------------------------
        MODAL
     -------------------------------------------------------- */
 
     function setupModal() {
+        const openButton =
+            $('openCreateButton') ||
+            $('createSessionButton');
 
-        if (createSessionButton) {
-
-            createSessionButton.addEventListener(
+        if (openButton) {
+            openButton.addEventListener(
                 'click',
                 openModal
             );
@@ -718,140 +630,136 @@
             .querySelectorAll(
                 '[data-close-modal], .close-modal'
             )
-            .forEach(
-                function (button) {
-
-                    button.addEventListener(
-                        'click',
-                        closeModal
-                    );
-                }
-            );
+            .forEach(function (button) {
+                button.addEventListener(
+                    'click',
+                    closeModal
+                );
+            });
     }
-
 
     function openModal() {
+        const modal =
+            $('sessionModal');
 
-        if (!sessionModal) {
+        if (!modal) {
             return;
         }
 
-        sessionModal.hidden = false;
-        sessionModal.classList.add(
-            'open'
-        );
+        modal.hidden = false;
+        modal.classList.add('open');
 
         const input =
-            document.getElementById(
-                'sessionName'
-            );
+            $('sessionName');
 
-        input?.focus();
+        if (input) {
+            input.focus();
+        }
     }
 
-
     function closeModal() {
+        const modal =
+            $('sessionModal');
 
-        if (!sessionModal) {
+        if (!modal) {
             return;
         }
 
-        sessionModal.classList.remove(
-            'open'
-        );
-
-        sessionModal.hidden = true;
+        modal.classList.remove('open');
+        modal.hidden = true;
     }
-
 
     /* --------------------------------------------------------
        FORM
     -------------------------------------------------------- */
 
     function setupForm() {
+        const form =
+            $('sessionForm');
 
-        if (!sessionForm) {
+        if (!form) {
             return;
         }
 
-        sessionForm.addEventListener(
+        form.addEventListener(
             'submit',
             function (event) {
-
                 event.preventDefault();
-
                 createSession();
             }
         );
     }
 
-
     function resetForm() {
+        const form =
+            $('sessionForm');
 
-        sessionForm?.reset();
+        if (form) {
+            form.reset();
+        }
     }
 
-
     function getInputValue(id) {
-
         const element =
-            document.getElementById(id);
+            $(id);
 
         return String(
             element?.value || ''
         ).trim();
     }
 
-
     /* --------------------------------------------------------
        NAVIGATION
     -------------------------------------------------------- */
 
     function setupNavigation() {
+        const menuButton =
+            $('menuButton');
 
-        menuButton?.addEventListener(
-            'click',
-            function () {
+        const sidebar =
+            $('sidebar');
 
-                sidebar?.classList.add(
-                    'open'
-                );
+        const overlay =
+            $('sidebarOverlay');
 
-                overlay?.classList.add(
-                    'show'
-                );
-            }
-        );
+        if (menuButton) {
+            menuButton.addEventListener(
+                'click',
+                function () {
+                    sidebar?.classList.add('open');
+                    overlay?.classList.add('show');
+                }
+            );
+        }
 
-        overlay?.addEventListener(
-            'click',
-            closeSidebar
-        );
+        if (overlay) {
+            overlay.addEventListener(
+                'click',
+                closeSidebar
+            );
+        }
     }
-
 
     function closeSidebar() {
-
-        sidebar?.classList.remove(
-            'open'
-        );
-
-        overlay?.classList.remove(
-            'show'
-        );
+        $('sidebar')?.classList.remove('open');
+        $('sidebarOverlay')?.classList.remove('show');
     }
-
 
     /* --------------------------------------------------------
        LOGOUT
     -------------------------------------------------------- */
 
     function setupLogout() {
+        const logoutButton =
+            $('logoutButton');
 
-        logoutButton?.addEventListener(
+        if (!logoutButton) {
+            return;
+        }
+
+        logoutButton.addEventListener(
             'click',
             function () {
-
                 const confirmed =
                     window.confirm(
                         'Are you sure you want to log out?'
@@ -870,34 +778,50 @@
         );
     }
 
-
     /* --------------------------------------------------------
-       LOADING
+       PAGE LOADING
     -------------------------------------------------------- */
 
     function setPageLoading(isLoading) {
-
         document.body.classList.toggle(
             'page-loading',
-            isLoading
+            Boolean(isLoading)
+        );
+
+        /*
+         * Also support an explicit loading element if the
+         * Sessions HTML contains one.
+         */
+        const loadingElements =
+            document.querySelectorAll(
+                '#loadingState, #loadingOverlay, .loading-state, .page-loader'
+            );
+
+        loadingElements.forEach(
+            function (element) {
+                element.hidden = !isLoading;
+                element.setAttribute(
+                    'aria-hidden',
+                    String(!isLoading)
+                );
+            }
         );
     }
 
-
     function setFormLoading(isLoading) {
+        const form =
+            $('sessionForm');
 
         const submitButton =
-            sessionForm?.querySelector(
+            form?.querySelector(
                 'button[type="submit"]'
             );
 
         if (submitButton) {
-
             submitButton.disabled =
-                isLoading;
+                Boolean(isLoading);
         }
     }
-
 
     /* --------------------------------------------------------
        MESSAGES
@@ -907,38 +831,74 @@
         message,
         type = 'error'
     ) {
+        const pageMessage =
+            $('pageMessage');
 
-        if (!messageElement) {
-            return;
+        const messageText =
+            $('messageText');
+
+        /*
+         * This matches the actual Sessions HTML.
+         */
+        if (pageMessage) {
+            pageMessage.hidden = false;
+
+            pageMessage.classList.remove(
+                'success',
+                'error',
+                'warning'
+            );
+
+            pageMessage.classList.add(type);
         }
 
-        messageElement.textContent =
-            message;
+        if (messageText) {
+            messageText.textContent =
+                message;
+        }
 
-        messageElement.className =
-            `session-message ${type}`;
+        /*
+         * Fallback for older markup.
+         */
+        const oldMessage =
+            $('sessionMessage');
 
-        messageElement.hidden =
-            false;
+        if (oldMessage) {
+            oldMessage.textContent =
+                message;
+
+            oldMessage.className =
+                `session-message ${type}`;
+
+            oldMessage.hidden = false;
+        }
     }
-
 
     function clearMessage() {
+        const pageMessage =
+            $('pageMessage');
 
-        if (!messageElement) {
-            return;
+        const messageText =
+            $('messageText');
+
+        if (pageMessage) {
+            pageMessage.hidden = true;
         }
 
-        messageElement.textContent =
-            '';
+        if (messageText) {
+            messageText.textContent = '';
+        }
 
-        messageElement.hidden =
-            true;
+        const oldMessage =
+            $('sessionMessage');
+
+        if (oldMessage) {
+            oldMessage.textContent = '';
+            oldMessage.hidden = true;
+        }
     }
 
-
     function getErrorMessage(error) {
-
         if (
             error &&
             typeof error.message === 'string' &&
@@ -952,69 +912,57 @@
         );
     }
 
-
     /* --------------------------------------------------------
        SESSION FIELD HELPERS
     -------------------------------------------------------- */
 
     function getSessionId(session) {
-
         return (
-            session.sessionId ??
-            session.id ??
-            session['Session ID'] ??
+            session?.sessionId ??
+            session?.id ??
+            session?.['Session ID'] ??
             ''
         );
     }
-
 
     function getSessionName(session) {
-
         return (
-            session.sessionName ??
-            session.name ??
-            session['Session Name'] ??
+            session?.sessionName ??
+            session?.name ??
+            session?.['Session Name'] ??
             ''
         );
     }
-
 
     function getSessionStartDate(session) {
-
         return (
-            session.startDate ??
-            session['Start Date'] ??
+            session?.startDate ??
+            session?.['Start Date'] ??
             ''
         );
     }
-
 
     function getSessionEndDate(session) {
-
         return (
-            session.endDate ??
-            session['End Date'] ??
+            session?.endDate ??
+            session?.['End Date'] ??
             ''
         );
     }
-
 
     function getSessionStatus(session) {
-
         return (
-            session.status ??
-            session['Status'] ??
+            session?.status ??
+            session?.['Status'] ??
             ''
         );
     }
-
 
     /* --------------------------------------------------------
        DATE
     -------------------------------------------------------- */
 
     function formatDate(value) {
-
         if (!value) {
             return '—';
         }
@@ -1042,13 +990,11 @@
         );
     }
 
-
     /* --------------------------------------------------------
        HTML ESCAPE
     -------------------------------------------------------- */
 
     function escapeHtml(value) {
-
         return String(value ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -1057,7 +1003,6 @@
             .replace(/'/g, '&#039;');
     }
 
-
     /* --------------------------------------------------------
        START
     -------------------------------------------------------- */
@@ -1065,14 +1010,11 @@
     if (
         document.readyState === 'loading'
     ) {
-
         document.addEventListener(
             'DOMContentLoaded',
             initialize
         );
-
     } else {
-
         initialize();
     }
 
