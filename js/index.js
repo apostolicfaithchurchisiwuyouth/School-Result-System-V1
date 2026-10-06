@@ -1,805 +1,560 @@
-/* ============================================================
-   SCHOOL RESULTS SYSTEM
-   FILE: index.js
-   VERSION: 1.0.0
-
-   PURPOSE:
-   Main login and frontend session management.
-============================================================ */
-
-
-/* ============================================================
-   CONFIGURATION
-============================================================ */
-
-const API_URL =
-    'https://script.google.com/macros/s/AKfycbwJOUmxayihKhry6HSZQl-tsnzbQYM8jDkHaQ4O_CdOqpnGTOJ8bi_80EjD6lLcxqCI/exec';
-
-
-/*
- * This is the single session key that the
- * entire frontend application will use.
- */
-const SESSION_KEY =
-    'school_results_system_session_v1';
-
-
-/*
- * Dashboard destination after successful login.
+/**
+ * ============================================================
+ * SCHOOL RESULTS SYSTEM
+ * FILE: /js/index.js
+ * VERSION: 2.1.0
  *
- * We will create this page in the next phase.
+ * PURPOSE:
+ * Login page controller.
+ *
+ * API communication is handled ONLY by /js/api.js.
+ * ============================================================
  */
-const DASHBOARD_URL =
-    '/app/dashboard.html';
 
+(function () {
+    'use strict';
 
-/* ============================================================
-   DOM
-============================================================ */
+    const SESSION_KEY =
+        'school_results_system_session_v1';
 
-const loginForm =
-    document.getElementById('loginForm');
+    const DASHBOARD_URL =
+        '/app/dashboard.html';
 
-const emailInput =
-    document.getElementById('email');
+    const LOGIN_PAGE =
+        '/index.html';
 
-const passwordInput =
-    document.getElementById('password');
+    /* --------------------------------------------------------
+       DOM ELEMENTS
+    -------------------------------------------------------- */
 
-const togglePassword =
-    document.getElementById('togglePassword');
+    const loginForm =
+        document.getElementById('loginForm');
 
-const loginButton =
-    document.getElementById('loginButton');
+    const emailInput =
+        document.getElementById('email');
 
-const loginButtonText =
-    document.getElementById('loginButtonText');
+    const passwordInput =
+        document.getElementById('password');
 
-const loginSpinner =
-    document.getElementById('loginSpinner');
+    const togglePasswordButton =
+        document.getElementById('togglePassword');
 
-const loginMessage =
-    document.getElementById('loginMessage');
+    const loginButton =
+        document.getElementById('loginButton');
 
-const emailError =
-    document.getElementById('emailError');
+    const loginSpinner =
+        document.getElementById('loginSpinner');
 
-const passwordError =
-    document.getElementById('passwordError');
+    const loginMessage =
+        document.getElementById('loginMessage');
 
-const registerButton =
-    document.getElementById('registerButton');
+    const registerButton =
+        document.getElementById('registerButton');
 
 
-/* ============================================================
-   INITIALIZATION
-============================================================ */
+    /* --------------------------------------------------------
+       INITIALIZE
+    -------------------------------------------------------- */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    initialize
-);
-
-
-function initialize() {
-
-    /*
-     * If a valid session already exists,
-     * don't show the login form again.
-     */
-    const existingSession =
-        getStoredSession();
-
-
-    if (
-        existingSession &&
-        existingSession.schoolId
-    ) {
-
-        window.location.href =
-            DASHBOARD_URL;
-
-        return;
-    }
-
-
-    bindEvents();
-}
-
-
-/* ============================================================
-   EVENTS
-============================================================ */
-
-function bindEvents() {
-
-    loginForm.addEventListener(
-        'submit',
-        handleLogin
-    );
-
-
-    togglePassword.addEventListener(
-        'click',
-        handlePasswordToggle
-    );
-
-
-    registerButton.addEventListener(
-        'click',
-        handleRegister
-    );
-
-
-    emailInput.addEventListener(
-        'input',
-        () => {
-            clearFieldError(
-                emailInput,
-                emailError
-            );
-
-            clearLoginMessage();
-        }
-    );
-
-
-    passwordInput.addEventListener(
-        'input',
-        () => {
-            clearFieldError(
-                passwordInput,
-                passwordError
-            );
-
-            clearLoginMessage();
-        }
-    );
-}
-
-
-/* ============================================================
-   LOGIN
-============================================================ */
-
-async function handleLogin(event) {
-
-    event.preventDefault();
-
-
-    clearErrors();
-
-    clearLoginMessage();
-
-
-    const email =
-        emailInput.value.trim();
-
-    const password =
-        passwordInput.value;
-
-
-    /*
-     * Frontend validation.
-     */
-
-    let valid = true;
-
-
-    if (!email) {
-
-        showFieldError(
-            emailInput,
-            emailError,
-            'Enter your email address.'
-        );
-
-        valid = false;
-
-    } else if (!isValidEmail(email)) {
-
-        showFieldError(
-            emailInput,
-            emailError,
-            'Enter a valid email address.'
-        );
-
-        valid = false;
-    }
-
-
-    if (!password) {
-
-        showFieldError(
-            passwordInput,
-            passwordError,
-            'Enter your password.'
-        );
-
-        valid = false;
-    }
-
-
-    if (!valid) {
-        return;
-    }
-
-
-    setLoginLoading(true);
-
-
-    try {
-
-        const result =
-            await api(
-                'login',
-                {
-                    email,
-                    password
-                }
-            );
-
-
-        /*
-         * Extract the returned login data
-         * without assuming one exact wrapper.
-         */
-
-        const loginData =
-            extractLoginData(result);
-
-
-        if (
-            !loginData ||
-            !loginData.schoolId
-        ) {
-
-            throw new Error(
-                'Login succeeded, but the server did not return a School ID.'
-            );
-        }
-
-
-        /*
-         * Build one consistent frontend session.
-         */
+    function initialize() {
 
         const session =
-            buildSession(loginData);
-
-
-        saveSession(session);
-
-
-        showLoginMessage(
-            'Login successful. Opening your dashboard...',
-            'success'
-        );
-
-
-        /*
-         * Give the message a moment to appear.
-         */
-
-        setTimeout(
-            () => {
-
-                window.location.href =
-                    DASHBOARD_URL;
-
-            },
-            500
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            'Login error:',
-            error
-        );
-
-
-        showLoginMessage(
-            getErrorMessage(error),
-            'error'
-        );
-
-
-        setLoginLoading(false);
-    }
-}
-
-
-/* ============================================================
-   API REQUEST
-============================================================ */
-
-async function api(
-    action,
-    data = {}
-) {
-
-    const payload = {
-
-        action,
-
-        ...data
-    };
-
-
-    const response =
-        await fetch(
-            API_URL,
-            {
-                method: 'POST',
-
-                headers: {
-                    'Content-Type':
-                        'text/plain;charset=utf-8'
-                },
-
-                body:
-                    JSON.stringify(payload)
-            }
-        );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            'Unable to connect to the server. HTTP ' +
-            response.status
-        );
-    }
-
-
-    const result =
-        await response.json();
-
-
-    if (
-        result &&
-        result.success === false
-    ) {
-
-        throw new Error(
-            result.error ||
-            result.message ||
-            'Login failed.'
-        );
-    }
-
-
-    return result;
-}
-
-
-/* ============================================================
-   EXTRACT LOGIN DATA
-============================================================ */
-
-function extractLoginData(result) {
-
-    if (!result) {
-        return null;
-    }
-
-
-    /*
-     * Possible response:
-     *
-     * {
-     *   success: true,
-     *   user: {...}
-     * }
-     */
-
-    if (
-        result.user &&
-        typeof result.user === 'object'
-    ) {
-
-        return {
-            ...result,
-            ...result.user
-        };
-    }
-
-
-    /*
-     * Possible response:
-     *
-     * {
-     *   success: true,
-     *   data: {...}
-     * }
-     */
-
-    if (
-        result.data &&
-        typeof result.data === 'object'
-    ) {
+            getStoredSession();
 
         if (
+            session &&
+            session.schoolId
+        ) {
+            window.location.replace(
+                DASHBOARD_URL
+            );
+
+            return;
+        }
+
+        setupPasswordToggle();
+        setupLoginForm();
+        setupRegisterButton();
+    }
+
+
+    /* --------------------------------------------------------
+       LOGIN
+    -------------------------------------------------------- */
+
+    async function handleLogin(event) {
+
+        event.preventDefault();
+
+        clearMessage();
+
+        const email =
+            String(
+                emailInput?.value || ''
+            ).trim();
+
+        const password =
+            String(
+                passwordInput?.value || ''
+            );
+
+        if (!email) {
+            showError(
+                'Please enter your email address.'
+            );
+
+            emailInput?.focus();
+
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            showError(
+                'Please enter a valid email address.'
+            );
+
+            emailInput?.focus();
+
+            return;
+        }
+
+        if (!password) {
+            showError(
+                'Please enter your password.'
+            );
+
+            passwordInput?.focus();
+
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+
+            /**
+             * IMPORTANT:
+             * No direct Apps Script URL here.
+             */
+            const result =
+                await window.schoolResultsAPI.request(
+                    'login',
+                    {
+                        email: email,
+                        password: password
+                    }
+                );
+
+            const loginData =
+                extractLoginData(result);
+
+            if (!loginData) {
+                throw new Error(
+                    'Login was successful, but no account information was returned.'
+                );
+            }
+
+            const session =
+                buildSession(loginData);
+
+            if (!session.schoolId) {
+                throw new Error(
+                    'Your school account could not be identified. Please contact support.'
+                );
+            }
+
+            saveSession(session);
+
+            showSuccess(
+                'Login successful. Redirecting...'
+            );
+
+            window.setTimeout(function () {
+                window.location.replace(
+                    DASHBOARD_URL
+                );
+            }, 200);
+
+        } catch (error) {
+
+            console.error(
+                'Login error:',
+                error
+            );
+
+            showError(
+                getErrorMessage(error)
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
+    }
+
+
+    /* --------------------------------------------------------
+       RESPONSE EXTRACTION
+    -------------------------------------------------------- */
+
+    function extractLoginData(result) {
+
+        if (!result) {
+            return null;
+        }
+
+        if (
+            result.user &&
+            typeof result.user === 'object'
+        ) {
+            return result.user;
+        }
+
+        if (
+            result.data &&
             result.data.user &&
             typeof result.data.user === 'object'
         ) {
-
-            return {
-                ...result,
-                ...result.data,
-                ...result.data.user
-            };
+            return result.data.user;
         }
 
+        if (
+            result.data &&
+            typeof result.data === 'object' &&
+            !Array.isArray(result.data)
+        ) {
+            return result.data;
+        }
 
-        return {
-            ...result,
-            ...result.data
-        };
-    }
+        if (
+            typeof result === 'object' &&
+            (
+                result.schoolId ||
+                result['School ID']
+            )
+        ) {
+            return result;
+        }
 
-
-    /*
-     * Possible response:
-     *
-     * {
-     *   success: true,
-     *   schoolId: "...",
-     *   userId: "..."
-     * }
-     */
-
-    return result;
-}
-
-
-/* ============================================================
-   BUILD SESSION
-============================================================ */
-
-function buildSession(data) {
-
-    const session = {
-
-        userId:
-            firstValue(
-                data,
-                [
-                    'userId',
-                    'User ID',
-                    'id'
-                ]
-            ),
-
-        schoolId:
-            firstValue(
-                data,
-                [
-                    'schoolId',
-                    'School ID'
-                ]
-            ),
-
-        fullName:
-            firstValue(
-                data,
-                [
-                    'fullName',
-                    'Full Name',
-                    'name'
-                ]
-            ),
-
-        email:
-            firstValue(
-                data,
-                [
-                    'email',
-                    'Email'
-                ]
-            ),
-
-        role:
-            firstValue(
-                data,
-                [
-                    'role',
-                    'Role'
-                ]
-            ),
-
-        schoolName:
-            firstValue(
-                data,
-                [
-                    'schoolName',
-                    'School Name'
-                ]
-            ),
-
-        status:
-            firstValue(
-                data,
-                [
-                    'status',
-                    'Status'
-                ]
-            ),
-
-        loginAt:
-            new Date().toISOString()
-    };
-
-
-    return session;
-}
-
-
-/* ============================================================
-   SAVE SESSION
-============================================================ */
-
-function saveSession(session) {
-
-    localStorage.setItem(
-        SESSION_KEY,
-        JSON.stringify(session)
-    );
-}
-
-
-/* ============================================================
-   GET SESSION
-============================================================ */
-
-function getStoredSession() {
-
-    const raw =
-        localStorage.getItem(
-            SESSION_KEY
-        );
-
-
-    if (!raw) {
         return null;
     }
 
 
-    try {
+    /* --------------------------------------------------------
+       SESSION
+    -------------------------------------------------------- */
 
-        return JSON.parse(raw);
+    function buildSession(user) {
 
-    } catch (error) {
+        return {
+            userId:
+                user.userId ??
+                user.id ??
+                user['User ID'] ??
+                '',
 
-        console.error(
-            'Invalid stored session:',
-            error
+            schoolId:
+                user.schoolId ??
+                user['School ID'] ??
+                '',
+
+            fullName:
+                user.fullName ??
+                user.name ??
+                user['Full Name'] ??
+                '',
+
+            email:
+                user.email ??
+                user['Email'] ??
+                '',
+
+            role:
+                user.role ??
+                user['Role'] ??
+                'Admin',
+
+            schoolName:
+                user.schoolName ??
+                user['School Name'] ??
+                '',
+
+            status:
+                user.status ??
+                user['Status'] ??
+                'Active',
+
+            loginAt:
+                new Date().toISOString()
+        };
+    }
+
+
+    function saveSession(session) {
+
+        localStorage.setItem(
+            SESSION_KEY,
+            JSON.stringify(session)
         );
+    }
+
+
+    function getStoredSession() {
+
+        try {
+
+            const raw =
+                localStorage.getItem(
+                    SESSION_KEY
+                );
+
+            if (!raw) {
+                return null;
+            }
+
+            const session =
+                JSON.parse(raw);
+
+            if (
+                !session ||
+                typeof session !== 'object'
+            ) {
+                return null;
+            }
+
+            return session;
+
+        } catch (error) {
+
+            console.error(
+                'Unable to read stored session:',
+                error
+            );
+
+            localStorage.removeItem(
+                SESSION_KEY
+            );
+
+            return null;
+        }
+    }
+
+
+    function logout() {
 
         localStorage.removeItem(
             SESSION_KEY
         );
 
-        return null;
-    }
-}
-
-
-/* ============================================================
-   LOGOUT
-============================================================ */
-
-function logout() {
-
-    localStorage.removeItem(
-        SESSION_KEY
-    );
-
-
-    window.location.href =
-        'index.html';
-}
-
-
-/*
- * Make logout available to
- * dashboard and other pages.
- */
-
-window.schoolResultsLogout =
-    logout;
-
-
-/* ============================================================
-   PASSWORD TOGGLE
-============================================================ */
-
-function handlePasswordToggle() {
-
-    const isPassword =
-        passwordInput.type === 'password';
-
-
-    passwordInput.type =
-        isPassword
-            ? 'text'
-            : 'password';
-
-
-    togglePassword.textContent =
-        isPassword
-            ? 'Hide'
-            : 'Show';
-}
-
-
-/* ============================================================
-   REGISTER
-============================================================ */
-
-function handleRegister() {
-
-    /*
-     * Registration page will be created
-     * separately after login is confirmed.
-     */
-
-    window.location.href =
-        '/app/register.html';
-}
-
-
-/* ============================================================
-   LOGIN LOADING
-============================================================ */
-
-function setLoginLoading(isLoading) {
-
-    loginButton.disabled =
-        isLoading;
-
-
-    if (isLoading) {
-
-        loginButtonText.textContent =
-            'Signing in...';
-
-        loginSpinner.classList.remove(
-            'hidden'
-        );
-
-    } else {
-
-        loginButtonText.textContent =
-            'Sign In';
-
-        loginSpinner.classList.add(
-            'hidden'
+        window.location.replace(
+            LOGIN_PAGE
         );
     }
-}
 
 
-/* ============================================================
-   FIELD ERRORS
-============================================================ */
+    /* --------------------------------------------------------
+       PASSWORD TOGGLE
+    -------------------------------------------------------- */
 
-function showFieldError(
-    input,
-    errorElement,
-    message
-) {
+    function setupPasswordToggle() {
 
-    input.classList.add(
-        'input-error'
-    );
+        if (!togglePasswordButton) {
+            return;
+        }
 
-    errorElement.textContent =
-        message;
-}
+        togglePasswordButton.addEventListener(
+            'click',
+            function () {
 
+                const isPassword =
+                    passwordInput.type === 'password';
 
-function clearFieldError(
-    input,
-    errorElement
-) {
+                passwordInput.type =
+                    isPassword
+                        ? 'text'
+                        : 'password';
 
-    input.classList.remove(
-        'input-error'
-    );
-
-    errorElement.textContent =
-        '';
-}
-
-
-function clearErrors() {
-
-    clearFieldError(
-        emailInput,
-        emailError
-    );
-
-    clearFieldError(
-        passwordInput,
-        passwordError
-    );
-}
+                togglePasswordButton.setAttribute(
+                    'aria-label',
+                    isPassword
+                        ? 'Hide password'
+                        : 'Show password'
+                );
+            }
+        );
+    }
 
 
-/* ============================================================
-   LOGIN MESSAGE
-============================================================ */
+    /* --------------------------------------------------------
+       FORM SETUP
+    -------------------------------------------------------- */
 
-function showLoginMessage(
-    message,
-    type
-) {
+    function setupLoginForm() {
 
-    loginMessage.textContent =
-        message;
+        if (!loginForm) {
+            return;
+        }
 
-    loginMessage.className =
-        `login-message ${type}`;
-}
-
-
-function clearLoginMessage() {
-
-    loginMessage.textContent = '';
-
-    loginMessage.className =
-        'login-message hidden';
-}
+        loginForm.addEventListener(
+            'submit',
+            handleLogin
+        );
+    }
 
 
-/* ============================================================
-   HELPERS
-============================================================ */
+    function setupRegisterButton() {
 
-function firstValue(
-    object,
-    keys
-) {
+        if (!registerButton) {
+            return;
+        }
 
-    for (const key of keys) {
+        registerButton.addEventListener(
+            'click',
+            function () {
 
-        if (
-            object[key] !== undefined &&
-            object[key] !== null &&
-            String(object[key]).trim() !== ''
-        ) {
+                window.location.href =
+                    '/register.html';
+            }
+        );
+    }
 
-            return String(
-                object[key]
-            ).trim();
+
+    /* --------------------------------------------------------
+       LOADING
+    -------------------------------------------------------- */
+
+    function setLoading(isLoading) {
+
+        if (loginButton) {
+
+            loginButton.disabled =
+                isLoading;
+        }
+
+        if (loginSpinner) {
+
+            loginSpinner.hidden =
+                !isLoading;
+        }
+
+        if (isLoading) {
+
+            loginButton?.setAttribute(
+                'aria-busy',
+                'true'
+            );
+
+        } else {
+
+            loginButton?.removeAttribute(
+                'aria-busy'
+            );
         }
     }
 
 
-    return '';
-}
+    /* --------------------------------------------------------
+       MESSAGES
+    -------------------------------------------------------- */
 
+    function showError(message) {
 
-function isValidEmail(email) {
+        if (!loginMessage) {
+            return;
+        }
 
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        .test(email);
-}
+        loginMessage.textContent =
+            message;
 
+        loginMessage.className =
+            'login-message error';
 
-function getErrorMessage(error) {
-
-    if (
-        error &&
-        error.message
-    ) {
-
-        return error.message;
+        loginMessage.hidden = false;
     }
 
 
-    return 'Unable to sign in. Please try again.';
-}
+    function showSuccess(message) {
+
+        if (!loginMessage) {
+            return;
+        }
+
+        loginMessage.textContent =
+            message;
+
+        loginMessage.className =
+            'login-message success';
+
+        loginMessage.hidden = false;
+    }
+
+
+    function clearMessage() {
+
+        if (!loginMessage) {
+            return;
+        }
+
+        loginMessage.textContent = '';
+
+        loginMessage.hidden = true;
+
+        loginMessage.className =
+            'login-message';
+    }
+
+
+    /* --------------------------------------------------------
+       VALIDATION
+    -------------------------------------------------------- */
+
+    function isValidEmail(email) {
+
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            .test(email);
+    }
+
+
+    function getErrorMessage(error) {
+
+        if (
+            error &&
+            typeof error.message === 'string' &&
+            error.message.trim()
+        ) {
+            return error.message;
+        }
+
+        return (
+            'Unable to log in at the moment. Please try again.'
+        );
+    }
+
+
+    /* --------------------------------------------------------
+       GLOBAL LOGOUT
+    -------------------------------------------------------- */
+
+    window.schoolResultsLogout =
+        logout;
+
+
+    /* --------------------------------------------------------
+       START
+    -------------------------------------------------------- */
+
+    if (
+        document.readyState === 'loading'
+    ) {
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            initialize
+        );
+
+    } else {
+
+        initialize();
+    }
+
+})();
