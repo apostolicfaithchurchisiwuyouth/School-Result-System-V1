@@ -14,9 +14,6 @@
 // CONFIGURATION
 // ============================================================
 
-const API_URL =
-    'https://script.google.com/macros/s/AKfycbwJOUmxayihKhry6HSZQl-tsnzbQYM8jDkHaQ4O_CdOqpnGTOJ8bi_80EjD6lLcxqCI/exec';
-
 const SESSION_KEY =
     'school_results_system_session_v1';
 
@@ -173,90 +170,6 @@ function redirectToLogin() {
         'index.html';
 
 }
-
-
-// ============================================================
-// API REQUEST
-// ============================================================
-
-async function apiRequest(
-    action,
-    data = {}
-) {
-
-    if (
-        !API_URL ||
-        API_URL ===
-            'YOUR_APPS_SCRIPT_WEB_APP_URL'
-    ) {
-
-        throw new Error(
-            'Apps Script Web App URL has not been configured.'
-        );
-
-    }
-
-
-    const payload = {
-
-        action:
-            action,
-
-        ...data
-
-    };
-
-
-    const response =
-        await fetch(
-            API_URL,
-            {
-
-                method:
-                    'POST',
-
-                headers: {
-                    'Content-Type':
-                        'text/plain;charset=utf-8'
-                },
-
-                body:
-                    JSON.stringify(payload)
-
-            }
-        );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            'Server request failed.'
-        );
-
-    }
-
-
-    const result =
-        await response.json();
-
-
-    if (
-        result &&
-        result.success === false
-    ) {
-
-        throw new Error(
-            result.message ||
-            'The request could not be completed.'
-        );
-
-    }
-
-
-    return result;
-
-}
-
 
 // ============================================================
 // LOAD DASHBOARD
