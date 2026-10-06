@@ -2,7 +2,7 @@
  * ============================================================
  * SCHOOL RESULTS SYSTEM
  * FILE: /js/sessions.js
- * VERSION: 2.2.0
+ * VERSION: 2.3.0
  *
  * PURPOSE:
  * Academic session management.
@@ -15,21 +15,21 @@
     'use strict';
 
     const SESSION_KEY = 'school_results_system_session_v1';
-    const LOGIN_PAGE = '/';
+    const LOGIN_PAGE = '/index.html';
 
     let sessions = [];
 
-    /* --------------------------------------------------------
-       DOM HELPERS
-    -------------------------------------------------------- */
+    /* ========================================================
+       DOM
+    ======================================================== */
 
     function $(id) {
         return document.getElementById(id);
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        INITIALIZE
-    -------------------------------------------------------- */
+    ======================================================== */
 
     async function initialize() {
         console.log('[Sessions] Initializing...');
@@ -37,7 +37,6 @@
         const session = getStoredSession();
 
         if (!session || !session.schoolId) {
-            console.warn('[Sessions] No valid login session.');
             redirectToLogin();
             return;
         }
@@ -47,13 +46,14 @@
         setupModal();
         setupForm();
         setupLogout();
+        setupMessageClose();
 
         await loadSessions(session);
     }
 
-    /* --------------------------------------------------------
-       STORED LOGIN SESSION
-    -------------------------------------------------------- */
+    /* ========================================================
+       LOGIN SESSION
+    ======================================================== */
 
     function getStoredSession() {
         try {
@@ -72,7 +72,10 @@
             return session;
 
         } catch (error) {
-            console.error('[Sessions] Session read error:', error);
+            console.error(
+                '[Sessions] Session read error:',
+                error
+            );
 
             localStorage.removeItem(SESSION_KEY);
 
@@ -84,40 +87,39 @@
         window.location.replace(LOGIN_PAGE);
     }
 
-    /* --------------------------------------------------------
-       USER DISPLAY
-    -------------------------------------------------------- */
+    /* ========================================================
+       USER
+    ======================================================== */
 
     function populateUser(session) {
         const name = session.fullName || 'Administrator';
         const role = session.role || 'Administrator';
-        const schoolName = session.schoolName || '';
+        const schoolName =
+            session.schoolName || 'School Results System';
 
-        document
-            .querySelectorAll('[data-user-name], .user-name')
-            .forEach(function (element) {
-                element.textContent = name;
-            });
+        const schoolNameElement = $('schoolName');
 
-        document
-            .querySelectorAll('[data-user-role], .user-role')
-            .forEach(function (element) {
-                element.textContent = role;
-            });
+        if (schoolNameElement) {
+            schoolNameElement.textContent = schoolName;
+        }
 
-        document
-            .querySelectorAll('[data-school-name], .school-name')
-            .forEach(function (element) {
-                element.textContent = schoolName;
-            });
+        const userNameElement = $('userName');
 
-        const initials = getInitials(name);
+        if (userNameElement) {
+            userNameElement.textContent = name;
+        }
 
-        document
-            .querySelectorAll('[data-user-initials], .user-initials')
-            .forEach(function (element) {
-                element.textContent = initials;
-            });
+        const userRoleElement = $('userRole');
+
+        if (userRoleElement) {
+            userRoleElement.textContent = role;
+        }
+
+        const initialsElement = $('userInitials');
+
+        if (initialsElement) {
+            initialsElement.textContent = getInitials(name);
+        }
     }
 
     function getInitials(name) {
@@ -132,9 +134,9 @@
             .join('');
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        LOAD SESSIONS
-    -------------------------------------------------------- */
+    ======================================================== */
 
     async function loadSessions(session) {
         setPageLoading(true);
@@ -151,7 +153,7 @@
             }
 
             console.log(
-                '[Sessions] Loading sessions for:',
+                '[Sessions] Requesting sessions:',
                 session.schoolId
             );
 
@@ -163,12 +165,16 @@
                     }
                 );
 
-            console.log('[Sessions] API response:', result);
+            console.log(
+                '[Sessions] API response:',
+                result
+            );
 
             sessions = extractSessions(result);
 
             console.log(
-                '[Sessions] Sessions extracted:',
+                '[Sessions] Sessions found:',
+                sessions.length,
                 sessions
             );
 
@@ -181,20 +187,21 @@
                 error
             );
 
+            renderEmptyState(
+                'Unable to load academic sessions.'
+            );
+
             showMessage(
                 getErrorMessage(error),
                 'error'
             );
 
         } finally {
-            /*
-             * IMPORTANT:
-             * Always remove the page-loading state, regardless
-             * of whether rendering succeeds or fails.
-             */
             setPageLoading(false);
 
-            console.log('[Sessions] Loading finished.');
+            console.log(
+                '[Sessions] Page loading finished.'
+            );
         }
     }
 
@@ -228,71 +235,95 @@
         return [];
     }
 
-    /* --------------------------------------------------------
-       RENDER SESSIONS
-    -------------------------------------------------------- */
+    /* ========================================================
+       RENDER
+    ======================================================== */
 
     function renderSessions() {
-        const tableBody = $('sessionsTableBody');
+        const wrapper = $('tableWrapper');
 
-        if (!tableBody) {
+        if (!wrapper) {
             console.error(
-                '[Sessions] sessionsTableBody was not found in the HTML.'
+                '[Sessions] tableWrapper was not found.'
             );
 
             return;
         }
 
-        const sorted = [...sessions].sort(function (a, b) {
-            const dateA =
-                new Date(
-                    getSessionStartDate(a)
-                ).getTime() || 0;
+        const sorted = [...sessions].sort(
+            function (a, b) {
+                const dateA =
+                    new Date(
+                        getSessionStartDate(a)
+                    ).getTime() || 0;
 
-            const dateB =
-                new Date(
-                    getSessionStartDate(b)
-                ).getTime() || 0;
+                const dateB =
+                    new Date(
+                        getSessionStartDate(b)
+                    ).getTime() || 0;
 
-            return dateB - dateA;
-        });
+                return dateB - dateA;
+            }
+        );
+
+        updateRecordCount(sorted.length);
 
         if (!sorted.length) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6">
-                        No academic sessions found.
-                    </td>
-                </tr>
-            `;
-
-            updateRecordCount(0);
+            renderEmptyState(
+                'No academic sessions found.'
+            );
 
             return;
         }
 
-        tableBody.innerHTML =
-            sorted
-                .map(renderSessionRow)
-                .join('');
+        wrapper.innerHTML = `
+            <table class="sessions-table">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
 
-        updateRecordCount(sorted.length);
+                <tbody>
+                    ${sorted
+                        .map(renderSessionRow)
+                        .join('')}
+                </tbody>
+            </table>
+        `;
 
         bindActivationButtons();
     }
 
     function renderSessionRow(session) {
-        const id = getSessionId(session);
-        const name = getSessionName(session);
-        const start = getSessionStartDate(session);
-        const end = getSessionEndDate(session);
-        const status = getSessionStatus(session);
-        const active = isActiveSession(session);
+        const id =
+            getSessionId(session);
+
+        const name =
+            getSessionName(session);
+
+        const start =
+            getSessionStartDate(session);
+
+        const end =
+            getSessionEndDate(session);
+
+        const status =
+            getSessionStatus(session);
+
+        const active =
+            isActiveSession(session);
 
         return `
             <tr>
                 <td>
-                    ${escapeHtml(name)}
+                    <strong>
+                        ${escapeHtml(name)}
+                    </strong>
                 </td>
 
                 <td>
@@ -304,15 +335,25 @@
                 </td>
 
                 <td>
-                    <span class="session-status ${active ? 'active' : ''}">
-                        ${escapeHtml(status || 'Inactive')}
+                    <span
+                        class="session-status ${
+                            active ? 'active' : ''
+                        }"
+                    >
+                        ${escapeHtml(
+                            status || 'Inactive'
+                        )}
                     </span>
                 </td>
 
                 <td>
                     ${
                         active
-                            ? '<span>Current Session</span>'
+                            ? `
+                                <span class="current-session-label">
+                                    Current Session
+                                </span>
+                              `
                             : `
                                 <button
                                     type="button"
@@ -321,10 +362,34 @@
                                 >
                                     Activate
                                 </button>
-                            `
+                              `
                     }
                 </td>
             </tr>
+        `;
+    }
+
+    function renderEmptyState(message) {
+        const wrapper = $('tableWrapper');
+
+        if (!wrapper) {
+            return;
+        }
+
+        wrapper.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    ◷
+                </div>
+
+                <strong>
+                    ${escapeHtml(message)}
+                </strong>
+
+                <span>
+                    Create an academic session to get started.
+                </span>
+            </div>
         `;
     }
 
@@ -354,12 +419,82 @@
             });
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
+       ACTIVE SESSION
+    ======================================================== */
+
+    function updateActiveSession() {
+        const active =
+            sessions.find(isActiveSession);
+
+        const nameElement =
+            $('activeSessionName');
+
+        const datesElement =
+            $('activeSessionDates');
+
+        const badgeElement =
+            $('activeBadge');
+
+        if (!active) {
+            if (nameElement) {
+                nameElement.textContent =
+                    'No active session';
+            }
+
+            if (datesElement) {
+                datesElement.textContent =
+                    'Create an academic session to get started.';
+            }
+
+            if (badgeElement) {
+                badgeElement.textContent =
+                    'No Active Session';
+            }
+
+            return;
+        }
+
+        if (nameElement) {
+            nameElement.textContent =
+                getSessionName(active);
+        }
+
+        if (datesElement) {
+            datesElement.textContent =
+                `${formatDate(
+                    getSessionStartDate(active)
+                )} – ${formatDate(
+                    getSessionEndDate(active)
+                )}`;
+        }
+
+        if (badgeElement) {
+            badgeElement.textContent = 'Active';
+        }
+    }
+
+    function isActiveSession(session) {
+        const status =
+            String(
+                getSessionStatus(session)
+            )
+                .trim()
+                .toLowerCase();
+
+        return (
+            status === 'active' ||
+            status === 'current'
+        );
+    }
+
+    /* ========================================================
        CREATE SESSION
-    -------------------------------------------------------- */
+    ======================================================== */
 
     async function createSession() {
-        const storedSession = getStoredSession();
+        const storedSession =
+            getStoredSession();
 
         if (
             !storedSession ||
@@ -379,39 +514,38 @@
             getInputValue('endDate');
 
         if (!sessionName) {
-            showMessage(
-                'Please enter the academic session name.',
-                'error'
+            showFormError(
+                'Please enter the academic session name.'
             );
             return;
         }
 
         if (!startDate) {
-            showMessage(
-                'Please select a start date.',
-                'error'
+            showFormError(
+                'Please select a start date.'
             );
             return;
         }
 
         if (!endDate) {
-            showMessage(
-                'Please select an end date.',
-                'error'
+            showFormError(
+                'Please select an end date.'
             );
             return;
         }
 
-        if (new Date(startDate) > new Date(endDate)) {
-            showMessage(
-                'The start date cannot be after the end date.',
-                'error'
+        if (
+            new Date(startDate) >
+            new Date(endDate)
+        ) {
+            showFormError(
+                'The start date cannot be after the end date.'
             );
             return;
         }
 
         setFormLoading(true);
-        clearMessage();
+        clearFormError();
 
         try {
             await window.schoolResultsAPI.request(
@@ -431,13 +565,13 @@
                 }
             );
 
+            closeModal();
+            resetForm();
+
             showMessage(
                 'Academic session created successfully.',
                 'success'
             );
-
-            resetForm();
-            closeModal();
 
             await loadSessions(
                 storedSession
@@ -449,9 +583,8 @@
                 error
             );
 
-            showMessage(
-                getErrorMessage(error),
-                'error'
+            showFormError(
+                getErrorMessage(error)
             );
 
         } finally {
@@ -459,9 +592,9 @@
         }
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        ACTIVATE SESSION
-    -------------------------------------------------------- */
+    ======================================================== */
 
     async function activateSession(sessionId) {
         if (!sessionId) {
@@ -540,84 +673,19 @@
         }
     }
 
-    /* --------------------------------------------------------
-       ACTIVE SESSION DISPLAY
-    -------------------------------------------------------- */
-
-    function updateActiveSession() {
-        const active =
-            sessions.find(isActiveSession);
-
-        const activeName =
-            $('activeSessionName');
-
-        const activeDates =
-            $('activeSessionDates');
-
-        const activeBadge =
-            $('activeBadge');
-
-        if (!active) {
-            if (activeName) {
-                activeName.textContent =
-                    'No active session';
-            }
-
-            if (activeDates) {
-                activeDates.textContent =
-                    '';
-            }
-
-            if (activeBadge) {
-                activeBadge.textContent =
-                    'No Active Session';
-            }
-
-            return;
-        }
-
-        if (activeName) {
-            activeName.textContent =
-                getSessionName(active);
-        }
-
-        if (activeDates) {
-            activeDates.textContent =
-                `${formatDate(
-                    getSessionStartDate(active)
-                )} – ${formatDate(
-                    getSessionEndDate(active)
-                )}`;
-        }
-
-        if (activeBadge) {
-            activeBadge.textContent =
-                'Active';
-        }
-    }
-
-    function isActiveSession(session) {
-        const status =
-            String(
-                getSessionStatus(session)
-            )
-                .trim()
-                .toLowerCase();
-
-        return (
-            status === 'active' ||
-            status === 'current'
-        );
-    }
-
-    /* --------------------------------------------------------
+    /* ========================================================
        MODAL
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function setupModal() {
         const openButton =
-            $('openCreateButton') ||
-            $('createSessionButton');
+            $('openCreateButton');
+
+        const closeButton =
+            $('closeModalButton');
+
+        const cancelButton =
+            $('cancelButton');
 
         if (openButton) {
             openButton.addEventListener(
@@ -626,16 +694,35 @@
             );
         }
 
-        document
-            .querySelectorAll(
-                '[data-close-modal], .close-modal'
-            )
-            .forEach(function (button) {
-                button.addEventListener(
-                    'click',
-                    closeModal
-                );
-            });
+        if (closeButton) {
+            closeButton.addEventListener(
+                'click',
+                closeModal
+            );
+        }
+
+        if (cancelButton) {
+            cancelButton.addEventListener(
+                'click',
+                closeModal
+            );
+        }
+
+        const modal =
+            $('sessionModal');
+
+        if (modal) {
+            modal.addEventListener(
+                'click',
+                function (event) {
+                    if (
+                        event.target === modal
+                    ) {
+                        closeModal();
+                    }
+                }
+            );
+        }
     }
 
     function openModal() {
@@ -646,14 +733,22 @@
             return;
         }
 
+        modal.classList.remove('hidden');
         modal.hidden = false;
         modal.classList.add('open');
+
+        clearFormError();
 
         const input =
             $('sessionName');
 
         if (input) {
-            input.focus();
+            setTimeout(
+                function () {
+                    input.focus();
+                },
+                50
+            );
         }
     }
 
@@ -666,12 +761,15 @@
         }
 
         modal.classList.remove('open');
+        modal.classList.add('hidden');
         modal.hidden = true;
+
+        clearFormError();
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        FORM
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function setupForm() {
         const form =
@@ -685,6 +783,7 @@
             'submit',
             function (event) {
                 event.preventDefault();
+
                 createSession();
             }
         );
@@ -708,9 +807,142 @@
         ).trim();
     }
 
-    /* --------------------------------------------------------
+    function setFormLoading(isLoading) {
+        const saveButton =
+            $('saveButton');
+
+        if (!saveButton) {
+            return;
+        }
+
+        saveButton.disabled =
+            Boolean(isLoading);
+
+        saveButton.textContent =
+            isLoading
+                ? 'Creating...'
+                : 'Create Session';
+    }
+
+    function showFormError(message) {
+        const errorElement =
+            $('formError');
+
+        if (!errorElement) {
+            showMessage(
+                message,
+                'error'
+            );
+
+            return;
+        }
+
+        errorElement.textContent =
+            message;
+
+        errorElement.classList.remove(
+            'hidden'
+        );
+
+        errorElement.hidden = false;
+    }
+
+    function clearFormError() {
+        const errorElement =
+            $('formError');
+
+        if (!errorElement) {
+            return;
+        }
+
+        errorElement.textContent = '';
+
+        errorElement.classList.add(
+            'hidden'
+        );
+
+        errorElement.hidden = true;
+    }
+
+    /* ========================================================
+       PAGE MESSAGE
+    ======================================================== */
+
+    function showMessage(
+        message,
+        type
+    ) {
+        const pageMessage =
+            $('pageMessage');
+
+        const messageText =
+            $('messageText');
+
+        if (!pageMessage) {
+            return;
+        }
+
+        if (messageText) {
+            messageText.textContent =
+                message;
+        }
+
+        pageMessage.classList.remove(
+            'hidden'
+        );
+
+        pageMessage.classList.remove(
+            'success',
+            'error',
+            'warning'
+        );
+
+        pageMessage.classList.add(
+            type || 'error'
+        );
+
+        pageMessage.hidden = false;
+    }
+
+    function clearMessage() {
+        const pageMessage =
+            $('pageMessage');
+
+        const messageText =
+            $('messageText');
+
+        if (!pageMessage) {
+            return;
+        }
+
+        if (messageText) {
+            messageText.textContent = '';
+        }
+
+        pageMessage.classList.add(
+            'hidden'
+        );
+
+        pageMessage.hidden = true;
+    }
+
+    function setupMessageClose() {
+        const closeButton =
+            $('closeMessage');
+
+        if (!closeButton) {
+            return;
+        }
+
+        closeButton.addEventListener(
+            'click',
+            clearMessage
+        );
+    }
+
+    /* ========================================================
        NAVIGATION
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function setupNavigation() {
         const menuButton =
@@ -726,8 +958,13 @@
             menuButton.addEventListener(
                 'click',
                 function () {
-                    sidebar?.classList.add('open');
-                    overlay?.classList.add('show');
+                    sidebar?.classList.add(
+                        'open'
+                    );
+
+                    overlay?.classList.add(
+                        'show'
+                    );
                 }
             );
         }
@@ -741,13 +978,18 @@
     }
 
     function closeSidebar() {
-        $('sidebar')?.classList.remove('open');
-        $('sidebarOverlay')?.classList.remove('show');
+        $('sidebar')?.classList.remove(
+            'open'
+        );
+
+        $('sidebarOverlay')?.classList.remove(
+            'show'
+        );
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        LOGOUT
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function setupLogout() {
         const logoutButton =
@@ -778,9 +1020,9 @@
         );
     }
 
-    /* --------------------------------------------------------
-       PAGE LOADING
-    -------------------------------------------------------- */
+    /* ========================================================
+       LOADING
+    ======================================================== */
 
     function setPageLoading(isLoading) {
         document.body.classList.toggle(
@@ -788,133 +1030,20 @@
             Boolean(isLoading)
         );
 
-        /*
-         * Also support an explicit loading element if the
-         * Sessions HTML contains one.
-         */
-        const loadingElements =
-            document.querySelectorAll(
-                '#loadingState, #loadingOverlay, .loading-state, .page-loader'
+        const loadingState =
+            $('tableWrapper')?.querySelector(
+                '.loading-state'
             );
 
-        loadingElements.forEach(
-            function (element) {
-                element.hidden = !isLoading;
-                element.setAttribute(
-                    'aria-hidden',
-                    String(!isLoading)
-                );
-            }
-        );
-    }
-
-    function setFormLoading(isLoading) {
-        const form =
-            $('sessionForm');
-
-        const submitButton =
-            form?.querySelector(
-                'button[type="submit"]'
-            );
-
-        if (submitButton) {
-            submitButton.disabled =
-                Boolean(isLoading);
+        if (loadingState) {
+            loadingState.style.display =
+                isLoading ? '' : 'none';
         }
     }
 
-    /* --------------------------------------------------------
-       MESSAGES
-    -------------------------------------------------------- */
-
-    function showMessage(
-        message,
-        type = 'error'
-    ) {
-        const pageMessage =
-            $('pageMessage');
-
-        const messageText =
-            $('messageText');
-
-        /*
-         * This matches the actual Sessions HTML.
-         */
-        if (pageMessage) {
-            pageMessage.hidden = false;
-
-            pageMessage.classList.remove(
-                'success',
-                'error',
-                'warning'
-            );
-
-            pageMessage.classList.add(type);
-        }
-
-        if (messageText) {
-            messageText.textContent =
-                message;
-        }
-
-        /*
-         * Fallback for older markup.
-         */
-        const oldMessage =
-            $('sessionMessage');
-
-        if (oldMessage) {
-            oldMessage.textContent =
-                message;
-
-            oldMessage.className =
-                `session-message ${type}`;
-
-            oldMessage.hidden = false;
-        }
-    }
-
-    function clearMessage() {
-        const pageMessage =
-            $('pageMessage');
-
-        const messageText =
-            $('messageText');
-
-        if (pageMessage) {
-            pageMessage.hidden = true;
-        }
-
-        if (messageText) {
-            messageText.textContent = '';
-        }
-
-        const oldMessage =
-            $('sessionMessage');
-
-        if (oldMessage) {
-            oldMessage.textContent = '';
-            oldMessage.hidden = true;
-        }
-    }
-
-    function getErrorMessage(error) {
-        if (
-            error &&
-            typeof error.message === 'string' &&
-            error.message.trim()
-        ) {
-            return error.message;
-        }
-
-        return (
-            'Unable to complete the request. Please try again.'
-        );
-    }
-
-    /* --------------------------------------------------------
+    /* ========================================================
        SESSION FIELD HELPERS
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function getSessionId(session) {
         return (
@@ -958,9 +1087,9 @@
         );
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        DATE
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function formatDate(value) {
         if (!value) {
@@ -990,9 +1119,9 @@
         );
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        HTML ESCAPE
-    -------------------------------------------------------- */
+    ======================================================== */
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -1003,9 +1132,9 @@
             .replace(/'/g, '&#039;');
     }
 
-    /* --------------------------------------------------------
+    /* ========================================================
        START
-    -------------------------------------------------------- */
+    ======================================================== */
 
     if (
         document.readyState === 'loading'
