@@ -1,39 +1,19 @@
 /**
  * ============================================================
  * SCHOOL RESULTS SYSTEM
- * FILE: /js/dashboard.js
- * VERSION: 2.1.0
+ * FILE: dashboard.js
+ * VERSION: 2.2.0
  *
  * PURPOSE:
  * Dashboard frontend controller.
  *
- * API ARCHITECTURE:
- *
- * Browser
- *    ↓
- * /js/api.js
- *    ↓
- * /api/school-results
- *    ↓
- * Vercel API Proxy
- *    ↓
- * Google Apps Script
- *    ↓
- * Google Sheets
- *
- * IMPORTANT:
- * This file MUST NOT communicate directly with
- * Google Apps Script.
+ * API:
+ * All server communication goes through api.js.
  * ============================================================
  */
 
 (function () {
     'use strict';
-
-
-    // ========================================================
-    // CONFIGURATION
-    // ========================================================
 
     const SESSION_KEY =
         'school_results_system_session_v1';
@@ -41,25 +21,14 @@
     const LOGIN_URL =
         '/index.html';
 
-
-    // ========================================================
-    // DOM ELEMENTS
-    // ========================================================
-
     const pageLoading =
-        document.getElementById(
-            'pageLoading'
-        );
+        document.getElementById('pageLoading');
 
     const dashboardContent =
-        document.getElementById(
-            'dashboardContent'
-        );
+        document.getElementById('dashboardContent');
 
     const dashboardError =
-        document.getElementById(
-            'dashboardError'
-        );
+        document.getElementById('dashboardError');
 
     const dashboardErrorMessage =
         document.getElementById(
@@ -67,19 +36,13 @@
         );
 
     const retryButton =
-        document.getElementById(
-            'retryButton'
-        );
+        document.getElementById('retryButton');
 
     const menuButton =
-        document.getElementById(
-            'menuButton'
-        );
+        document.getElementById('menuButton');
 
     const sidebar =
-        document.getElementById(
-            'sidebar'
-        );
+        document.getElementById('sidebar');
 
     const sidebarOverlay =
         document.getElementById(
@@ -96,76 +59,67 @@
     // START
     // ========================================================
 
+    function start() {
+
+        try {
+
+            setupNavigation();
+
+            setupLogout();
+
+            setupRetry();
+
+            const session =
+                getStoredSession();
+
+            if (
+                !session ||
+                !session.schoolId
+            ) {
+
+                redirectToLogin();
+
+                return;
+            }
+
+            populateUserHeader(
+                session
+            );
+
+            loadDashboard();
+
+        } catch (error) {
+
+            console.error(
+                'Dashboard initialization error:',
+                error
+            );
+
+            showDashboardError(
+                getErrorMessage(error)
+            );
+        }
+    }
+
+
     if (
-        document.readyState ===
-        'loading'
+        document.readyState === 'loading'
     ) {
 
         document.addEventListener(
             'DOMContentLoaded',
-            initializeDashboard
+            start
         );
 
     } else {
 
-        initializeDashboard();
+        start();
 
     }
 
 
     // ========================================================
-    // INITIALIZE DASHBOARD
-    // ========================================================
-
-    function initializeDashboard() {
-
-        setupNavigation();
-
-        setupLogout();
-
-        setupRetry();
-
-
-        const session =
-            getStoredSession();
-
-
-        // ----------------------------------------------------
-        // NO SESSION
-        // ----------------------------------------------------
-
-        if (
-            !session ||
-            !session.schoolId
-        ) {
-
-            redirectToLogin();
-
-            return;
-
-        }
-
-
-        // ----------------------------------------------------
-        // SHOW USER INFORMATION
-        // ----------------------------------------------------
-
-        populateUserHeader(
-            session
-        );
-
-
-        // ----------------------------------------------------
-        // LOAD DASHBOARD
-        // ----------------------------------------------------
-
-        loadDashboard();
-
-    }
-
-
-    // ========================================================
-    // GET STORED SESSION
+    // SESSION
     // ========================================================
 
     function getStoredSession() {
@@ -177,17 +131,12 @@
                     SESSION_KEY
                 );
 
-
             if (!raw) {
-
                 return null;
-
             }
-
 
             const session =
                 JSON.parse(raw);
-
 
             if (
                 !session ||
@@ -199,9 +148,7 @@
                 );
 
                 return null;
-
             }
-
 
             return session;
 
@@ -212,50 +159,35 @@
                 error
             );
 
-
             localStorage.removeItem(
                 SESSION_KEY
             );
 
-
             return null;
-
         }
-
     }
 
-
-    // ========================================================
-    // REDIRECT TO LOGIN
-    // ========================================================
 
     function redirectToLogin() {
 
         window.location.replace(
             LOGIN_URL
         );
-
     }
 
 
     // ========================================================
-    // LOAD DASHBOARD
+    // DASHBOARD API
     // ========================================================
 
     async function loadDashboard() {
 
         showLoading();
 
-
         try {
 
             const session =
                 getStoredSession();
-
-
-            // ------------------------------------------------
-            // SESSION CHECK
-            // ------------------------------------------------
 
             if (
                 !session ||
@@ -265,26 +197,29 @@
                 redirectToLogin();
 
                 return;
-
             }
 
 
-            // ------------------------------------------------
-            // CENTRAL API REQUEST
-            // ------------------------------------------------
-            //
-            // IMPORTANT:
-            // There is NO direct Apps Script fetch here.
-            //
-            // dashboard.js
-            //      ↓
-            // api.js
-            //      ↓
-            // /api/school-results
-            //      ↓
-            // Apps Script
-            //
-            // ------------------------------------------------
+            /*
+             * Make absolutely sure api.js loaded.
+             */
+            if (
+                !window.schoolResultsAPI ||
+                typeof
+                    window.schoolResultsAPI.request !==
+                    'function'
+            ) {
+
+                throw new Error(
+                    'The central API client could not be loaded. Please refresh the page.'
+                );
+            }
+
+
+            console.log(
+                '[Dashboard] Requesting dashboard data...'
+            );
+
 
             const result =
                 await window.schoolResultsAPI.request(
@@ -296,9 +231,11 @@
                 );
 
 
-            // ------------------------------------------------
-            // EXTRACT RESPONSE
-            // ------------------------------------------------
+            console.log(
+                '[Dashboard] Dashboard data received:',
+                result
+            );
+
 
             const data =
                 extractDashboardData(
@@ -309,15 +246,10 @@
             if (!data) {
 
                 throw new Error(
-                    'No dashboard data was returned.'
+                    'The server did not return valid dashboard data.'
                 );
-
             }
 
-
-            // ------------------------------------------------
-            // POPULATE
-            // ------------------------------------------------
 
             populateDashboard(
                 data
@@ -326,26 +258,22 @@
 
             showDashboard();
 
-
         } catch (error) {
 
             console.error(
-                'Dashboard loading error:',
+                '[Dashboard] Loading failed:',
                 error
             );
-
 
             showDashboardError(
                 getErrorMessage(error)
             );
-
         }
-
     }
 
 
     // ========================================================
-    // EXTRACT DASHBOARD DATA
+    // EXTRACT DATA
     // ========================================================
 
     function extractDashboardData(
@@ -353,29 +281,17 @@
     ) {
 
         if (!result) {
-
             return null;
-
         }
 
 
-        // ----------------------------------------------------
-        // Direct response
-        // ----------------------------------------------------
-
         if (
-            result.success &&
             result.school
         ) {
 
             return result;
-
         }
 
-
-        // ----------------------------------------------------
-        // Wrapped in data
-        // ----------------------------------------------------
 
         if (
             result.data &&
@@ -383,38 +299,15 @@
         ) {
 
             return result.data;
-
-        }
-
-
-        // ----------------------------------------------------
-        // Some backend responses may return:
-        //
-        // {
-        //     success: true,
-        //     data: {
-        //         ...
-        //     }
-        // }
-        // ----------------------------------------------------
-
-        if (
-            result.data &&
-            typeof result.data === 'object'
-        ) {
-
-            return result.data;
-
         }
 
 
         return null;
-
     }
 
 
     // ========================================================
-    // POPULATE USER HEADER
+    // USER HEADER
     // ========================================================
 
     function populateUserHeader(
@@ -425,71 +318,33 @@
             session.fullName ||
             'User';
 
-
         const role =
             session.role ||
             'User';
 
 
-        const welcomeName =
-            document.getElementById(
-                'welcomeName'
-            );
+        setText(
+            'welcomeName',
+            getFirstName(fullName)
+        );
 
 
-        const topbarUserName =
-            document.getElementById(
-                'topbarUserName'
-            );
+        setText(
+            'topbarUserName',
+            fullName
+        );
 
 
-        const topbarUserRole =
-            document.getElementById(
-                'topbarUserRole'
-            );
+        setText(
+            'topbarUserRole',
+            role
+        );
 
 
-        const userInitials =
-            document.getElementById(
-                'userInitials'
-            );
-
-
-        if (welcomeName) {
-
-            welcomeName.textContent =
-                getFirstName(
-                    fullName
-                );
-
-        }
-
-
-        if (topbarUserName) {
-
-            topbarUserName.textContent =
-                fullName;
-
-        }
-
-
-        if (topbarUserRole) {
-
-            topbarUserRole.textContent =
-                role;
-
-        }
-
-
-        if (userInitials) {
-
-            userInitials.textContent =
-                getInitials(
-                    fullName
-                );
-
-        }
-
+        setText(
+            'userInitials',
+            getInitials(fullName)
+        );
     }
 
 
@@ -504,14 +359,9 @@
         const school =
             data.school || {};
 
-
         const counts =
             data.counts || {};
 
-
-        // ----------------------------------------------------
-        // SCHOOL INFORMATION
-        // ----------------------------------------------------
 
         setText(
             'topbarSchoolName',
@@ -571,10 +421,6 @@
         );
 
 
-        // ----------------------------------------------------
-        // COUNTS
-        // ----------------------------------------------------
-
         setText(
             'classesCount',
             counts.classes || 0
@@ -605,23 +451,14 @@
         );
 
 
-        // ----------------------------------------------------
-        // ACTIVE SESSION
-        // ----------------------------------------------------
-
         populateActiveSession(
             data.activeSession
         );
 
 
-        // ----------------------------------------------------
-        // RECENT SESSIONS
-        // ----------------------------------------------------
-
         populateRecentSessions(
             data.recentSessions || []
         );
-
     }
 
 
@@ -638,18 +475,17 @@
                 'activeSessionName'
             );
 
-
         const datesElement =
             document.getElementById(
                 'activeSessionDates'
             );
 
 
-        if (!nameElement ||
-            !datesElement) {
-
+        if (
+            !nameElement ||
+            !datesElement
+        ) {
             return;
-
         }
 
 
@@ -658,13 +494,10 @@
             nameElement.textContent =
                 'No active session';
 
-
             datesElement.textContent =
                 'Create an academic session to get started.';
 
-
             return;
-
         }
 
 
@@ -677,7 +510,6 @@
             formatDate(
                 session.startDate
             );
-
 
         const end =
             formatDate(
@@ -702,9 +534,7 @@
 
             datesElement.textContent =
                 'Active academic session';
-
         }
-
     }
 
 
@@ -723,16 +553,12 @@
 
 
         if (!container) {
-
             return;
-
         }
 
 
         if (
-            !Array.isArray(
-                sessions
-            ) ||
+            !Array.isArray(sessions) ||
             sessions.length === 0
         ) {
 
@@ -750,98 +576,91 @@
             `;
 
             return;
-
         }
 
 
         container.innerHTML =
             sessions
-                .map(
-                    function (session) {
+                .map(function (session) {
 
-                        const status =
-                            String(
-                                session.status ||
-                                ''
-                            ).trim();
-
-
-                        const statusClass =
-                            status.toLowerCase() ===
-                            'active'
-                                ? 'active'
-                                : '';
+                    const status =
+                        String(
+                            session.status ||
+                            ''
+                        ).trim();
 
 
-                        const start =
-                            formatDate(
-                                session.startDate
-                            );
+                    const statusClass =
+                        status.toLowerCase() ===
+                        'active'
+                            ? 'active'
+                            : '';
 
 
-                        const end =
-                            formatDate(
-                                session.endDate
-                            );
+                    const start =
+                        formatDate(
+                            session.startDate
+                        );
 
 
-                        let dateText =
-                            '';
+                    const end =
+                        formatDate(
+                            session.endDate
+                        );
 
 
-                        if (
-                            start &&
-                            end
-                        ) {
-
-                            dateText =
-                                `${start} — ${end}`;
-
-                        } else if (start) {
-
-                            dateText =
-                                start;
-
-                        }
+                    let dateText = '';
 
 
-                        return `
-                            <div class="session-row">
+                    if (
+                        start &&
+                        end
+                    ) {
 
-                                <div class="session-row-info">
+                        dateText =
+                            `${start} — ${end}`;
 
-                                    <strong>
-                                        ${escapeHtml(
-                                            session.sessionName ||
-                                            'Unnamed Session'
-                                        )}
-                                    </strong>
+                    } else if (start) {
 
-                                    <span>
-                                        ${escapeHtml(
-                                            dateText ||
-                                            'No dates specified'
-                                        )}
-                                    </span>
+                        dateText =
+                            start;
+                    }
 
-                                </div>
 
-                                <span
-                                    class="session-row-status ${statusClass}"
-                                >
+                    return `
+                        <div class="session-row">
+
+                            <div class="session-row-info">
+
+                                <strong>
                                     ${escapeHtml(
-                                        status ||
-                                        'Unknown'
+                                        session.sessionName ||
+                                        'Unnamed Session'
+                                    )}
+                                </strong>
+
+                                <span>
+                                    ${escapeHtml(
+                                        dateText ||
+                                        'No dates specified'
                                     )}
                                 </span>
 
                             </div>
-                        `;
 
-                    }
-                )
+                            <span
+                                class="session-row-status ${statusClass}"
+                            >
+                                ${escapeHtml(
+                                    status ||
+                                    'Unknown'
+                                )}
+                            </span>
+
+                        </div>
+                    `;
+                })
                 .join('');
-
     }
 
 
@@ -862,7 +681,6 @@
                         sidebar.classList.toggle(
                             'open'
                         );
-
                     }
 
 
@@ -871,12 +689,9 @@
                         sidebarOverlay.classList.toggle(
                             'visible'
                         );
-
                     }
-
                 }
             );
-
         }
 
 
@@ -886,53 +701,30 @@
                 'click',
                 closeMobileSidebar
             );
-
         }
 
 
-        const navLinks =
-            document.querySelectorAll(
-                '.nav-link'
-            );
-
-
-        navLinks.forEach(
-            function (link) {
+        document
+            .querySelectorAll('.nav-link')
+            .forEach(function (link) {
 
                 link.addEventListener(
                     'click',
                     closeMobileSidebar
                 );
-
-            }
-        );
-
+            });
     }
 
 
-    // ========================================================
-    // CLOSE MOBILE SIDEBAR
-    // ========================================================
-
     function closeMobileSidebar() {
 
-        if (sidebar) {
+        sidebar?.classList.remove(
+            'open'
+        );
 
-            sidebar.classList.remove(
-                'open'
-            );
-
-        }
-
-
-        if (sidebarOverlay) {
-
-            sidebarOverlay.classList.remove(
-                'visible'
-            );
-
-        }
-
+        sidebarOverlay?.classList.remove(
+            'visible'
+        );
     }
 
 
@@ -943,9 +735,7 @@
     function setupLogout() {
 
         if (!sidebarLogoutButton) {
-
             return;
-
         }
 
 
@@ -960,9 +750,7 @@
 
 
                 if (!confirmed) {
-
                     return;
-
                 }
 
 
@@ -972,10 +760,8 @@
 
 
                 redirectToLogin();
-
             }
         );
-
     }
 
 
@@ -986,9 +772,7 @@
     function setupRetry() {
 
         if (!retryButton) {
-
             return;
-
         }
 
 
@@ -997,45 +781,28 @@
             function () {
 
                 loadDashboard();
-
             }
         );
-
     }
 
 
     // ========================================================
-    // LOADING STATE
+    // LOADING
     // ========================================================
 
     function showLoading() {
 
-        if (pageLoading) {
+        pageLoading?.classList.remove(
+            'hidden'
+        );
 
-            pageLoading.classList.remove(
-                'hidden'
-            );
+        dashboardContent?.classList.add(
+            'hidden'
+        );
 
-        }
-
-
-        if (dashboardContent) {
-
-            dashboardContent.classList.add(
-                'hidden'
-            );
-
-        }
-
-
-        if (dashboardError) {
-
-            dashboardError.classList.add(
-                'hidden'
-            );
-
-        }
-
+        dashboardError?.classList.add(
+            'hidden'
+        );
     }
 
 
@@ -1045,32 +812,17 @@
 
     function showDashboard() {
 
-        if (pageLoading) {
+        pageLoading?.classList.add(
+            'hidden'
+        );
 
-            pageLoading.classList.add(
-                'hidden'
-            );
+        dashboardError?.classList.add(
+            'hidden'
+        );
 
-        }
-
-
-        if (dashboardError) {
-
-            dashboardError.classList.add(
-                'hidden'
-            );
-
-        }
-
-
-        if (dashboardContent) {
-
-            dashboardContent.classList.remove(
-                'hidden'
-            );
-
-        }
-
+        dashboardContent?.classList.remove(
+            'hidden'
+        );
     }
 
 
@@ -1082,22 +834,13 @@
         message
     ) {
 
-        if (pageLoading) {
+        pageLoading?.classList.add(
+            'hidden'
+        );
 
-            pageLoading.classList.add(
-                'hidden'
-            );
-
-        }
-
-
-        if (dashboardContent) {
-
-            dashboardContent.classList.add(
-                'hidden'
-            );
-
-        }
+        dashboardContent?.classList.add(
+            'hidden'
+        );
 
 
         if (dashboardErrorMessage) {
@@ -1105,45 +848,12 @@
             dashboardErrorMessage.textContent =
                 message ||
                 'Unable to load dashboard.';
-
         }
 
 
-        if (dashboardError) {
-
-            dashboardError.classList.remove(
-                'hidden'
-            );
-
-        }
-
-    }
-
-
-    // ========================================================
-    // ERROR MESSAGE
-    // ========================================================
-
-    function getErrorMessage(
-        error
-    ) {
-
-        if (
-            error &&
-            typeof error.message ===
-                'string' &&
-            error.message.trim()
-        ) {
-
-            return error.message;
-
-        }
-
-
-        return (
-            'Unable to load the dashboard. Please try again.'
+        dashboardError?.classList.remove(
+            'hidden'
         );
-
     }
 
 
@@ -1157,15 +867,11 @@
     ) {
 
         const element =
-            document.getElementById(
-                id
-            );
+            document.getElementById(id);
 
 
         if (!element) {
-
             return;
-
         }
 
 
@@ -1175,12 +881,11 @@
             value === ''
                 ? '—'
                 : String(value);
-
     }
 
 
     // ========================================================
-    // GET FIRST NAME
+    // FIRST NAME
     // ========================================================
 
     function getFirstName(
@@ -1194,19 +899,16 @@
 
 
         if (!value) {
-
             return 'Administrator';
-
         }
 
 
         return value.split(/\s+/)[0];
-
     }
 
 
     // ========================================================
-    // GET INITIALS
+    // INITIALS
     // ========================================================
 
     function getInitials(
@@ -1220,9 +922,7 @@
 
 
         if (!value) {
-
             return '--';
-
         }
 
 
@@ -1235,7 +935,6 @@
             return parts[0]
                 .substring(0, 2)
                 .toUpperCase();
-
         }
 
 
@@ -1243,12 +942,11 @@
             parts[0].charAt(0) +
             parts[parts.length - 1].charAt(0)
         ).toUpperCase();
-
     }
 
 
     // ========================================================
-    // FORMAT PLAN
+    // PLAN
     // ========================================================
 
     function formatPlan(
@@ -1262,19 +960,16 @@
 
 
         if (!value) {
-
             return 'No plan';
-
         }
 
 
         return `${value} Plan`;
-
     }
 
 
     // ========================================================
-    // FORMAT DATE
+    // DATE
     // ========================================================
 
     function formatDate(
@@ -1282,9 +977,7 @@
     ) {
 
         if (!value) {
-
             return '';
-
         }
 
 
@@ -1299,7 +992,6 @@
         ) {
 
             return String(value);
-
         }
 
 
@@ -1311,7 +1003,6 @@
                 year: 'numeric'
             }
         );
-
     }
 
 
@@ -1349,7 +1040,31 @@
                 /'/g,
                 '&#039;'
             );
+    }
 
+
+    // ========================================================
+    // ERROR MESSAGE
+    // ========================================================
+
+    function getErrorMessage(
+        error
+    ) {
+
+        if (
+            error &&
+            typeof error.message ===
+                'string' &&
+            error.message.trim()
+        ) {
+
+            return error.message;
+        }
+
+
+        return (
+            'Unable to load the dashboard. Please try again.'
+        );
     }
 
 })();
