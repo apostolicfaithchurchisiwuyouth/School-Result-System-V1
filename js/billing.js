@@ -42,9 +42,6 @@
    CONFIG
 ========================================================= */
 
-const API_URL =
-    '/api/school-results';
-
 const SESSION_KEY =
     'school_results_system_session_v1';
 
@@ -607,116 +604,6 @@ function getInitials(name) {
     ).toUpperCase();
 
 }
-
-
-/* =========================================================
-   API REQUEST
-========================================================= */
-
-async function apiRequest(
-    action,
-    data = {}
-) {
-
-    const payload = {
-
-        action,
-
-        ...data
-
-    };
-
-
-    let response;
-
-
-    try {
-
-        response =
-            await fetch(
-                API_URL,
-                {
-                    method: 'POST',
-
-                    headers: {
-                        'Content-Type':
-                            'text/plain;charset=utf-8'
-                    },
-
-                    body:
-                        JSON.stringify(
-                            payload
-                        )
-                }
-            );
-
-    } catch (error) {
-
-        console.error(
-            'Network/API request error:',
-            error
-        );
-
-
-        throw new Error(
-            'Unable to connect to the school results server.'
-        );
-
-    }
-
-
-    let result;
-
-
-    try {
-
-        result =
-            await response.json();
-
-    } catch (error) {
-
-        console.error(
-            'Invalid JSON response:',
-            error
-        );
-
-
-        throw new Error(
-            'The server returned an invalid response.'
-        );
-
-    }
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            result?.message ||
-            result?.error ||
-            `Server request failed (${response.status}).`
-        );
-
-    }
-
-
-    if (
-        !result ||
-        result.success !== true
-    ) {
-
-        throw new Error(
-            result?.message ||
-            result?.error ||
-            'The request could not be completed.'
-        );
-
-    }
-
-
-    return result;
-
-}
-
 
 /* =========================================================
    LOAD BILLING
