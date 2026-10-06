@@ -1,8 +1,7 @@
 /* =========================================================
-   School Results System
+   SCHOOL RESULTS SYSTEM
    Sessions Page
-   Version: 2.4.0
-   Uses the central /js/api.js client
+   Version: 2.5.0
    ========================================================= */
 
 (function () {
@@ -13,9 +12,10 @@
 
     let sessions = [];
     let isCreatingSession = false;
+    let isActivatingSession = false;
 
     /* =========================================================
-       HELPERS
+       BASIC HELPERS
        ========================================================= */
 
     function $(id) {
@@ -37,8 +37,13 @@
             }
 
             return session;
+
         } catch (error) {
-            console.error('[Sessions] Could not read stored session:', error);
+            console.error(
+                '[Sessions] Unable to read stored login session:',
+                error
+            );
+
             return null;
         }
     }
@@ -57,14 +62,19 @@
             return error;
         }
 
-        return error.message ||
+        return (
+            error.message ||
             error.error ||
-            'Something went wrong. Please try again.';
+            'Something went wrong. Please try again.'
+        );
     }
 
     function getInputValue(id) {
         const element = $(id);
-        return element ? element.value.trim() : '';
+
+        return element
+            ? element.value.trim()
+            : '';
     }
 
     function escapeHtml(value) {
@@ -76,15 +86,24 @@
             .replace(/'/g, '&#039;');
     }
 
+    function normalizeSessionName(name) {
+        return String(name || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLowerCase();
+    }
+
     function formatDate(dateValue) {
         if (!dateValue) {
             return '—';
         }
 
-        const date = new Date(dateValue + 'T00:00:00');
+        const date = new Date(
+            String(dateValue) + 'T00:00:00'
+        );
 
         if (Number.isNaN(date.getTime())) {
-            return dateValue;
+            return String(dateValue);
         }
 
         return date.toLocaleDateString('en-NG', {
@@ -105,7 +124,9 @@
             .filter(Boolean);
 
         if (parts.length === 1) {
-            return parts[0].substring(0, 2).toUpperCase();
+            return parts[0]
+                .substring(0, 2)
+                .toUpperCase();
         }
 
         return (
@@ -123,7 +144,10 @@
         const messageText = $('messageText');
 
         if (!pageMessage || !messageText) {
-            console.warn('[Sessions] Page message elements not found.');
+            console.warn(
+                '[Sessions] Page message elements not found.'
+            );
+
             return;
         }
 
@@ -144,7 +168,10 @@
             behavior: 'smooth'
         });
 
-        console.log('[Sessions] Message:', message);
+        console.log(
+            '[Sessions] Message:',
+            message
+        );
     }
 
     function hideMessage() {
@@ -177,11 +204,6 @@
 
         formError.textContent = message;
         formError.classList.remove('hidden');
-
-        formError.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest'
-        });
     }
 
     function clearFormError() {
@@ -196,25 +218,26 @@
     }
 
     /* =========================================================
-       LOADING STATES
+       LOADING
        ========================================================= */
 
     function setFormLoading(isLoading) {
         const saveButton = $('saveButton');
         const cancelButton = $('cancelButton');
 
+        isCreatingSession = Boolean(isLoading);
+
         if (saveButton) {
-            saveButton.disabled = Boolean(isLoading);
+            saveButton.disabled = isLoading;
+
             saveButton.textContent = isLoading
                 ? 'Creating...'
                 : 'Create Session';
         }
 
         if (cancelButton) {
-            cancelButton.disabled = Boolean(isLoading);
+            cancelButton.disabled = isLoading;
         }
-
-        isCreatingSession = Boolean(isLoading);
     }
 
     function setPageLoading(isLoading) {
@@ -232,7 +255,10 @@
         const modal = $('sessionModal');
 
         if (!modal) {
-            console.error('[Sessions] sessionModal not found.');
+            console.error(
+                '[Sessions] sessionModal was not found.'
+            );
+
             return;
         }
 
@@ -242,17 +268,22 @@
         modal.classList.remove('hidden');
         modal.classList.add('open');
 
-        modal.setAttribute('aria-hidden', 'false');
+        modal.setAttribute(
+            'aria-hidden',
+            'false'
+        );
+
+        document.body.classList.add(
+            'modal-open'
+        );
 
         const sessionName = $('sessionName');
 
         if (sessionName) {
-            setTimeout(() => {
+            setTimeout(function () {
                 sessionName.focus();
             }, 100);
         }
-
-        document.body.classList.add('modal-open');
     }
 
     function closeModal() {
@@ -269,9 +300,14 @@
         modal.classList.remove('open');
         modal.classList.add('hidden');
 
-        modal.setAttribute('aria-hidden', 'true');
+        modal.setAttribute(
+            'aria-hidden',
+            'true'
+        );
 
-        document.body.classList.remove('modal-open');
+        document.body.classList.remove(
+            'modal-open'
+        );
 
         clearFormError();
     }
@@ -287,7 +323,7 @@
     }
 
     /* =========================================================
-       USER / HEADER
+       USER INFORMATION
        ========================================================= */
 
     function populateUserDetails(session) {
@@ -302,43 +338,62 @@
 
         if (schoolName) {
             schoolName.textContent =
-                session.schoolName || 'School Results System';
+                session.schoolName ||
+                'School Results System';
         }
 
         if (userName) {
             userName.textContent =
-                session.fullName || session.name || 'User';
+                session.fullName ||
+                session.name ||
+                'User';
         }
 
         if (userRole) {
             userRole.textContent =
-                session.role || 'Administrator';
+                session.role ||
+                'Administrator';
         }
 
         if (userInitials) {
-            userInitials.textContent = getInitials(
-                session.fullName || session.name || 'User'
-            );
+            userInitials.textContent =
+                getInitials(
+                    session.fullName ||
+                    session.name ||
+                    'User'
+                );
         }
     }
 
     /* =========================================================
-       ACTIVE SESSION
+       ACTIVE SESSION CARD
        ========================================================= */
 
+    function getActiveSession() {
+        return sessions.find(function (session) {
+            return String(
+                session.status || ''
+            ).toLowerCase() === 'active';
+        }) || null;
+    }
+
     function updateActiveSession() {
-        const activeSessionName = $('activeSessionName');
-        const activeSessionDates = $('activeSessionDates');
-        const activeBadge = $('activeBadge');
+        const activeSessionName =
+            $('activeSessionName');
 
-        const active = sessions.find(
-            session =>
-                String(session.status || '').toLowerCase() === 'active'
-        );
+        const activeSessionDates =
+            $('activeSessionDates');
 
-        if (!active) {
+        const activeBadge =
+            $('activeBadge');
+
+        const activeSession =
+            getActiveSession();
+
+        if (!activeSession) {
             if (activeSessionName) {
-                activeSessionName.textContent = 'No active session';
+                activeSessionName.textContent =
+                    'No active session';
             }
 
             if (activeSessionDates) {
@@ -347,8 +402,12 @@
             }
 
             if (activeBadge) {
-                activeBadge.textContent = 'No Active Session';
-                activeBadge.classList.remove('active');
+                activeBadge.textContent =
+                    'No Active Session';
+
+                activeBadge.classList.remove(
+                    'active'
+                );
             }
 
             return;
@@ -356,51 +415,104 @@
 
         if (activeSessionName) {
             activeSessionName.textContent =
-                active.sessionName || 'Unnamed Session';
+                activeSession.sessionName ||
+                'Unnamed Session';
         }
 
         if (activeSessionDates) {
             activeSessionDates.textContent =
-                `${formatDate(active.startDate)} – ${formatDate(active.endDate)}`;
+                `${formatDate(activeSession.startDate)} – ${formatDate(activeSession.endDate)}`;
         }
 
         if (activeBadge) {
-            activeBadge.textContent = 'Active';
-            activeBadge.classList.add('active');
+            activeBadge.textContent =
+                'Active';
+
+            activeBadge.classList.add(
+                'active'
+            );
         }
     }
 
     /* =========================================================
-       RENDER SESSIONS
+       SESSION TABLE
        ========================================================= */
 
     function renderSessionRow(session) {
         const isActive =
-            String(session.status || '').toLowerCase() === 'active';
+            String(
+                session.status || ''
+            ).toLowerCase() === 'active';
+
+        /*
+         * IMPORTANT:
+         * Do not change the existing visual classes.
+         * The existing sessions.css controls the appearance.
+         *
+         * The action button has a unique ID generated from
+         * the session ID, so there are no duplicate IDs.
+         */
+
+        const safeSessionId =
+            escapeHtml(
+                session.sessionId || ''
+            );
+
+        const buttonId =
+            `setActiveSession-${String(
+                session.sessionId || ''
+            ).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
         return `
             <tr>
                 <td>
                     <div class="session-name-cell">
-                        <strong>${escapeHtml(session.sessionName || 'Unnamed Session')}</strong>
-                        ${isActive
-                            ? '<span class="session-current-label">Current</span>'
-                            : ''
+                        <strong>
+                            ${escapeHtml(
+                                session.sessionName ||
+                                'Unnamed Session'
+                            )}
+                        </strong>
+
+                        ${
+                            isActive
+                                ? `
+                                    <span class="session-current-label">
+                                        Current
+                                    </span>
+                                  `
+                                : ''
                         }
                     </div>
                 </td>
 
                 <td>
-                    ${escapeHtml(formatDate(session.startDate))}
+                    ${escapeHtml(
+                        formatDate(
+                            session.startDate
+                        )
+                    )}
                 </td>
 
                 <td>
-                    ${escapeHtml(formatDate(session.endDate))}
+                    ${escapeHtml(
+                        formatDate(
+                            session.endDate
+                        )
+                    )}
                 </td>
 
                 <td>
-                    <span class="status-badge ${isActive ? 'active' : 'inactive'}">
-                        ${isActive ? 'Active' : 'Inactive'}
+                    <span class="status-badge ${
+                        isActive
+                            ? 'active'
+                            : 'inactive'
+                    }">
+                        ${
+                            isActive
+                                ? 'Active'
+                                : 'Inactive'
+                        }
                     </span>
                 </td>
 
@@ -415,8 +527,9 @@
                             : `
                                 <button
                                     type="button"
+                                    id="${buttonId}"
                                     class="table-action-button activate-session-button"
-                                    data-session-id="${escapeHtml(session.sessionId)}"
+                                    data-session-id="${safeSessionId}"
                                 >
                                     Set Active
                                 </button>
@@ -437,11 +550,15 @@
         wrapper.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">◷</div>
+
                 <h3>No academic sessions yet</h3>
+
                 <p>
-                    Create your first academic session to start setting up
-                    your school's academic year.
+                    Create your first academic session
+                    to start setting up your school's
+                    academic year.
                 </p>
+
                 <button
                     type="button"
                     class="primary-button"
@@ -452,19 +569,29 @@
             </div>
         `;
 
-        const emptyCreateButton = $('emptyCreateButton');
+        const emptyCreateButton =
+            $('emptyCreateButton');
 
         if (emptyCreateButton) {
-            emptyCreateButton.addEventListener('click', openModal);
+            emptyCreateButton.addEventListener(
+                'click',
+                openModal
+            );
         }
     }
 
     function renderSessions() {
-        const wrapper = $('tableWrapper');
-        const recordCount = $('recordCount');
+        const wrapper =
+            $('tableWrapper');
+
+        const recordCount =
+            $('recordCount');
 
         if (!wrapper) {
-            console.error('[Sessions] tableWrapper not found.');
+            console.error(
+                '[Sessions] tableWrapper was not found.'
+            );
+
             return;
         }
 
@@ -474,7 +601,11 @@
 
         if (recordCount) {
             recordCount.textContent =
-                `${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
+                `${sessions.length} session${
+                    sessions.length === 1
+                        ? ''
+                        : 's'
+                }`;
         }
 
         updateActiveSession();
@@ -484,24 +615,44 @@
             return;
         }
 
-        const sortedSessions = [...sessions].sort((a, b) => {
-            const aActive =
-                String(a.status || '').toLowerCase() === 'active';
+        const sortedSessions =
+            [...sessions].sort(
+                function (a, b) {
+                    const aActive =
+                        String(
+                            a.status || ''
+                        ).toLowerCase() ===
+                        'active';
 
-            const bActive =
-                String(b.status || '').toLowerCase() === 'active';
+                    const bActive =
+                        String(
+                            b.status || ''
+                        ).toLowerCase() ===
+                        'active';
 
-            if (aActive && !bActive) {
-                return -1;
-            }
+                    if (
+                        aActive &&
+                        !bActive
+                    ) {
+                        return -1;
+                    }
 
-            if (!aActive && bActive) {
-                return 1;
-            }
+                    if (
+                        !aActive &&
+                        bActive
+                    ) {
+                        return 1;
+                    }
 
-            return String(b.startDate || '')
-                .localeCompare(String(a.startDate || ''));
-        });
+                    return String(
+                        b.startDate || ''
+                    ).localeCompare(
+                        String(
+                            a.startDate || ''
+                        )
+                    );
+                }
+            );
 
         wrapper.innerHTML = `
             <table class="sessions-table">
@@ -516,7 +667,9 @@
                 </thead>
 
                 <tbody>
-                    ${sortedSessions.map(renderSessionRow).join('')}
+                    ${sortedSessions
+                        .map(renderSessionRow)
+                        .join('')}
                 </tbody>
             </table>
         `;
@@ -528,10 +681,17 @@
        LOAD SESSIONS
        ========================================================= */
 
-    async function loadSessions(storedSession = null) {
-        const session = storedSession || getStoredSession();
+    async function loadSessions(
+        storedSession = null
+    ) {
+        const session =
+            storedSession ||
+            getStoredSession();
 
-        if (!session || !session.schoolId) {
+        if (
+            !session ||
+            !session.schoolId
+        ) {
             redirectToLogin();
             return;
         }
@@ -540,7 +700,7 @@
 
         try {
             console.log(
-                '[Sessions] Loading sessions for school:',
+                '[Sessions] Loading sessions:',
                 session.schoolId
             );
 
@@ -548,33 +708,43 @@
                 await window.schoolResultsAPI.request(
                     'getSessions',
                     {
-                        schoolId: session.schoolId
+                        schoolId:
+                            session.schoolId
                     }
                 );
 
             console.log(
-                '[Sessions] Get sessions response:',
+                '[Sessions] getSessions response:',
                 result
             );
 
-            if (!result || result.success === false) {
+            if (
+                !result ||
+                result.success === false
+            ) {
                 throw new Error(
                     result?.message ||
                     'Unable to load academic sessions.'
                 );
             }
 
-            sessions =
-                Array.isArray(result.sessions)
-                    ? result.sessions
-                    : Array.isArray(result.data?.sessions)
-                        ? result.data.sessions
-                        : [];
-
-            console.log(
-                '[Sessions] Sessions loaded:',
-                sessions
-            );
+            if (
+                Array.isArray(
+                    result.sessions
+                )
+            ) {
+                sessions =
+                    result.sessions;
+            } else if (
+                Array.isArray(
+                    result.data?.sessions
+                )
+            ) {
+                sessions =
+                    result.data.sessions;
+            } else {
+                sessions = [];
+            }
 
             renderSessions();
 
@@ -586,16 +756,26 @@
 
             sessions = [];
 
-            const wrapper = $('tableWrapper');
+            const wrapper =
+                $('tableWrapper');
 
             if (wrapper) {
                 wrapper.innerHTML = `
                     <div class="empty-state error-state">
                         <div class="empty-state-icon">!</div>
-                        <h3>Unable to load sessions</h3>
+
+                        <h3>
+                            Unable to load sessions
+                        </h3>
+
                         <p>
-                            ${escapeHtml(getErrorMessage(error))}
+                            ${escapeHtml(
+                                getErrorMessage(
+                                    error
+                                )
+                            )}
                         </p>
+
                         <button
                             type="button"
                             class="primary-button"
@@ -612,7 +792,11 @@
                 if (retryButton) {
                     retryButton.addEventListener(
                         'click',
-                        () => loadSessions(session)
+                        function () {
+                            loadSessions(
+                                session
+                            );
+                        }
                     );
                 }
             }
@@ -628,13 +812,40 @@
     }
 
     /* =========================================================
+       DUPLICATE SESSION CHECK
+       ========================================================= */
+
+    function findDuplicateSession(
+        sessionName
+    ) {
+        const normalized =
+            normalizeSessionName(
+                sessionName
+            );
+
+        return sessions.find(
+            function (session) {
+                return (
+                    normalizeSessionName(
+                        session.sessionName
+                    ) === normalized
+                );
+            }
+        ) || null;
+    }
+
+    /* =========================================================
        CREATE SESSION
        ========================================================= */
 
     async function createSession() {
-        const storedSession = getStoredSession();
+        const storedSession =
+            getStoredSession();
 
-        if (!storedSession || !storedSession.schoolId) {
+        if (
+            !storedSession ||
+            !storedSession.schoolId
+        ) {
             redirectToLogin();
             return;
         }
@@ -644,20 +855,26 @@
         }
 
         const sessionName =
-            getInputValue('sessionName');
+            getInputValue(
+                'sessionName'
+            );
 
         const startDate =
-            getInputValue('startDate');
+            getInputValue(
+                'startDate'
+            );
 
         const endDate =
-            getInputValue('endDate');
+            getInputValue(
+                'endDate'
+            );
 
         clearFormError();
         hideMessage();
 
-        /* -------------------------
-           Validation
-           ------------------------- */
+        /* -----------------------------------------
+           VALIDATION
+           ----------------------------------------- */
 
         if (!sessionName) {
             showFormError(
@@ -689,7 +906,10 @@
             return;
         }
 
-        if (new Date(startDate) > new Date(endDate)) {
+        if (
+            new Date(startDate) >
+            new Date(endDate)
+        ) {
             showFormError(
                 'The start date cannot be after the end date.'
             );
@@ -699,17 +919,37 @@
             return;
         }
 
-        /* -------------------------
-           Start request
-           ------------------------- */
+        /* -----------------------------------------
+           DUPLICATE CHECK
+           ----------------------------------------- */
+
+        const duplicate =
+            findDuplicateSession(
+                sessionName
+            );
+
+        if (duplicate) {
+            showFormError(
+                `The academic session "${duplicate.sessionName}" already exists. Please use a different session name.`
+            );
+
+            $('sessionName')?.focus();
+
+            return;
+        }
+
+        /* -----------------------------------------
+           CREATE
+           ----------------------------------------- */
 
         setFormLoading(true);
 
         try {
             console.log(
-                '[Sessions] Creating session:',
+                '[Sessions] Creating new session:',
                 {
-                    schoolId: storedSession.schoolId,
+                    schoolId:
+                        storedSession.schoolId,
                     sessionName,
                     startDate,
                     endDate
@@ -720,63 +960,83 @@
                 await window.schoolResultsAPI.request(
                     'createSession',
                     {
-                        schoolId: storedSession.schoolId,
-                        sessionName,
-                        startDate,
-                        endDate
+                        schoolId:
+                            storedSession.schoolId,
+
+                        sessionName:
+                            sessionName,
+
+                        startDate:
+                            startDate,
+
+                        endDate:
+                            endDate
                     }
                 );
 
             console.log(
-                '[Sessions] Create session response:',
+                '[Sessions] createSession response:',
                 result
             );
 
-            if (!result || result.success === false) {
+            if (
+                !result ||
+                result.success === false
+            ) {
                 throw new Error(
                     result?.message ||
                     'The academic session could not be created.'
                 );
             }
 
-            /* -------------------------
-               SUCCESS
-               ------------------------- */
-
             /*
-             * Close the modal FIRST.
-             * This happens only after the backend confirms success.
+             * Backend confirmed success.
+             *
+             * Close the modal immediately.
              */
 
             isCreatingSession = false;
 
-            const modal = $('sessionModal');
+            const modal =
+                $('sessionModal');
 
             if (modal) {
-                modal.classList.remove('open');
-                modal.classList.add('hidden');
-                modal.setAttribute('aria-hidden', 'true');
+                modal.classList.remove(
+                    'open'
+                );
+
+                modal.classList.add(
+                    'hidden'
+                );
+
+                modal.setAttribute(
+                    'aria-hidden',
+                    'true'
+                );
             }
 
-            document.body.classList.remove('modal-open');
+            document.body.classList.remove(
+                'modal-open'
+            );
 
             resetForm();
 
             /*
-             * Show a clear success message.
+             * Show success message.
              */
 
             showMessage(
-                `Academic session "${sessionName}" was created successfully.`,
+                `Academic session "${sessionName}" was added successfully.`,
                 'success'
             );
 
             /*
-             * Reload the session list so the new session
-             * immediately appears on the page.
+             * Reload the list immediately.
              */
 
-            await loadSessions(storedSession);
+            await loadSessions(
+                storedSession
+            );
 
         } catch (error) {
             console.error(
@@ -797,52 +1057,98 @@
        ACTIVATE SESSION
        ========================================================= */
 
-    async function activateSession(sessionId) {
-        const storedSession = getStoredSession();
+    async function activateSession(
+        sessionId
+    ) {
+        const storedSession =
+            getStoredSession();
 
-        if (!storedSession || !storedSession.schoolId) {
+        if (
+            !storedSession ||
+            !storedSession.schoolId
+        ) {
             redirectToLogin();
             return;
         }
 
-        if (!sessionId) {
-            showMessage(
-                'The selected session could not be identified.',
-                'error'
-            );
-
+        if (
+            !sessionId ||
+            isActivatingSession
+        ) {
             return;
         }
 
         const selectedSession =
             sessions.find(
-                session =>
-                    String(session.sessionId) ===
-                    String(sessionId)
+                function (session) {
+                    return String(
+                        session.sessionId
+                    ) === String(
+                        sessionId
+                    );
+                }
             );
 
         if (!selectedSession) {
             showMessage(
-                'The selected session could not be found.',
+                'The selected academic session could not be found.',
                 'error'
             );
 
             return;
         }
 
-        const confirmed = window.confirm(
-            `Set "${selectedSession.sessionName}" as the active academic session?`
-        );
+        const currentActive =
+            getActiveSession();
+
+        if (
+            currentActive &&
+            String(
+                currentActive.sessionId
+            ) === String(sessionId)
+        ) {
+            showMessage(
+                `"${selectedSession.sessionName}" is already the active academic session.`,
+                'info'
+            );
+
+            return;
+        }
+
+        const confirmed =
+            window.confirm(
+                `Set "${selectedSession.sessionName}" as the active academic session?`
+            );
 
         if (!confirmed) {
             return;
         }
 
+        isActivatingSession = true;
+
         try {
-            setPageLoading(true);
+            /*
+             * Disable the action area while the
+             * backend changes the active session.
+             */
+
+            const clickedButton =
+                document.querySelector(
+                    `[data-session-id="${CSS.escape(
+                        String(sessionId)
+                    )}"]`
+                );
+
+            if (clickedButton) {
+                clickedButton.disabled =
+                    true;
+
+                clickedButton.textContent =
+                    'Setting Active...';
+            }
 
             console.log(
-                '[Sessions] Activating session:',
+                '[Sessions] Setting active session:',
                 sessionId
             );
 
@@ -850,29 +1156,76 @@
                 await window.schoolResultsAPI.request(
                     'setActiveSession',
                     {
-                        schoolId: storedSession.schoolId,
-                        sessionId
+                        schoolId:
+                            storedSession.schoolId,
+
+                        sessionId:
+                            sessionId
                     }
                 );
 
             console.log(
-                '[Sessions] Activate session response:',
+                '[Sessions] setActiveSession response:',
                 result
             );
 
-            if (!result || result.success === false) {
+            if (
+                !result ||
+                result.success === false
+            ) {
                 throw new Error(
                     result?.message ||
-                    'The academic session could not be activated.'
+                    'The academic session could not be made active.'
                 );
             }
 
+            /*
+             * Update the local list immediately.
+             *
+             * The old active session becomes inactive.
+             * The selected session becomes active.
+             */
+
+            sessions =
+                sessions.map(
+                    function (session) {
+                        return {
+                            ...session,
+                            status:
+                                String(
+                                    session.sessionId
+                                ) === String(
+                                    sessionId
+                                )
+                                    ? 'Active'
+                                    : 'Inactive'
+                        };
+                    }
+                );
+
+            /*
+             * Redraw immediately.
+             */
+
+            renderSessions();
+
+            /*
+             * Tell the user exactly what happened.
+             */
+
             showMessage(
-                `"${selectedSession.sessionName}" is now the active academic session.`,
+                `"${selectedSession.sessionName}" has been made the active academic session.`,
                 'success'
             );
 
-            await loadSessions(storedSession);
+            /*
+             * Reload from the backend afterward so
+             * the screen and database stay synchronized.
+             */
+
+            await loadSessions(
+                storedSession
+            );
 
         } catch (error) {
             console.error(
@@ -885,13 +1238,22 @@
                 'error'
             );
 
+            /*
+             * Restore the real server state if
+             * activation failed.
+             */
+
+            await loadSessions(
+                storedSession
+            );
+
         } finally {
-            setPageLoading(false);
+            isActivatingSession = false;
         }
     }
 
     /* =========================================================
-       TABLE ACTIONS
+       SESSION ACTION BUTTONS
        ========================================================= */
 
     function attachSessionActions() {
@@ -900,19 +1262,23 @@
                 '.activate-session-button'
             );
 
-        buttons.forEach(button => {
-            button.addEventListener(
-                'click',
-                function () {
-                    const sessionId =
-                        this.getAttribute(
-                            'data-session-id'
-                        );
+        buttons.forEach(
+            function (button) {
+                button.addEventListener(
+                    'click',
+                    function () {
+                        const sessionId =
+                            this.getAttribute(
+                                'data-session-id'
+                            );
 
-                    activateSession(sessionId);
-                }
-            );
-        });
+                        activateSession(
+                            sessionId
+                        );
+                    }
+                );
+            }
+        );
     }
 
     /* =========================================================
@@ -920,17 +1286,29 @@
        ========================================================= */
 
     function setupNavigation() {
-        const menuButton = $('menuButton');
-        const sidebar = $('sidebar');
-        const sidebarOverlay = $('sidebarOverlay');
+        const menuButton =
+            $('menuButton');
 
-        if (menuButton && sidebar) {
+        const sidebar =
+            $('sidebar');
+
+        const sidebarOverlay =
+            $('sidebarOverlay');
+
+        if (
+            menuButton &&
+            sidebar
+        ) {
             menuButton.addEventListener(
                 'click',
                 function () {
-                    sidebar.classList.toggle('open');
+                    sidebar.classList.toggle(
+                        'open'
+                    );
 
-                    if (sidebarOverlay) {
+                    if (
+                        sidebarOverlay
+                    ) {
                         sidebarOverlay.classList.toggle(
                             'open'
                         );
@@ -943,13 +1321,19 @@
             sidebarOverlay.addEventListener(
                 'click',
                 function () {
-                    sidebar?.classList.remove('open');
-                    sidebarOverlay.classList.remove('open');
+                    sidebar?.classList.remove(
+                        'open'
+                    );
+
+                    sidebarOverlay.classList.remove(
+                        'open'
+                    );
                 }
             );
         }
 
-        const logoutButton = $('logoutButton');
+        const logoutButton =
+            $('logoutButton');
 
         if (logoutButton) {
             logoutButton.addEventListener(
@@ -1030,7 +1414,7 @@
                     event.preventDefault();
 
                     console.log(
-                        '[Sessions] Create form submitted.'
+                        '[Sessions] Session form submitted.'
                     );
 
                     createSession();
@@ -1069,7 +1453,7 @@
     }
 
     /* =========================================================
-       INITIALIZATION
+       INITIALIZE
        ========================================================= */
 
     async function initialize() {
@@ -1121,12 +1505,12 @@
         );
 
         console.log(
-            '[Sessions] Initialization complete.'
+            '[Sessions] Sessions page initialized.'
         );
     }
 
     /* =========================================================
-       GLOBAL ACCESS
+       GLOBAL API
        ========================================================= */
 
     window.schoolResultsSessions = {
@@ -1142,7 +1526,8 @@
        ========================================================= */
 
     if (
-        document.readyState === 'loading'
+        document.readyState ===
+        'loading'
     ) {
         document.addEventListener(
             'DOMContentLoaded',
