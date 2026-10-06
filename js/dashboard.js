@@ -249,42 +249,6 @@ async function loadDashboard() {
 }
 
 
-// ============================================================
-// EXTRACT DASHBOARD DATA
-// ============================================================
-
-function extractDashboardData(
-    result
-) {
-
-    if (!result) {
-        return null;
-    }
-
-
-    if (
-        result.success &&
-        result.school
-    ) {
-
-        return result;
-
-    }
-
-
-    if (
-        result.data &&
-        result.data.school
-    ) {
-
-        return result.data;
-
-    }
-
-
-    return null;
-
-}
 
 
 // ============================================================
